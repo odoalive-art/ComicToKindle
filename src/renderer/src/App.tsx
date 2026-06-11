@@ -89,6 +89,12 @@ import {
   TableRow
 } from '@/components/ui/table'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from '@/components/ui/tooltip'
 import { designTokens } from '@/data/design-tokens'
 import {
   installedShadcnComponentSlugs,
@@ -120,11 +126,203 @@ type Comic = {
   author: string
   format: string
   pages: number
-  status: string
+  status: '已入库' | '待整理' | '待转换'
   updatedAt: string
 }
 
 type ThemeMode = 'light' | 'dark'
+type LanguageMode = 'zh' | 'en'
+
+const uiText = {
+  zh: {
+    nav: {
+      library: '漫画库',
+      'design-components': '设计组件',
+      'foundation-standards': '基础规范',
+      inbox: '导入收件箱',
+      queue: '转换队列',
+      deliveries: '投递记录',
+      archive: '归档'
+    },
+    header: {
+      componentDescription: 'shadcn/ui 官方组件索引，搭建界面时快速选型',
+      officialPage: '官方页面',
+      sourceDetails: '来源详情',
+      foundationDescription: '颜色、字体、字号、间距与基础界面节奏',
+      libraryDescription: '本地收藏、整理状态和转换准备区的工作台框架',
+      searchComponents: '搜索组件名或 slug',
+      searchComics: '搜索标题、作者或格式',
+      filter: '筛选',
+      add: '添加',
+      officialDocs: '官方文档',
+      themeTitle: '深浅模式',
+      switchToLight: '切换到浅色模式',
+      switchToDark: '切换到深色模式',
+      languageTitle: '中英切换',
+      switchLanguage: 'Switch to English'
+    },
+    library: {
+      localComics: '本地漫画',
+      localComicsDescription: '第一版只展示库视图、整理状态和占位操作。',
+      all: '全部',
+      recent: '新导入',
+      todo: '待整理',
+      mobileSearch: '搜索漫画',
+      title: '标题',
+      format: '格式',
+      pages: '页数',
+      status: '状态',
+      updated: '更新',
+      gridView: '网格视图',
+      listView: '列表视图'
+    },
+    components: {
+      countSuffix: '个组件',
+      mirrored: '已镜像',
+      pendingMirror: '待镜像',
+      installed: '已安装',
+      notInstalled: '未安装',
+      noMatches: (query: string) => `没有找到匹配 “${query}” 的组件。`,
+      notMirrored: '这个组件还没有导入本地镜像数据。',
+      openOfficialDocs: '打开官方文档',
+      copiedPreviewName: '已复制示例名称',
+      copyPreviewName: (name: string) => `复制 ${name}`,
+      copied: '已复制'
+    },
+    source: {
+      localMirror: '本地镜像',
+      description: '当前本地文档镜像使用的官方源码信息。',
+      repository: '来源仓库',
+      currentSource: '当前页面源文件'
+    },
+    sidebar: {
+      tagline: '本地漫画工作台',
+      workspace: '工作区',
+      folders: '库目录',
+      settings: '设置',
+      folderNames: ['全部漫画', '新导入', '待整理', 'Kindle 预备区'],
+      statuses: {
+        已入库: '已入库',
+        待整理: '待整理',
+        待转换: '待转换'
+      }
+    },
+    foundation: {
+      title: '基础规范',
+      description:
+        '本页沉淀当前 renderer 的基础设计 token 和界面节奏，开发阶段用于快速选取颜色、字体、字号和间距。',
+      colors: '颜色',
+      colorsNote: '使用语义 token，不直接散落硬编码色值。',
+      font: '字体',
+      fontNote: '优先系统可读性，保持工作台界面克制。',
+      typeScale: '字号',
+      typeScaleNote: '内容面板避免使用超大展示字。',
+      spacing: '间距',
+      spacingNote: '以 Tailwind spacing scale 组织密度。',
+      radius: '圆角',
+      radiusNote: '沿用 shadcn radius token。',
+      layout: '布局',
+      layoutNote: '页面边距、最大宽度和关键分栏。',
+      tokenCount: (count: number) => `${count} 个 token`,
+      levelCount: (count: number) => `${count} 个层级`,
+      ruleCount: (count: number) => `${count} 条规则`
+    }
+  },
+  en: {
+    nav: {
+      library: 'Library',
+      'design-components': 'Components',
+      'foundation-standards': 'Foundations',
+      inbox: 'Inbox',
+      queue: 'Queue',
+      deliveries: 'Deliveries',
+      archive: 'Archive'
+    },
+    header: {
+      componentDescription: 'shadcn/ui component index for faster UI assembly',
+      officialPage: 'Official page',
+      sourceDetails: 'Source',
+      foundationDescription: 'Colors, typography, type scale, spacing, and layout rhythm',
+      libraryDescription: 'Workspace shell for local collections, organization, and conversion prep',
+      searchComponents: 'Search components or slug',
+      searchComics: 'Search title, author, or format',
+      filter: 'Filter',
+      add: 'Add',
+      officialDocs: 'Official docs',
+      themeTitle: 'Theme',
+      switchToLight: 'Switch to light mode',
+      switchToDark: 'Switch to dark mode',
+      languageTitle: 'Language',
+      switchLanguage: '切换到中文'
+    },
+    library: {
+      localComics: 'Local Comics',
+      localComicsDescription: 'The first version only shows library views, states, and placeholder actions.',
+      all: 'All',
+      recent: 'Recent',
+      todo: 'To Organize',
+      mobileSearch: 'Search comics',
+      title: 'Title',
+      format: 'Format',
+      pages: 'Pages',
+      status: 'Status',
+      updated: 'Updated',
+      gridView: 'Grid view',
+      listView: 'List view'
+    },
+    components: {
+      countSuffix: 'components',
+      mirrored: 'Mirrored',
+      pendingMirror: 'Pending',
+      installed: 'Installed',
+      notInstalled: 'Not installed',
+      noMatches: (query: string) => `No components found for "${query}".`,
+      notMirrored: 'This component has not been imported into the local mirror yet.',
+      openOfficialDocs: 'Open official docs',
+      copiedPreviewName: 'Preview name copied',
+      copyPreviewName: (name: string) => `Copy ${name}`,
+      copied: 'Copied'
+    },
+    source: {
+      localMirror: 'Local Mirror',
+      description: 'Official source metadata used by the local documentation mirror.',
+      repository: 'Repository',
+      currentSource: 'Current source file'
+    },
+    sidebar: {
+      tagline: 'Local comic workspace',
+      workspace: 'Workspaces',
+      folders: 'Library',
+      settings: 'Settings',
+      folderNames: ['All Comics', 'New Imports', 'To Organize', 'Kindle Prep'],
+      statuses: {
+        已入库: 'In Library',
+        待整理: 'To Organize',
+        待转换: 'To Convert'
+      }
+    },
+    foundation: {
+      title: 'Foundations',
+      description:
+        'This page captures the renderer design tokens and interface rhythm used during development.',
+      colors: 'Colors',
+      colorsNote: 'Use semantic tokens instead of scattered hard-coded colors.',
+      font: 'Font',
+      fontNote: 'Prioritize system readability and a restrained workspace feel.',
+      typeScale: 'Type Scale',
+      typeScaleNote: 'Avoid oversized display type inside content panels.',
+      spacing: 'Spacing',
+      spacingNote: 'Organize density with the Tailwind spacing scale.',
+      radius: 'Radius',
+      radiusNote: 'Follow the shadcn radius token.',
+      layout: 'Layout',
+      layoutNote: 'Page margins, max widths, and key column rules.',
+      tokenCount: (count: number) => `${count} tokens`,
+      levelCount: (count: number) => `${count} levels`,
+      ruleCount: (count: number) => `${count} rules`
+    }
+  }
+} as const
 
 const primaryNav: NavItem[] = [
   { id: 'library', title: '漫画库', icon: Library, badge: '128' },
@@ -178,8 +376,6 @@ const comics: Comic[] = [
   }
 ]
 
-const folders = ['全部漫画', '新导入', '待整理', 'Kindle 预备区']
-
 function getInitialThemeMode(): ThemeMode {
   if (typeof window === 'undefined') {
     return 'light'
@@ -192,6 +388,16 @@ function getInitialThemeMode(): ThemeMode {
   }
 
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+}
+
+function getInitialLanguageMode(): LanguageMode {
+  if (typeof window === 'undefined') {
+    return 'zh'
+  }
+
+  const storedLanguage = window.localStorage.getItem('comic-to-kindle-language')
+
+  return storedLanguage === 'en' ? 'en' : 'zh'
 }
 
 async function copyTextToClipboard(text: string): Promise<void> {
@@ -252,6 +458,8 @@ function App(): React.JSX.Element {
   const [componentSearch, setComponentSearch] = useState('')
   const [selectedComponentSlug, setSelectedComponentSlug] = useState('button')
   const [themeMode, setThemeMode] = useState<ThemeMode>(getInitialThemeMode)
+  const [languageMode, setLanguageMode] = useState<LanguageMode>(getInitialLanguageMode)
+  const text = uiText[languageMode]
   const activeNavItem = primaryNav.find((item) => item.id === activeView) ?? primaryNav[0]
   const isComponentView = activeView === 'design-components'
   const isFoundationView = activeView === 'foundation-standards'
@@ -281,15 +489,20 @@ function App(): React.JSX.Element {
     window.localStorage.setItem('comic-to-kindle-theme', themeMode)
   }, [themeMode])
 
+  useEffect(() => {
+    document.documentElement.lang = languageMode === 'zh' ? 'zh-CN' : 'en'
+    window.localStorage.setItem('comic-to-kindle-language', languageMode)
+  }, [languageMode])
+
   return (
     <SidebarProvider>
       <div className="flex h-dvh w-full bg-background text-foreground">
-        <AppSidebar activeView={activeView} onSelect={setActiveView} />
+        <AppSidebar activeView={activeView} locale={languageMode} onSelect={setActiveView} />
         <SidebarInset className="flex min-w-0 flex-col overflow-hidden">
           <header className="flex min-h-14 shrink-0 items-center gap-3 border-b bg-background px-4 py-2">
             <SidebarTrigger className="md:hidden" />
             <div className="min-w-0 flex-1">
-              <h1 className="truncate text-base font-semibold">{activeNavItem.title}</h1>
+              <h1 className="truncate text-base font-semibold">{text.nav[activeNavItem.id]}</h1>
               {isComponentView ? (
                 <div className="flex max-w-full flex-wrap items-center gap-x-2 gap-y-1 overflow-hidden text-xs text-muted-foreground">
                   <span>{shadcnDocsSource.repository}</span>
@@ -305,20 +518,21 @@ function App(): React.JSX.Element {
                     rel="noreferrer"
                     target="_blank"
                   >
-                    官方页面
+                    {text.header.officialPage}
                     <ExternalLink className="size-3" />
                   </a>
                   <ShadcnSourceDialog
+                    locale={languageMode}
                     selectedPath={mirroredShadcnDocs[selectedComponentSlug]?.sourcePath}
                   />
                 </div>
               ) : isFoundationView ? (
                 <p className="truncate text-xs text-muted-foreground">
-                  颜色、字体、字号、间距与基础界面节奏
+                  {text.header.foundationDescription}
                 </p>
               ) : (
                 <p className="truncate text-xs text-muted-foreground">
-                  本地收藏、整理状态和转换准备区的工作台框架
+                  {text.header.libraryDescription}
                 </p>
               )}
             </div>
@@ -327,50 +541,91 @@ function App(): React.JSX.Element {
                 <Search className="size-4 text-muted-foreground" />
                 {isComponentView ? (
                   <Input
-                    aria-label="搜索设计组件"
+                    aria-label={text.header.searchComponents}
                     className="h-9 border-0 px-0 shadow-none focus-visible:ring-0"
                     onChange={(event) => setComponentSearch(event.target.value)}
-                    placeholder="搜索组件名或 slug"
+                    placeholder={text.header.searchComponents}
                     value={componentSearch}
                   />
                 ) : (
                   <Input
-                    aria-label="搜索漫画"
+                    aria-label={text.header.searchComics}
                     className="h-9 border-0 px-0 shadow-none focus-visible:ring-0"
-                    placeholder="搜索标题、作者或格式"
+                    placeholder={text.header.searchComics}
                   />
                 )}
               </div>
             ) : null}
-            <Button
-              aria-label={themeMode === 'dark' ? '切换到浅色模式' : '切换到深色模式'}
-              onClick={() => setThemeMode((current) => (current === 'dark' ? 'light' : 'dark'))}
-              size="icon-sm"
-              title="深浅模式"
-              variant="outline"
-            >
-              {themeMode === 'dark' ? <Sun /> : <Moon />}
-              <span className="sr-only">深浅模式</span>
-            </Button>
-            {isComponentView ? (
-              <a
-                className="hidden h-8 shrink-0 items-center justify-center gap-1.5 rounded-md border bg-background px-3 text-sm font-medium whitespace-nowrap shadow-xs transition-all hover:bg-accent hover:text-accent-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 sm:inline-flex"
-                href="https://ui.shadcn.com/docs/components"
-                rel="noreferrer"
-                target="_blank"
-              >
-                <ExternalLink className="size-4" />
-                官方文档
-              </a>
-            ) : isFoundationView ? null : (
+            <TooltipProvider>
+              <div className="flex shrink-0 items-center gap-2">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      aria-label={
+                        themeMode === 'dark' ? text.header.switchToLight : text.header.switchToDark
+                      }
+                      className="size-10"
+                      onClick={() =>
+                        setThemeMode((current) => (current === 'dark' ? 'light' : 'dark'))
+                      }
+                      size="icon"
+                      variant="outline"
+                    >
+                      {themeMode === 'dark' ? <Sun /> : <Moon />}
+                      <span className="sr-only">{text.header.themeTitle}</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" sideOffset={8}>
+                    {text.header.themeTitle}
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      aria-label={text.header.switchLanguage}
+                      className="size-10 text-xs"
+                      onClick={() => setLanguageMode((current) => (current === 'zh' ? 'en' : 'zh'))}
+                      size="icon"
+                      variant="outline"
+                    >
+                      {languageMode === 'zh' ? '中' : 'EN'}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" sideOffset={8}>
+                    {text.header.languageTitle}
+                  </TooltipContent>
+                </Tooltip>
+
+                {isComponentView ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <a
+                        aria-label={text.header.officialDocs}
+                        className="hidden size-10 shrink-0 items-center justify-center rounded-md border bg-background text-sm font-medium whitespace-nowrap shadow-xs transition-all hover:bg-accent hover:text-accent-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none sm:inline-flex"
+                        href="https://ui.shadcn.com/docs/components"
+                        rel="noreferrer"
+                        target="_blank"
+                      >
+                        <ExternalLink className="size-4" />
+                      </a>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" sideOffset={8}>
+                      {text.header.officialDocs}
+                    </TooltipContent>
+                  </Tooltip>
+                ) : null}
+              </div>
+            </TooltipProvider>
+            {isComponentView || isFoundationView ? null : (
               <>
                 <Button variant="outline" size="sm">
                   <SlidersHorizontal />
-                  筛选
+                  {text.header.filter}
                 </Button>
                 <Button size="sm">
                   <Plus />
-                  添加
+                  {text.header.add}
                 </Button>
               </>
             )}
@@ -382,14 +637,15 @@ function App(): React.JSX.Element {
               onSelect={setSelectedComponentSlug}
               query={componentSearch}
               selectedSlug={selectedComponentSlug}
+              locale={languageMode}
             />
           ) : isFoundationView ? (
             <ScrollArea className="min-h-0 flex-1">
-              <FoundationStandardsView />
+              <FoundationStandardsView locale={languageMode} />
             </ScrollArea>
           ) : (
             <ScrollArea className="min-h-0 flex-1">
-              <LibraryView />
+              <LibraryView locale={languageMode} />
             </ScrollArea>
           )}
         </SidebarInset>
@@ -398,7 +654,9 @@ function App(): React.JSX.Element {
   )
 }
 
-function LibraryView(): React.JSX.Element {
+function LibraryView({ locale }: { locale: LanguageMode }): React.JSX.Element {
+  const text = uiText[locale]
+
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-col gap-5 p-4 lg:p-6">
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -425,14 +683,14 @@ function LibraryView(): React.JSX.Element {
         <Card className="min-w-0 gap-0 rounded-lg py-0 shadow-none">
           <CardHeader className="border-b px-4 py-4">
             <div className="min-w-0">
-              <CardTitle className="text-base">本地漫画</CardTitle>
-              <CardDescription>第一版只展示库视图、整理状态和占位操作。</CardDescription>
+              <CardTitle className="text-base">{text.library.localComics}</CardTitle>
+              <CardDescription>{text.library.localComicsDescription}</CardDescription>
             </div>
             <CardAction className="hidden items-center gap-1 sm:flex">
-              <Button variant="ghost" size="icon-sm" aria-label="网格视图">
+              <Button variant="ghost" size="icon-sm" aria-label={text.library.gridView}>
                 <Grid2X2 />
               </Button>
-              <Button variant="secondary" size="icon-sm" aria-label="列表视图">
+              <Button variant="secondary" size="icon-sm" aria-label={text.library.listView}>
                 <List />
               </Button>
             </CardAction>
@@ -441,9 +699,9 @@ function LibraryView(): React.JSX.Element {
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <Tabs defaultValue="all" className="min-w-0">
                 <TabsList className="w-full sm:w-fit">
-                  <TabsTrigger value="all">全部</TabsTrigger>
-                  <TabsTrigger value="recent">新导入</TabsTrigger>
-                  <TabsTrigger value="todo">待整理</TabsTrigger>
+                  <TabsTrigger value="all">{text.library.all}</TabsTrigger>
+                  <TabsTrigger value="recent">{text.library.recent}</TabsTrigger>
+                  <TabsTrigger value="todo">{text.library.todo}</TabsTrigger>
                   <TabsTrigger value="kindle">Kindle</TabsTrigger>
                 </TabsList>
               </Tabs>
@@ -451,9 +709,9 @@ function LibraryView(): React.JSX.Element {
                 <div className="flex min-w-0 flex-1 items-center gap-2 rounded-md border px-3">
                   <Search className="size-4 shrink-0 text-muted-foreground" />
                   <Input
-                    aria-label="移动端搜索漫画"
+                    aria-label={text.library.mobileSearch}
                     className="h-9 border-0 px-0 shadow-none focus-visible:ring-0"
-                    placeholder="搜索漫画"
+                    placeholder={text.library.mobileSearch}
                   />
                 </div>
               </div>
@@ -463,11 +721,13 @@ function LibraryView(): React.JSX.Element {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/40 hover:bg-muted/40">
-                    <TableHead className="w-[42%] px-4">标题</TableHead>
-                    <TableHead>格式</TableHead>
-                    <TableHead className="hidden md:table-cell">页数</TableHead>
-                    <TableHead>状态</TableHead>
-                    <TableHead className="hidden text-right md:table-cell">更新</TableHead>
+                    <TableHead className="w-[42%] px-4">{text.library.title}</TableHead>
+                    <TableHead>{text.library.format}</TableHead>
+                    <TableHead className="hidden md:table-cell">{text.library.pages}</TableHead>
+                    <TableHead>{text.library.status}</TableHead>
+                    <TableHead className="hidden text-right md:table-cell">
+                      {text.library.updated}
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -488,7 +748,7 @@ function LibraryView(): React.JSX.Element {
                       </TableCell>
                       <TableCell className="hidden md:table-cell">{comic.pages}</TableCell>
                       <TableCell>
-                        <StatusLabel status={comic.status} />
+                        <StatusLabel locale={locale} status={comic.status} />
                       </TableCell>
                       <TableCell className="hidden text-right text-muted-foreground md:table-cell">
                         {comic.updatedAt}
@@ -507,15 +767,17 @@ function LibraryView(): React.JSX.Element {
   )
 }
 
-function FoundationStandardsView(): React.JSX.Element {
+function FoundationStandardsView({ locale }: { locale: LanguageMode }): React.JSX.Element {
+  const text = uiText[locale]
+
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 p-4 lg:p-6">
       <header className="border-b pb-5">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
-            <h2 className="text-2xl font-semibold">基础规范</h2>
+            <h2 className="text-2xl font-semibold">{text.foundation.title}</h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
-              本页沉淀当前 renderer 的基础设计 token 和界面节奏，开发阶段用于快速选取颜色、字体、字号和间距。
+              {text.foundation.description}
             </p>
           </div>
           <div className="flex shrink-0 flex-wrap gap-2 text-xs text-muted-foreground">
@@ -529,39 +791,39 @@ function FoundationStandardsView(): React.JSX.Element {
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <FoundationSummaryCard
           icon={Palette}
-          label="颜色"
-          value={`${designTokens.colors.length} 个 token`}
-          note="使用语义 token，不直接散落硬编码色值。"
+          label={text.foundation.colors}
+          value={text.foundation.tokenCount(designTokens.colors.length)}
+          note={text.foundation.colorsNote}
         />
         <FoundationSummaryCard
           icon={Type}
-          label="字体"
+          label={text.foundation.font}
           value={designTokens.font.name}
-          note="优先系统可读性，保持工作台界面克制。"
+          note={text.foundation.fontNote}
         />
         <FoundationSummaryCard
           icon={Rows3}
-          label="字号"
-          value={`${designTokens.typeScale.length} 个层级`}
-          note="内容面板避免使用超大展示字。"
+          label={text.foundation.typeScale}
+          value={text.foundation.levelCount(designTokens.typeScale.length)}
+          note={text.foundation.typeScaleNote}
         />
         <FoundationSummaryCard
           icon={Ruler}
-          label="间距"
+          label={text.foundation.spacing}
           value={`${designTokens.spacing[0].value} 基线`}
-          note="以 Tailwind spacing scale 组织密度。"
+          note={text.foundation.spacingNote}
         />
         <FoundationSummaryCard
           icon={Ruler}
-          label="圆角"
+          label={text.foundation.radius}
           value="0.5rem 基准"
-          note="沿用 shadcn radius token。"
+          note={text.foundation.radiusNote}
         />
         <FoundationSummaryCard
           icon={Grid2X2}
-          label="布局"
-          value={`${designTokens.layout.length} 条规则`}
-          note="页面边距、最大宽度和关键分栏。"
+          label={text.foundation.layout}
+          value={text.foundation.ruleCount(designTokens.layout.length)}
+          note={text.foundation.layoutNote}
         />
       </section>
 
@@ -803,15 +1065,18 @@ function SectionHeading({
 
 function DesignComponentsView({
   components,
+  locale,
   onSelect,
   query,
   selectedSlug
 }: {
   components: ShadcnComponent[]
+  locale: LanguageMode
   onSelect: (slug: string) => void
   query: string
   selectedSlug: string
 }): React.JSX.Element {
+  const text = uiText[locale]
   const selectedComponent =
     shadcnComponents.find((item) => item.slug === selectedSlug) ?? shadcnComponents[0]
   const selectedDoc = mirroredShadcnDocs[selectedComponent.slug]
@@ -824,7 +1089,7 @@ function DesignComponentsView({
             <div className="min-w-0">
               <div className="truncate text-sm font-medium">Components</div>
               <div className="text-xs text-muted-foreground">
-                {components.length} / {shadcnComponents.length} 个组件
+                {components.length} / {shadcnComponents.length} {text.components.countSuffix}
               </div>
             </div>
           </div>
@@ -857,7 +1122,7 @@ function DesignComponentsView({
         {components.length === 0 ? (
           <Card className="mt-3 rounded-lg py-6 text-center shadow-none">
             <CardContent className="text-sm text-muted-foreground">
-              没有找到匹配 “{query}” 的组件。
+              {text.components.noMatches(query)}
             </CardContent>
           </Card>
         ) : null}
@@ -868,7 +1133,7 @@ function DesignComponentsView({
           <CardHeader className="border-b px-4 py-4">
             <CardTitle className="text-base">Components</CardTitle>
             <CardDescription>
-              {components.length} / {shadcnComponents.length} 个组件
+              {components.length} / {shadcnComponents.length} {text.components.countSuffix}
             </CardDescription>
           </CardHeader>
           <CardContent className="min-h-0 flex-1 overflow-auto p-2">
@@ -890,8 +1155,8 @@ function DesignComponentsView({
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-medium">{item.name}</span>
                       <span className="block truncate text-xs text-muted-foreground">
-                        {mirrored ? '已镜像' : '待镜像'}
-                        {installed ? ' · 已安装' : ''}
+                        {mirrored ? text.components.mirrored : text.components.pendingMirror}
+                        {installed ? ` · ${text.components.installed}` : ''}
                       </span>
                     </span>
                     {mirrored ? (
@@ -907,7 +1172,7 @@ function DesignComponentsView({
         {components.length === 0 ? (
           <Card className="mt-3 rounded-lg py-6 text-center shadow-none">
             <CardContent className="text-sm text-muted-foreground">
-              没有找到匹配 “{query}” 的组件。
+              {text.components.noMatches(query)}
             </CardContent>
           </Card>
         ) : null}
@@ -924,10 +1189,12 @@ function DesignComponentsView({
                 </div>
                 <div className="flex shrink-0 flex-wrap gap-2">
                   <span className="rounded-md border bg-muted/40 px-2 py-1 text-xs text-muted-foreground">
-                    {installedShadcnComponentSlugs.has(selectedDoc.slug) ? '已安装' : '未安装'}
+                    {installedShadcnComponentSlugs.has(selectedDoc.slug)
+                      ? text.components.installed
+                      : text.components.notInstalled}
                   </span>
                   <span className="rounded-md border bg-muted/40 px-2 py-1 text-xs text-muted-foreground">
-                    已镜像
+                    {text.components.mirrored}
                   </span>
                 </div>
               </div>
@@ -938,7 +1205,11 @@ function DesignComponentsView({
                   <h2 className="text-lg font-semibold">{section.title}</h2>
                   <div className="space-y-3">
                     {section.blocks.map((block, index) => (
-                      <ShadcnDocBlockView block={block} key={`${section.title}-${index}`} />
+                      <ShadcnDocBlockView
+                        block={block}
+                        key={`${section.title}-${index}`}
+                        locale={locale}
+                      />
                     ))}
                   </div>
                 </section>
@@ -952,7 +1223,7 @@ function DesignComponentsView({
                 <div className="min-w-0">
                   <h2 className="text-2xl font-semibold">{selectedComponent.name}</h2>
                   <p className="mt-2 text-sm text-muted-foreground">
-                    这个组件还没有导入本地镜像数据。
+                    {text.components.notMirrored}
                   </p>
                 </div>
               </div>
@@ -968,7 +1239,7 @@ function DesignComponentsView({
                 target="_blank"
               >
                 <ExternalLink className="size-4" />
-                打开官方文档
+                {text.components.openOfficialDocs}
               </a>
             </div>
           </div>
@@ -978,7 +1249,15 @@ function DesignComponentsView({
   )
 }
 
-function ShadcnSourceDialog({ selectedPath }: { selectedPath?: string }): React.JSX.Element {
+function ShadcnSourceDialog({
+  locale,
+  selectedPath
+}: {
+  locale: LanguageMode
+  selectedPath?: string
+}): React.JSX.Element {
+  const text = uiText[locale]
+
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -987,17 +1266,17 @@ function ShadcnSourceDialog({ selectedPath }: { selectedPath?: string }): React.
           type="button"
         >
           <Info className="size-3" />
-          来源详情
+          {text.header.sourceDetails}
         </button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>本地镜像</DialogTitle>
-          <DialogDescription>当前本地文档镜像使用的官方源码信息。</DialogDescription>
+          <DialogTitle>{text.source.localMirror}</DialogTitle>
+          <DialogDescription>{text.source.description}</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 text-sm">
           <div className="space-y-1">
-            <div className="font-medium">来源仓库</div>
+            <div className="font-medium">{text.source.repository}</div>
             <div className="text-muted-foreground">{shadcnDocsSource.repository}</div>
           </div>
           <div className="space-y-1">
@@ -1010,7 +1289,7 @@ function ShadcnSourceDialog({ selectedPath }: { selectedPath?: string }): React.
           </div>
           {selectedPath ? (
             <div className="space-y-1">
-              <div className="font-medium">当前页面源文件</div>
+              <div className="font-medium">{text.source.currentSource}</div>
               <div className="break-all text-muted-foreground">{selectedPath}</div>
             </div>
           ) : null}
@@ -1024,7 +1303,14 @@ function ShadcnSourceDialog({ selectedPath }: { selectedPath?: string }): React.
   )
 }
 
-function ShadcnDocBlockView({ block }: { block: ShadcnDocBlock }): React.JSX.Element {
+function ShadcnDocBlockView({
+  block,
+  locale
+}: {
+  block: ShadcnDocBlock
+  locale: LanguageMode
+}): React.JSX.Element {
+  const text = uiText[locale]
   const [copiedPreviewName, setCopiedPreviewName] = useState<string | null>(null)
 
   async function handleCopyPreviewName(name: string): Promise<void> {
@@ -1080,13 +1366,17 @@ function ShadcnDocBlockView({ block }: { block: ShadcnDocBlock }): React.JSX.Ele
             ) : null}
           </div>
           <Button
-            aria-label={isCopied ? '已复制示例名称' : `复制 ${block.name}`}
+            aria-label={
+              isCopied
+                ? text.components.copiedPreviewName
+                : text.components.copyPreviewName(block.name)
+            }
             className={`shrink-0 text-muted-foreground transition-opacity hover:text-foreground ${
               isCopied ? 'opacity-100' : 'opacity-40 group-hover:opacity-100'
             } ${previewHeader.description ? 'mt-0.5' : ''}`}
             onClick={() => handleCopyPreviewName(block.name)}
             size="icon-xs"
-            title={isCopied ? '已复制' : `复制 ${block.name}`}
+            title={isCopied ? text.components.copied : text.components.copyPreviewName(block.name)}
             type="button"
             variant="ghost"
           >
@@ -1736,11 +2026,15 @@ function TablePreview({
 
 function AppSidebar({
   activeView,
+  locale,
   onSelect
 }: {
   activeView: ViewId
+  locale: LanguageMode
   onSelect: (view: ViewId) => void
 }): React.JSX.Element {
+  const text = uiText[locale]
+
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b">
@@ -1752,7 +2046,9 @@ function AppSidebar({
               </div>
               <div className="min-w-0">
                 <div className="truncate text-sm font-semibold">ComicToKindle</div>
-                <div className="truncate text-xs text-sidebar-foreground/60">本地漫画工作台</div>
+                <div className="truncate text-xs text-sidebar-foreground/60">
+                  {text.sidebar.tagline}
+                </div>
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -1761,18 +2057,18 @@ function AppSidebar({
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>工作区</SidebarGroupLabel>
+          <SidebarGroupLabel>{text.sidebar.workspace}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {primaryNav.map((item) => (
-                <SidebarMenuItem key={item.title}>
+                <SidebarMenuItem key={item.id}>
                   <SidebarMenuButton
                     isActive={item.id === activeView}
                     onClick={() => onSelect(item.id)}
-                    tooltip={item.title}
+                    tooltip={text.nav[item.id]}
                   >
                     <item.icon />
-                    <span>{item.title}</span>
+                    <span>{text.nav[item.id]}</span>
                   </SidebarMenuButton>
                   {item.badge ? <SidebarMenuBadge>{item.badge}</SidebarMenuBadge> : null}
                 </SidebarMenuItem>
@@ -1784,10 +2080,10 @@ function AppSidebar({
         <SidebarSeparator />
 
         <SidebarGroup>
-          <SidebarGroupLabel>库目录</SidebarGroupLabel>
+          <SidebarGroupLabel>{text.sidebar.folders}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {folders.map((folder) => (
+              {text.sidebar.folderNames.map((folder) => (
                 <SidebarMenuItem key={folder}>
                   <SidebarMenuButton tooltip={folder}>
                     <FolderOpen />
@@ -1803,9 +2099,9 @@ function AppSidebar({
       <SidebarFooter className="border-t">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton tooltip="设置">
+            <SidebarMenuButton tooltip={text.sidebar.settings}>
               <Settings />
-              <span>设置</span>
+              <span>{text.sidebar.settings}</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
@@ -1815,7 +2111,14 @@ function AppSidebar({
   )
 }
 
-function StatusLabel({ status }: { status: string }): React.JSX.Element {
+function StatusLabel({
+  locale,
+  status
+}: {
+  locale: LanguageMode
+  status: keyof (typeof uiText)['zh']['sidebar']['statuses']
+}): React.JSX.Element {
+  const text = uiText[locale]
   const tone =
     status === '已入库'
       ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300'
@@ -1823,7 +2126,11 @@ function StatusLabel({ status }: { status: string }): React.JSX.Element {
         ? 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900/60 dark:bg-sky-950/40 dark:text-sky-300'
         : 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-300'
 
-  return <span className={`rounded-md border px-2 py-1 text-xs ${tone}`}>{status}</span>
+  return (
+    <span className={`rounded-md border px-2 py-1 text-xs ${tone}`}>
+      {text.sidebar.statuses[status]}
+    </span>
+  )
 }
 
 export default App
