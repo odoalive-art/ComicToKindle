@@ -1,57 +1,57 @@
 # ComicToKindle
 
-ComicToKindle is an Electron desktop app foundation for a local comic library, Kindle-oriented conversion workflow, and delivery tooling.
+ComicToKindle 是一个 Electron 桌面应用基础项目，用于后续实现本地漫画库、面向 Kindle 的转换流程和投递工具。
 
-The project currently contains the runnable application shell and UI system setup. The product workflows for comic scanning, image processing, EPUB generation, and Kindle delivery are not implemented yet.
+当前项目包含可运行的应用壳、漫画库占位工作区，以及开发期用于搭建界面的设计辅助工作区。漫画扫描、图像处理、EPUB 生成和 Kindle 投递等产品工作流尚未实现。
 
-## Stack
+## 技术栈
 
 - Electron 39
 - electron-vite 5
 - React 19
 - TypeScript 5
 - Tailwind CSS 4
-- shadcn/ui 4 with Radix primitives and Lucide icons
-- electron-builder for packaging
+- shadcn/ui 4、Radix primitives、Lucide icons
+- electron-builder 打包
 
-## Requirements
+## 环境要求
 
-- Node.js 22 or newer
-- npm 10 or newer
-- macOS, Windows, or Linux for development targets supported by Electron
+- Node.js 22 或更新版本
+- npm 10 或更新版本
+- macOS、Windows 或 Linux，需满足 Electron 支持的开发目标
 
-Keep the repository in a local filesystem path such as:
+仓库应放在本地文件系统路径，例如：
 
 ```bash
-/Users/linweiqiang/Dev/ComicToKindle
+/Users/linweiqiang/Desktop/ComicToKindle
 ```
 
-Do not work from iCloud Drive or another synced provider path. On 2026-06-11, running Node toolchain binaries from the iCloud path caused `esbuild` and `.bin` shims to hang.
+不要从 iCloud Drive 或其他同步盘路径开发。2026-06-11 曾在 iCloud 路径下遇到 `esbuild` 和 `.bin` shim 执行卡住的问题。
 
-## Setup
+## 安装
 
 ```bash
 npm install
 ```
 
-## Development
+## 开发
 
 ```bash
 npm run dev
 ```
 
-This starts the Electron main process, preload script, and renderer dev server.
+该命令会启动 Electron main process、preload script 和 renderer dev server。
 
-## Verification
+## 验证
 
 ```bash
 npm run typecheck
 npm run build
 ```
 
-`npm run build` compiles the main process, preload script, and renderer into `out/`.
+`npm run build` 会编译 main、preload 和 renderer，并输出到 `out/`。
 
-## Packaging
+## 打包
 
 ```bash
 npm run build:mac
@@ -59,44 +59,48 @@ npm run build:win
 npm run build:linux
 ```
 
-Platform packages are produced by electron-builder. Cross-platform packaging may require running on the target OS or configuring the required platform toolchain.
+平台安装包由 electron-builder 生成。跨平台打包可能需要在目标系统运行，或提前配置对应平台工具链。
 
-## Project Layout
+## 项目结构
 
 ```txt
 src/main/                 Electron main process
-src/preload/              Preload bridge and exposed renderer types
-src/renderer/             React renderer app
-src/renderer/src/assets/  Tailwind and shadcn CSS tokens
+src/preload/              Preload bridge 和暴露给 renderer 的类型
+src/renderer/             React renderer 应用
+src/renderer/src/assets/  Tailwind 和 shadcn CSS token
 src/renderer/src/components/ui/
-                          shadcn/ui generated components
-docs/                     Architecture, runbook, and handoff notes
+                          shadcn/ui 生成组件
+src/renderer/src/data/    开发期本地数据，包括设计 token 和 shadcn 文档镜像数据
+docs/                     架构、运行手册和交接记录
 ```
 
 ## shadcn/ui
 
-The shadcn configuration lives in `components.json`.
+shadcn 配置位于 `components.json`。
 
-The configured aliases are:
+alias 配置：
 
 ```txt
-@/*         -> src/renderer/src/*
-@renderer/* -> src/renderer/src/*
+@/*          -> src/renderer/src/*
+@renderer/*  -> src/renderer/src/*
 ```
 
-Generated UI components should live under:
+生成的 UI 组件应放在：
 
 ```txt
 src/renderer/src/components/ui/
 ```
 
-The initial component set includes button, sidebar, card, table, dialog, tabs, progress, scroll-area, and sonner, plus sidebar dependencies.
+当前生成组件包括 button、card、dialog、input、progress、scroll-area、separator、sheet、sidebar、skeleton、sonner、table、tabs 和 tooltip。
 
-## Current Status
+## 当前状态
 
-As of 2026-06-11:
+截至 2026-06-11：
 
-- The Electron + Vite + React + TypeScript app builds successfully.
-- Tailwind CSS and shadcn/ui are configured.
-- The renderer still shows the default electron-vite placeholder screen.
-- No comic library, converter, image upscaling, EPUB generation, or Kindle delivery feature exists yet.
+- Electron + Vite + React + TypeScript 应用可以成功构建。
+- Tailwind CSS 和 shadcn/ui 已配置。
+- renderer 已有侧边栏应用壳和漫画库占位工作区。
+- 顶栏提供应用级深浅模式切换，切换会影响整个 renderer。
+- 开发期工作区包含 shadcn 组件选型页和基础规范页；基础规范页读取 `src/renderer/src/data/design-tokens.ts`。
+- shadcn 本地组件文档镜像目前包含完整组件索引，以及 Button、Dialog、Table 的本地文档内容。
+- 尚未实现真实漫画库、转换器、图像放大、EPUB 生成或 Kindle 投递功能。

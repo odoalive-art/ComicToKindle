@@ -1,58 +1,60 @@
-# Operator Runbook
+# 运行手册
 
-This runbook covers setup and verification for the current foundation stage.
+本文覆盖当前基础阶段的安装、开发和验证流程。
 
-## Repository Location
+## 仓库位置
 
-Use the local path:
+当前工作区路径：
 
 ```txt
-/Users/linweiqiang/Dev/ComicToKindle
+/Users/linweiqiang/Desktop/ComicToKindle
 ```
 
-Do not use the old iCloud Drive path. On 2026-06-11, the project was moved because `esbuild` and Node `.bin` shims hung when executed from the synced directory.
+不要使用旧 iCloud Drive 路径。2026-06-11 项目迁出同步盘路径，是因为 `esbuild` 和 Node `.bin` shim 在同步目录下执行卡住。
 
-## Install
+## 安装
 
 ```bash
 npm install
 ```
 
-If npm reports root-owned cache files under `~/.npm`, use a local cache for the install:
+如果 npm 报告 `~/.npm` 下存在 root-owned cache 文件，可以临时使用项目内缓存：
 
 ```bash
 npm_config_cache=.npm-cache npm install
 ```
 
-Keep `.npm-cache` untracked.
+保持 `.npm-cache` 不入库。
 
-## Development Smoke Test
+## 开发冒烟
 
 ```bash
 npm run dev
 ```
 
-Expected result:
+预期结果：
 
-- Electron main process builds.
-- Preload script builds.
-- Renderer dev server starts at `http://localhost:5173/`.
-- Electron window opens with the current placeholder UI.
+- Electron main process 构建成功。
+- preload script 构建成功。
+- renderer dev server 默认从 `http://localhost:5173/` 启动；如果端口被占用，Vite 会顺延到下一个端口。
+- Electron 窗口打开当前工作台 UI。
+- 侧边栏包含 `漫画库`、`设计组件`、`基础规范` 等工作区。
+- 顶栏深浅模式按钮可以切换整个 renderer 的主题。
 
-Stop the dev process with `Ctrl+C`.
+使用 `Ctrl+C` 停止 dev 进程。
 
-## Build Verification
+## 构建验证
 
 ```bash
 npm run build
 ```
 
-Expected result:
+预期结果：
 
-- TypeScript checks pass for node and web configs.
-- electron-vite builds `out/main`, `out/preload`, and `out/renderer`.
+- node 和 web TypeScript 检查通过。
+- electron-vite 构建 `out/main`、`out/preload` 和 `out/renderer`。
 
-## Packaging
+## 打包
 
 ```bash
 npm run build:mac
@@ -60,9 +62,9 @@ npm run build:win
 npm run build:linux
 ```
 
-These scripts run `npm run build` and then invoke electron-builder for the requested target.
+这些脚本会先运行 `npm run build`，再调用 electron-builder 生成目标平台产物。
 
-## Useful Checks
+## 常用检查
 
 ```bash
 npm run typecheck
@@ -71,16 +73,17 @@ npm run format
 git status --short
 ```
 
-`npm run lint` and `npm run format` are available from the scaffold. Run them before broader application work or before publishing a branch.
+`npm run build` 是当前 UI 系统和应用壳变更后的主验证命令。发布分支前可再运行 `npm run lint` 和 `npm run format`。
 
-## Environment Variables
+## 环境变量
 
-No application-specific environment variables exist yet.
+当前没有应用专属环境变量。
 
-If future work adds converter paths, Kindle email settings, Send to Kindle automation flags, or model locations, update this file and `AGENTS.md`.
+如果后续新增转换器路径、Kindle 邮箱设置、Send to Kindle 自动化开关或模型位置，需要同步更新本文和 `AGENTS.md`。
 
-## Known Tooling Notes
+## 已知工具链说明
 
-- Keep the repository outside iCloud Drive, Dropbox, or similar synced folders.
-- The shadcn CLI did not auto-detect this Electron Vite project as a standard Vite project. The project uses manual shadcn configuration through `components.json`.
-- `npm run build` is the current source of truth for verifying the setup.
+- 仓库应放在 iCloud Drive、Dropbox 等同步目录之外。
+- shadcn CLI 无法自动把该 Electron Vite 项目识别为标准 Vite app，因此项目通过 `components.json` 手动配置 shadcn。
+- `设计组件` 和 `基础规范` 是开发期提效页面，不代表已实现终端用户功能。
+- `npm run build` 是当前验证设置是否正确的事实来源。

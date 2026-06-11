@@ -7,7 +7,7 @@ ComicToKindle is a desktop app project for a local comic library, Kindle convers
 The active repository path is:
 
 ```txt
-/Users/linweiqiang/Dev/ComicToKindle
+/Users/linweiqiang/Desktop/ComicToKindle
 ```
 
 Do not use the old iCloud Drive path. The project was moved off iCloud Drive on 2026-06-11 because running Node toolchain binaries from the synced path caused `esbuild` and `.bin` shim hangs.
@@ -57,18 +57,54 @@ sidebar, skeleton, sonner, table, tabs, tooltip
 
 `src/renderer/src/hooks/use-mobile.ts` and `src/renderer/src/lib/utils.ts` are part of the shadcn setup.
 
-## Current Product Boundary
+## Renderer 工作区
 
-The app does not yet implement:
+`src/renderer/src/App.tsx` 当前提供侧边栏应用壳，包含这些工作区入口：
 
-- Local comic scanning or metadata storage
-- CBZ, CBR, image-folder, EPUB, or PDF conversion logic
-- Image enhancement or AI upscaling
-- Send to Kindle web embedding
-- Kindle email delivery
-- Task queue, persistence, or settings
+```txt
+漫画库
+设计组件
+基础规范
+导入收件箱
+转换队列
+投递记录
+归档
+```
 
-Avoid documenting these as existing features until code is added.
+当前只有 `漫画库`、`设计组件` 和 `基础规范` 有实际本地 UI。漫画库内容是占位数据，不是真实扫描器或持久化层。
+
+顶栏有应用级深浅模式切换按钮，会在 `document.documentElement` 上切换 `.dark` class，并把选择保存到 `localStorage` 的 `comic-to-kindle-theme`。
+
+`设计组件` 是开发期 shadcn/ui 组件本地镜像和选型入口。源数据位于：
+
+```txt
+src/renderer/src/data/shadcn-docs.ts
+```
+
+该镜像当前跟踪 shadcn Radix docs 路径，并有 Button、Dialog、Table 的本地文档内容；Button 预览已尽量贴近官方 Radix 页面。
+
+`基础规范` 是开发期设计参考页，覆盖当前 renderer UI 系统中的颜色 token、字体栈、字号层级和间距层级。它不应被当作终端用户功能。
+
+基础规范页的数据源位于：
+
+```txt
+src/renderer/src/data/design-tokens.ts
+```
+
+颜色主题的真实运行时 token 仍以 `src/renderer/src/assets/main.css` 中的 CSS variables 和 `@theme inline` 为准；`design-tokens.ts` 用于集中记录和渲染规范数据，不替代 Tailwind/shadcn 的语义类使用方式。
+
+## 当前产品边界
+
+应用尚未实现：
+
+- 本地漫画扫描或元数据存储
+- CBZ、CBR、图片文件夹、EPUB 或 PDF 转换逻辑
+- 图像增强或 AI 放大
+- Send to Kindle 网页嵌入
+- Kindle 邮箱投递
+- 任务队列、持久化或设置
+
+除非代码已经实现，否则不要把这些写成现有功能。
 
 ## Development Notes
 

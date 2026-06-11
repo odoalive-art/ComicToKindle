@@ -1,58 +1,73 @@
-# Handoff
+# 交接记录
 
-## Snapshot
+## 快照
 
-Date: 2026-06-11
+日期：2026-06-11
 
-ComicToKindle is at the desktop-app foundation stage. The technical base is ready for product UI and local workflow implementation.
+ComicToKindle 处于桌面应用基础阶段。技术底座已能运行和构建，renderer 已从默认占位屏变成侧边栏工作台。
 
-## Completed
+## 已完成
 
-- Initialized a git repository.
-- Created an Electron + Vite + React + TypeScript app.
-- Installed npm dependencies.
-- Added Tailwind CSS 4.
-- Added shadcn/ui manual configuration.
-- Added initial shadcn/ui components:
+- 初始化 Electron + Vite + React + TypeScript 应用。
+- 安装 npm 依赖。
+- 接入 Tailwind CSS 4。
+- 手动配置 shadcn/ui。
+- 生成基础 shadcn/ui 组件：
   - button
-  - sidebar
   - card
-  - table
   - dialog
-  - tabs
+  - input
   - progress
   - scroll-area
+  - separator
+  - sheet
+  - sidebar
+  - skeleton
   - sonner
-  - sidebar dependencies
-- Configured aliases:
+  - table
+  - tabs
+  - tooltip
+- 配置 alias：
   - `@/*`
   - `@renderer/*`
-- Moved the repository from iCloud Drive to `/Users/linweiqiang/Dev/ComicToKindle`.
-- Verified `npm run build`.
-- Verified `npm run dev` starts the Electron app, then stopped the dev process.
+- 搭建侧边栏应用壳。
+- 新增漫画库占位工作区，使用静态示例数据展示未来库视图。
+- 新增应用级深浅模式切换，影响整个 renderer 并持久化用户选择。
+- 新增开发期 `设计组件` 工作区：
+  - 包含 shadcn/ui 组件索引。
+  - 本地镜像 Button、Dialog、Table 文档。
+  - Button 示例已贴近官方 Radix 页面。
+- 新增开发期 `基础规范` 工作区：
+  - 颜色 token
+  - 字体栈
+  - 字号层级
+  - 间距层级
+- 新增 `src/renderer/src/data/design-tokens.ts`，让基础规范页读取统一的项目级规范数据源。
+- 验证 `npm run build` 通过。
 
-## Important Context
+## 重要上下文
 
-The repository should stay outside iCloud Drive. Toolchain binaries hung under the synced path during setup. The local path works normally.
+仓库应保持在本地非同步盘路径：
 
-The current renderer still shows the default electron-vite placeholder screen. shadcn/ui is installed and available, but the real app shell has not been built yet.
+```txt
+/Users/linweiqiang/Desktop/ComicToKindle
+```
 
-## Next Work
+旧 iCloud Drive 路径下曾出现 Node toolchain binary 卡住问题，不要把项目移回同步盘后继续开发。
 
-Recommended next steps:
+`设计组件` 和 `基础规范` 都是开发期提效页面，便于搭建 UI 时选择组件和 token。它们不是终端用户产品功能。
 
-1. Replace the placeholder renderer with the first app shell.
-2. Add `TooltipProvider` and any other root providers needed by shadcn sidebar and tooltip components.
-3. Define the first product navigation:
-   - Library
-   - Convert
-   - Delivery
-   - Tasks
-   - Settings
-4. Design the local data model before implementing comic scanning.
-5. Decide how image processing and EPUB conversion will be executed from Electron main or worker processes.
+真实产品能力仍未实现：本地扫描、元数据存储、转换流水线、图像处理、EPUB 生成、Kindle 投递和任务队列都还只是规划边界。
 
-## Verification Commands
+## 下一步建议
+
+1. 为导入、转换、投递和任务队列定义真实工作流。
+2. 设计本地数据模型，再实现漫画扫描。
+3. 明确转换流程由 Electron main、worker 还是独立服务模块执行。
+4. 将 `设计组件` 镜像能力抽成可复用模块，便于未来新应用复用。
+5. 在实现任何本地文件访问或凭据相关能力前，重新评估 Electron sandbox 和 IPC 边界。
+
+## 验证命令
 
 ```bash
 npm run typecheck
