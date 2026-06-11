@@ -101,7 +101,7 @@ alias 配置：
 src/renderer/src/components/ui/
 ```
 
-当前生成组件包括 button、card、dialog、input、progress、scroll-area、separator、sheet、sidebar、skeleton、sonner、table、tabs 和 tooltip。
+当前生成组件包括 accordion、button、card、dialog、input、progress、scroll-area、separator、sheet、sidebar、skeleton、sonner、table、tabs 和 tooltip。
 
 ## 当前状态
 
@@ -112,5 +112,5 @@ src/renderer/src/components/ui/
 - renderer 已有侧边栏应用壳和漫画库占位工作区。
 - 顶栏提供应用级深浅模式切换和中英切换，切换会影响整个 renderer。
 - 开发期工作区包含 shadcn 组件选型页和基础规范页；基础规范页读取 `src/renderer/src/data/design-tokens.ts`。
-- shadcn 本地组件文档镜像目前包含完整组件索引，以及 Button、Dialog、Table 的本地文档内容；这些镜像文档支持中文阅读和英文原文切换，复制示例名时仍复制英文源值。
+- shadcn 本地组件文档镜像目前包含完整组件索引，以及 Accordion、Button、Dialog、Sidebar、Table 的本地文档内容；这些镜像文档支持中文阅读和英文原文切换，复制示例名时仍复制英文源值。
 - 尚未实现真实漫画库、转换器、图像放大、EPUB 生成或 Kindle 投递功能。

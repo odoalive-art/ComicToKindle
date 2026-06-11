@@ -13,6 +13,7 @@ ComicToKindle 处于桌面应用基础阶段。技术底座已能运行和构建
 - 接入 Tailwind CSS 4。
 - 手动配置 shadcn/ui。
 - 生成基础 shadcn/ui 组件：
+  - accordion
   - button
   - card
   - dialog
@@ -36,9 +37,9 @@ ComicToKindle 处于桌面应用基础阶段。技术底座已能运行和构建
 - 新增顶栏中英切换，影响应用壳、开发期页面和 shadcn 镜像文档阅读语言，并持久化用户选择。
 - 新增开发期 `设计组件` 工作区：
   - 包含 shadcn/ui 组件索引。
-  - 本地镜像 Button、Dialog、Table 文档。
-  - Button 示例已贴近官方 Radix 页面。
-  - Button、Dialog、Table 文档支持中文阅读和英文原文切换。
+  - 本地镜像 Accordion、Button、Dialog、Sidebar、Table 文档。
+  - Accordion、Button、Sidebar 示例已贴近官方 Radix 页面。
+  - Accordion、Button、Dialog、Sidebar、Table 文档支持中文阅读和英文原文切换。
   - 示例复制按钮复制英文示例名，不复制中文标题。
 - 新增开发期 `基础规范` 工作区：
   - 颜色 token

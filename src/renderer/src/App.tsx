@@ -10,6 +10,7 @@ import {
   BookOpen,
   BookOpenCheck,
   CheckCircle2,
+  ChevronDown,
   CircleFadingArrowUp,
   Clock3,
   Component,
@@ -21,6 +22,7 @@ import {
   GitBranch,
   Grid2X2,
   HardDrive,
+  Home,
   Inbox,
   Library,
   List,
@@ -40,6 +42,12 @@ import {
   Type
 } from 'lucide-react'
 
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger
+} from '@/components/ui/accordion'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -65,6 +73,7 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
+  SidebarGroupAction,
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarHeader,
@@ -1536,6 +1545,14 @@ function ShadcnComponentPreview({
     return <TablePreview name={name} direction={direction} />
   }
 
+  if (name.startsWith('sidebar') || name.startsWith('Sidebar')) {
+    return <SidebarPreview name={name} direction={direction} />
+  }
+
+  if (name.startsWith('accordion')) {
+    return <AccordionPreview name={name} direction={direction} />
+  }
+
   return (
     <div className="flex min-h-24 items-center justify-center rounded-md border border-dashed bg-muted/30 text-sm text-muted-foreground">
       这个预览还没有本地实现：{name}
@@ -2042,6 +2059,732 @@ function TablePreview({
           ))}
         </TableBody>
       </Table>
+    </div>
+  )
+}
+
+function AccordionPreview({
+  direction,
+  name
+}: {
+  direction?: string
+  name: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+
+  const accordionItems = [
+    {
+      value: 'item-1',
+      trigger: 'Is it accessible?',
+      content: 'Yes. It adheres to the WAI-ARIA design pattern.'
+    },
+    {
+      value: 'item-2',
+      trigger: 'Is it styled?',
+      content:
+        'Yes. It comes with default styles that match the other components aesthetic.'
+    },
+    {
+      value: 'item-3',
+      trigger: 'Is it animated?',
+      content:
+        "Yes. It's animated by default, but you can disable it if you prefer."
+    }
+  ]
+
+  if (name === 'accordion-rtl') {
+    return (
+      <div dir="rtl">
+        <Accordion type="single" collapsible className="w-full">
+          <AccordionItem value="password">
+            <AccordionTrigger>
+              كيف يمكنني إعادة تعيين كلمة المرور؟
+            </AccordionTrigger>
+            <AccordionContent>
+              يمكنك إعادة تعيين كلمة المرور باستخدام خيار "نسيت كلمة المرور" في صفحة تسجيل الدخول.
+            </AccordionContent>
+          </AccordionItem>
+          <AccordionItem value="subscription">
+            <AccordionTrigger>
+              هل يمكنني تغيير خطة الاشتراك الخاصة بي؟
+            </AccordionTrigger>
+            <AccordionContent>
+              نعم، يمكنك تغيير خطتك في أي وقت من إعدادات الحساب.
+            </AccordionContent>
+          </AccordionItem>
+          <AccordionItem value="payment">
+            <AccordionTrigger>
+              ما هي طرق الدفع التي تقبلونها؟
+            </AccordionTrigger>
+            <AccordionContent>
+              نقبل بطاقات الائتمان الرئيسية و PayPal والتحويل المصرفي.
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+      </div>
+    )
+  }
+
+  if (name === 'accordion-multiple') {
+    return (
+      <div dir={dir}>
+        <Accordion type="multiple" className="w-full">
+          <AccordionItem value="notifications">
+            <AccordionTrigger>Notification Settings</AccordionTrigger>
+            <AccordionContent>
+              Manage how you receive notifications. You can enable email alerts
+              for updates or push notifications.
+            </AccordionContent>
+          </AccordionItem>
+          <AccordionItem value="privacy">
+            <AccordionTrigger>Privacy & Security</AccordionTrigger>
+            <AccordionContent>
+              Control your privacy settings and manage how your data is shared
+              and used across the platform.
+            </AccordionContent>
+          </AccordionItem>
+          <AccordionItem value="billing">
+            <AccordionTrigger>Billing & Subscription</AccordionTrigger>
+            <AccordionContent>
+              View and manage your billing information, payment methods, and
+              subscription details.
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+      </div>
+    )
+  }
+
+  if (name === 'accordion-disabled') {
+    return (
+      <div dir={dir}>
+        <Accordion type="single" collapsible className="w-full">
+          <AccordionItem value="history">
+            <AccordionTrigger>Can I access my account history?</AccordionTrigger>
+            <AccordionContent>
+              Yes, you can view your complete account history including past
+              transactions and activity logs from the dashboard.
+            </AccordionContent>
+          </AccordionItem>
+          <AccordionItem value="premium" disabled>
+            <AccordionTrigger>
+              Premium feature information
+            </AccordionTrigger>
+            <AccordionContent>
+              This feature requires a premium subscription. Upgrade your plan to
+              access advanced features and tools.
+            </AccordionContent>
+          </AccordionItem>
+          <AccordionItem value="email">
+            <AccordionTrigger>
+              How do I update my email address?
+            </AccordionTrigger>
+            <AccordionContent>
+              Go to your profile settings and click on the email field to change
+              it. A verification email will be sent to confirm.
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+      </div>
+    )
+  }
+
+  if (name === 'accordion-borders') {
+    return (
+      <div dir={dir}>
+        <Accordion
+          type="single"
+          collapsible
+          className="w-full rounded-md border"
+        >
+          <AccordionItem value="billing">
+            <AccordionTrigger className="px-4">
+              How does billing work?
+            </AccordionTrigger>
+            <AccordionContent className="px-4">
+              We offer monthly and annual subscription plans. Billing is charged
+              at the beginning of each cycle.
+            </AccordionContent>
+          </AccordionItem>
+          <AccordionItem value="security">
+            <AccordionTrigger className="px-4">
+              Is my data secure?
+            </AccordionTrigger>
+            <AccordionContent className="px-4">
+              Your data is encrypted both in transit and at rest. We follow
+              industry best practices to keep your information safe.
+            </AccordionContent>
+          </AccordionItem>
+          <AccordionItem value="integrations">
+            <AccordionTrigger className="px-4">
+              What integrations do you support?
+            </AccordionTrigger>
+            <AccordionContent className="px-4">
+              We support integrations with popular tools like Slack, GitHub,
+              Jira, and many more through our API.
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+      </div>
+    )
+  }
+
+  if (name === 'accordion-card') {
+    return (
+      <div dir={dir}>
+        <Card className="w-full">
+          <CardHeader>
+            <CardTitle>Subscription & Billing</CardTitle>
+            <CardDescription>
+              Common questions about your account, plans, payments and
+              cancellations.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Accordion type="single" collapsible className="w-full">
+              <AccordionItem value="plans">
+                <AccordionTrigger>
+                  What subscription plans do you offer?
+                </AccordionTrigger>
+                <AccordionContent>
+                  We offer three tiers: Starter ($9/mo), Professional ($29/mo),
+                  and Enterprise ($99/mo). Each tier includes different features
+                  and support levels.
+                </AccordionContent>
+              </AccordionItem>
+              <AccordionItem value="billing-card">
+                <AccordionTrigger>How does billing work?</AccordionTrigger>
+                <AccordionContent>
+                  Billing is charged at the beginning of each billing cycle. You
+                  can upgrade or downgrade your plan at any time.
+                </AccordionContent>
+              </AccordionItem>
+              <AccordionItem value="cancel">
+                <AccordionTrigger>
+                  How do I cancel my subscription?
+                </AccordionTrigger>
+                <AccordionContent>
+                  You can cancel your subscription anytime from your account
+                  settings. Your access will continue until the end of the
+                  current billing period.
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // accordion-basic and accordion-demo (default)
+  return (
+    <div dir={dir}>
+      <Accordion type="single" collapsible defaultValue="item-1" className="w-full">
+        {accordionItems.map((item) => (
+          <AccordionItem key={item.value} value={item.value}>
+            <AccordionTrigger>{item.trigger}</AccordionTrigger>
+            <AccordionContent>{item.content}</AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
+    </div>
+  )
+}
+
+function SidebarPreview({
+  direction,
+  name
+}: {
+  direction?: string
+  name: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+
+  const navItems = [
+    { icon: Home, label: 'Home', active: true },
+    { icon: Inbox, label: 'Inbox', badge: '6' },
+    { icon: Search, label: 'Search' },
+    { icon: Settings, label: 'Settings' }
+  ]
+
+  const projects = [
+    { icon: FileText, label: 'Design System' },
+    { icon: Component, label: 'Components' },
+    { icon: Palette, label: 'Brand Assets' }
+  ]
+
+  if (name === 'sidebar-rtl') {
+    return (
+      <div dir="rtl" className="h-[400px] overflow-hidden rounded-md border">
+        <SidebarProvider className="!min-h-0 h-full" defaultOpen>
+          <Sidebar side="right" className="absolute inset-y-0 right-0">
+            <SidebarHeader>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton size="lg">
+                    <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                      <Component className="size-4" />
+                    </div>
+                    <div className="flex flex-col gap-0.5 leading-none">
+                      <span className="font-semibold">لوحة التحكم</span>
+                      <span className="text-xs text-muted-foreground">الإصدار 2.0</span>
+                    </div>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarHeader>
+            <SidebarContent>
+              <SidebarGroup>
+                <SidebarGroupLabel>التنقل الرئيسي</SidebarGroupLabel>
+                <SidebarMenu>
+                  {[
+                    { icon: Home, label: 'الرئيسية', active: true },
+                    { icon: Inbox, label: 'صندوق الوارد', badge: '٦' },
+                    { icon: Search, label: 'بحث' },
+                    { icon: Settings, label: 'الإعدادات' }
+                  ].map((item) => (
+                    <SidebarMenuItem key={item.label}>
+                      <SidebarMenuButton isActive={item.active} tooltip={item.label}>
+                        {item.icon && <item.icon />}
+                        <span>{item.label}</span>
+                      </SidebarMenuButton>
+                      {item.badge && (
+                        <SidebarMenuBadge>{item.badge}</SidebarMenuBadge>
+                      )}
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroup>
+            </SidebarContent>
+            <SidebarFooter>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton tooltip="المستخدم">
+                    <BadgeCheck className="size-4" />
+                    <span>مستخدم الضيف</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarFooter>
+            <SidebarRail />
+          </Sidebar>
+        </SidebarProvider>
+      </div>
+    )
+  }
+
+  if (name === 'sidebar-floating') {
+    return (
+      <div dir={dir} className="relative h-[400px] overflow-hidden rounded-md border bg-sidebar">
+        <SidebarProvider className="!min-h-0 h-full" defaultOpen>
+          <Sidebar variant="floating" collapsible="none">
+            <SidebarHeader>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton size="lg">
+                    <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                      <Component className="size-4" />
+                    </div>
+                    <div className="flex flex-col gap-0.5 leading-none">
+                      <span className="font-semibold">Floating</span>
+                      <span className="text-xs text-muted-foreground">v2.0</span>
+                    </div>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarHeader>
+            <SidebarContent>
+              <SidebarGroup>
+                <SidebarGroupLabel>Platform</SidebarGroupLabel>
+                <SidebarMenu>
+                  {navItems.map((item) => (
+                    <SidebarMenuItem key={item.label}>
+                      <SidebarMenuButton isActive={item.active} tooltip={item.label}>
+                        {item.icon && <item.icon />}
+                        <span>{item.label}</span>
+                      </SidebarMenuButton>
+                      {item.badge && <SidebarMenuBadge>{item.badge}</SidebarMenuBadge>}
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroup>
+            </SidebarContent>
+          </Sidebar>
+        </SidebarProvider>
+      </div>
+    )
+  }
+
+  if (name === 'sidebar-inset') {
+    return (
+      <div dir={dir} className="h-[400px] overflow-hidden rounded-md border">
+        <SidebarProvider className="!min-h-0 h-full" defaultOpen>
+          <Sidebar variant="inset" collapsible="none">
+            <SidebarHeader>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton size="lg">
+                    <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                      <Component className="size-4" />
+                    </div>
+                    <div className="flex flex-col gap-0.5 leading-none">
+                      <span className="font-semibold">Inset</span>
+                      <span className="text-xs text-muted-foreground">v2.0</span>
+                    </div>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarHeader>
+            <SidebarContent>
+              <SidebarGroup>
+                <SidebarGroupLabel>Platform</SidebarGroupLabel>
+                <SidebarMenu>
+                  {navItems.map((item) => (
+                    <SidebarMenuItem key={item.label}>
+                      <SidebarMenuButton isActive={item.active} tooltip={item.label}>
+                        {item.icon && <item.icon />}
+                        <span>{item.label}</span>
+                      </SidebarMenuButton>
+                      {item.badge && <SidebarMenuBadge>{item.badge}</SidebarMenuBadge>}
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroup>
+            </SidebarContent>
+            <SidebarFooter>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton tooltip="Account">
+                    <BadgeCheck className="size-4" />
+                    <span>Account</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarFooter>
+            <SidebarRail />
+          </Sidebar>
+          <SidebarInset className="p-4">
+            <h4 className="text-sm font-semibold">Main Content Area</h4>
+            <p className="text-xs text-muted-foreground mt-1">
+              This content is wrapped in SidebarInset and automatically adjusts to the sidebar width.
+            </p>
+          </SidebarInset>
+        </SidebarProvider>
+      </div>
+    )
+  }
+
+  if (name === 'sidebar-icon') {
+    return (
+      <div dir={dir} className="h-[400px] overflow-hidden rounded-md border">
+        <SidebarProvider className="!min-h-0 h-full" defaultOpen={false}>
+          <Sidebar collapsible="icon">
+            <SidebarHeader>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton size="lg">
+                    <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                      <Component className="size-4" />
+                    </div>
+                    <div className="flex flex-col gap-0.5 leading-none">
+                      <span className="font-semibold">Acme Inc</span>
+                      <span className="text-xs text-muted-foreground">Enterprise</span>
+                    </div>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarHeader>
+            <SidebarContent>
+              <SidebarGroup>
+                <SidebarGroupLabel>Platform</SidebarGroupLabel>
+                <SidebarMenu>
+                  {navItems.map((item) => (
+                    <SidebarMenuItem key={item.label}>
+                      <SidebarMenuButton isActive={item.active} tooltip={item.label}>
+                        {item.icon && <item.icon />}
+                        <span>{item.label}</span>
+                      </SidebarMenuButton>
+                      {item.badge && <SidebarMenuBadge>{item.badge}</SidebarMenuBadge>}
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroup>
+              <SidebarGroup>
+                <SidebarGroupLabel>Projects</SidebarGroupLabel>
+                <SidebarMenu>
+                  {projects.map((project) => (
+                    <SidebarMenuItem key={project.label}>
+                      <SidebarMenuButton tooltip={project.label}>
+                        {project.icon && <project.icon />}
+                        <span>{project.label}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroup>
+            </SidebarContent>
+            <SidebarFooter>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton tooltip="Account">
+                    <BadgeCheck className="size-4" />
+                    <span>Account</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarFooter>
+            <SidebarRail />
+          </Sidebar>
+        </SidebarProvider>
+      </div>
+    )
+  }
+
+  if (name === 'sidebar-header') {
+    return (
+      <div dir={dir} className="h-[400px] overflow-hidden rounded-md border">
+        <SidebarProvider className="!min-h-0 h-full" defaultOpen>
+          <Sidebar collapsible="none">
+            <SidebarHeader>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton size="lg">
+                    <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                      <Component className="size-4" />
+                    </div>
+                    <div className="flex flex-col gap-0.5 leading-none">
+                      <span className="font-semibold">Acme Inc</span>
+                      <span className="text-xs text-muted-foreground">Enterprise</span>
+                    </div>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+              <SidebarSeparator />
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton tooltip="Select Workspace">
+                    <span>Workspace</span>
+                    <ChevronDown className="ml-auto size-4" />
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarHeader>
+            <SidebarContent>
+              <SidebarGroup>
+                <SidebarGroupLabel>Platform</SidebarGroupLabel>
+                <SidebarMenu>
+                  {navItems.map((item) => (
+                    <SidebarMenuItem key={item.label}>
+                      <SidebarMenuButton isActive={item.active} tooltip={item.label}>
+                        {item.icon && <item.icon />}
+                        <span>{item.label}</span>
+                      </SidebarMenuButton>
+                      {item.badge && <SidebarMenuBadge>{item.badge}</SidebarMenuBadge>}
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroup>
+            </SidebarContent>
+          </Sidebar>
+        </SidebarProvider>
+      </div>
+    )
+  }
+
+  if (name === 'sidebar-footer') {
+    return (
+      <div dir={dir} className="h-[400px] overflow-hidden rounded-md border">
+        <SidebarProvider className="!min-h-0 h-full" defaultOpen>
+          <Sidebar collapsible="none">
+            <SidebarHeader>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton size="lg">
+                    <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                      <Component className="size-4" />
+                    </div>
+                    <div className="flex flex-col gap-0.5 leading-none">
+                      <span className="font-semibold">Acme Inc</span>
+                      <span className="text-xs text-muted-foreground">Enterprise</span>
+                    </div>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarHeader>
+            <SidebarContent>
+              <SidebarGroup>
+                <SidebarGroupLabel>Platform</SidebarGroupLabel>
+                <SidebarMenu>
+                  {navItems.map((item) => (
+                    <SidebarMenuItem key={item.label}>
+                      <SidebarMenuButton isActive={item.active} tooltip={item.label}>
+                        {item.icon && <item.icon />}
+                        <span>{item.label}</span>
+                      </SidebarMenuButton>
+                      {item.badge && <SidebarMenuBadge>{item.badge}</SidebarMenuBadge>}
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroup>
+            </SidebarContent>
+            <SidebarFooter>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton tooltip="Settings">
+                    <Settings className="size-4" />
+                    <span>Settings</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton tooltip="Account">
+                    <BadgeCheck className="size-4" />
+                    <span>john@acme.com</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarFooter>
+          </Sidebar>
+        </SidebarProvider>
+      </div>
+    )
+  }
+
+  if (name === 'sidebar-collapsible') {
+    return (
+      <div dir={dir} className="h-[400px] overflow-hidden rounded-md border">
+        <SidebarProvider className="!min-h-0 h-full" defaultOpen>
+          <Sidebar collapsible="none">
+            <SidebarHeader>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton size="lg">
+                    <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                      <Component className="size-4" />
+                    </div>
+                    <div className="flex flex-col gap-0.5 leading-none">
+                      <span className="font-semibold">Acme Inc</span>
+                      <span className="text-xs text-muted-foreground">Enterprise</span>
+                    </div>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarHeader>
+            <SidebarContent>
+              <SidebarGroup>
+                <SidebarGroupLabel>Platform</SidebarGroupLabel>
+                <SidebarMenu>
+                  {navItems.map((item) => (
+                    <SidebarMenuItem key={item.label}>
+                      <SidebarMenuButton isActive={item.active} tooltip={item.label}>
+                        {item.icon && <item.icon />}
+                        <span>{item.label}</span>
+                      </SidebarMenuButton>
+                      {item.badge && <SidebarMenuBadge>{item.badge}</SidebarMenuBadge>}
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroup>
+              <SidebarSeparator />
+              <SidebarGroup>
+                <SidebarGroupLabel>Projects</SidebarGroupLabel>
+                <SidebarGroupAction title="Add Project">
+                  <Plus className="size-4" />
+                  <span className="sr-only">Add Project</span>
+                </SidebarGroupAction>
+                <SidebarMenu>
+                  {projects.map((project) => (
+                    <SidebarMenuItem key={project.label}>
+                      <SidebarMenuButton tooltip={project.label}>
+                        {project.icon && <project.icon />}
+                        <span>{project.label}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroup>
+            </SidebarContent>
+            <SidebarFooter>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton tooltip="Account">
+                    <BadgeCheck className="size-4" />
+                    <span>Account</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarFooter>
+            <SidebarRail />
+          </Sidebar>
+        </SidebarProvider>
+      </div>
+    )
+  }
+
+  // sidebar-demo (default)
+  return (
+    <div dir={dir} className="h-[400px] overflow-hidden rounded-md border">
+      <SidebarProvider className="!min-h-0 h-full" defaultOpen>
+        <Sidebar collapsible="none">
+          <SidebarHeader>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton size="lg">
+                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                    <Component className="size-4" />
+                  </div>
+                  <div className="flex flex-col gap-0.5 leading-none">
+                    <span className="font-semibold">Acme Inc</span>
+                    <span className="text-xs text-muted-foreground">Enterprise</span>
+                  </div>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarHeader>
+          <SidebarContent>
+            <SidebarGroup>
+              <SidebarGroupLabel>Platform</SidebarGroupLabel>
+              <SidebarMenu>
+                {navItems.map((item) => (
+                  <SidebarMenuItem key={item.label}>
+                    <SidebarMenuButton isActive={item.active} tooltip={item.label}>
+                      {item.icon && <item.icon />}
+                      <span>{item.label}</span>
+                    </SidebarMenuButton>
+                    {item.badge && (
+                      <SidebarMenuBadge>{item.badge}</SidebarMenuBadge>
+                    )}
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroup>
+            <SidebarSeparator />
+            <SidebarGroup>
+              <SidebarGroupLabel>Projects</SidebarGroupLabel>
+              <SidebarMenu>
+                {projects.map((project) => (
+                  <SidebarMenuItem key={project.label}>
+                    <SidebarMenuButton tooltip={project.label}>
+                      {project.icon && <project.icon />}
+                      <span>{project.label}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroup>
+          </SidebarContent>
+          <SidebarFooter>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton tooltip="Account">
+                  <BadgeCheck className="size-4" />
+                  <span>Account</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarFooter>
+          <SidebarRail />
+        </Sidebar>
+      </SidebarProvider>
     </div>
   )
 }

@@ -129,6 +129,7 @@ export const shadcnComponents: ShadcnComponent[] = [
 ]
 
 export const installedShadcnComponentSlugs = new Set([
+  'accordion',
   'button',
   'card',
   'dialog',
@@ -153,6 +154,179 @@ export const shadcnDocsSource = {
 }
 
 export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
+  accordion: {
+    name: 'Accordion',
+    slug: 'accordion',
+    description: translated(
+      'A vertically stacked set of interactive headings that each reveal a section of content.',
+      '垂直堆叠的一组交互式标题，每个标题可展开显示对应内容区域。'
+    ),
+    featured: true,
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/radix/accordion.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/radix/accordion',
+    installCommand: 'npx shadcn@latest add accordion',
+    manualDependencies: ['radix-ui'],
+    sections: [
+      {
+        title: translated('Preview', '预览'),
+        blocks: [
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'accordion-demo',
+            description: translated(
+              'A vertically stacked set of interactive headings that each reveal a section of content.',
+              '垂直堆叠的一组交互式标题，每个标题可展开显示对应内容区域。'
+            )
+          }
+        ]
+      },
+      {
+        title: translated('Installation', '安装'),
+        blocks: [
+          {
+            type: 'code',
+            language: 'bash',
+            title: translated('Command', '命令'),
+            code: 'npx shadcn@latest add accordion'
+          },
+          {
+            type: 'steps',
+            items: [
+              translated(
+                'Install the following dependencies: npm install radix-ui',
+                '安装以下依赖：npm install radix-ui'
+              ),
+              translated(
+                'Copy and paste the component source into your project.',
+                '将组件源码复制并粘贴到你的项目中。'
+              ),
+              translated(
+                'Update the import paths to match your project setup.',
+                '按你的项目配置更新 import 路径。'
+              )
+            ]
+          }
+        ]
+      },
+      {
+        title: translated('Usage', '用法'),
+        blocks: [
+          {
+            type: 'code',
+            language: 'tsx',
+            code: 'import {\n  Accordion,\n  AccordionContent,\n  AccordionItem,\n  AccordionTrigger,\n} from "@/components/ui/accordion"'
+          },
+          {
+            type: 'code',
+            language: 'tsx',
+            code: '<Accordion type="single" collapsible defaultValue="item-1">\n  <AccordionItem value="item-1">\n    <AccordionTrigger>Is it accessible?</AccordionTrigger>\n    <AccordionContent>\n      Yes. It adheres to the WAI-ARIA design pattern.\n    </AccordionContent>\n  </AccordionItem>\n</Accordion>'
+          }
+        ]
+      },
+      {
+        title: translated('Composition', '组成'),
+        blocks: [
+          {
+            type: 'composition',
+            code: 'Accordion\n├── AccordionItem\n│   ├── AccordionTrigger\n│   └── AccordionContent\n└── AccordionItem\n    ├── AccordionTrigger\n    └── AccordionContent'
+          }
+        ]
+      },
+      {
+        title: translated('Examples', '示例'),
+        blocks: [
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'accordion-basic',
+            description: translated(
+              'A basic accordion that shows one item at a time. The first item is open by default.',
+              '基础手风琴，一次展示一个条目，默认展开第一个。'
+            )
+          },
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'accordion-multiple',
+            description: translated(
+              'Use `type="multiple"` to allow multiple items to be open at the same time.',
+              '使用 `type="multiple"` 允许同时展开多个条目。'
+            )
+          },
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'accordion-disabled',
+            description: translated(
+              'Use the `disabled` prop on `AccordionItem` to disable individual items.',
+              '在 `AccordionItem` 上使用 `disabled` prop 来禁用单个条目。'
+            )
+          },
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'accordion-borders',
+            description: translated(
+              'Add `border` to the `Accordion` and `border-b last:border-b-0` to the `AccordionItem` to add borders.',
+              '为 `Accordion` 添加 `border` 类，为 `AccordionItem` 添加 `border-b last:border-b-0` 类来添加边框。'
+            )
+          },
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'accordion-card',
+            description: translated(
+              'Wrap the `Accordion` in a `Card` component for a card-style layout.',
+              '将 `Accordion` 包裹在 `Card` 组件中以获得卡片式布局。'
+            )
+          }
+        ]
+      },
+      {
+        title: 'RTL',
+        blocks: [
+          {
+            type: 'paragraph',
+            text: translated(
+              'To enable RTL support in shadcn/ui, see the [RTL configuration guide](/docs/rtl).',
+              '如需启用 shadcn/ui 的 RTL 支持，请查看 [RTL configuration guide](/docs/rtl)。'
+            )
+          },
+          { type: 'preview', styleName: 'radix-nova', name: 'accordion-rtl', direction: 'rtl' }
+        ]
+      },
+      {
+        title: translated('API Reference', 'API 参考'),
+        blocks: [
+          {
+            type: 'table',
+            columns: [
+              translated('Prop', '属性'),
+              translated('Type', '类型'),
+              translated('Default', '默认值')
+            ],
+            rows: [
+              ['type', '"single" | "multiple"', '"single"'],
+              ['collapsible', 'boolean', 'false'],
+              ['defaultValue', 'string | string[]', '-'],
+              ['disabled (AccordionItem)', 'boolean', 'false'],
+              ['value (AccordionItem)', 'string', '-']
+            ]
+          },
+          {
+            type: 'link',
+            label: translated(
+              'Radix UI Accordion API Reference',
+              'Radix UI Accordion API 参考'
+            ),
+            href: 'https://www.radix-ui.com/primitives/docs/components/accordion#api-reference'
+          }
+        ]
+      }
+    ]
+  },
   button: {
     name: 'Button',
     slug: 'button',
@@ -633,6 +807,204 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
             )
           },
           { type: 'preview', styleName: 'radix-nova', name: 'table-rtl', direction: 'rtl' }
+        ]
+      }
+    ]
+  },
+  sidebar: {
+    name: 'Sidebar',
+    slug: 'sidebar',
+    description: translated(
+      'A composable, themeable and customizable sidebar component. Supports collapsible, floating, and inset variants with full RTL support.',
+      '可组合、可主题化、可定制的侧边栏组件。支持可折叠、浮动和内嵌三种变体，具备完整的 RTL 支持。'
+    ),
+    featured: true,
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/sidebar.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/sidebar',
+    installCommand: 'npx shadcn@latest add sidebar',
+    manualDependencies: ['radix-ui'],
+    sections: [
+      {
+        title: translated('Preview', '预览'),
+        blocks: [
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'sidebar-demo',
+            description: translated(
+              'A basic sidebar with navigation items, header and footer.',
+              '包含导航项、页头和页脚的基础侧边栏。'
+            )
+          }
+        ]
+      },
+      {
+        title: translated('Installation', '安装'),
+        blocks: [
+          {
+            type: 'code',
+            language: 'bash',
+            title: translated('Command', '命令'),
+            code: 'npx shadcn@latest add sidebar'
+          },
+          {
+            type: 'steps',
+            items: [
+              translated(
+                'Install the following dependencies: npm install radix-ui',
+                '安装以下依赖：npm install radix-ui'
+              ),
+              translated(
+                'Copy and paste the component source into your project.',
+                '将组件源码复制并粘贴到你的项目中。'
+              ),
+              translated(
+                'Update the import paths to match your project setup.',
+                '按你的项目配置更新 import 路径。'
+              )
+            ]
+          }
+        ]
+      },
+      {
+        title: translated('Usage', '用法'),
+        blocks: [
+          {
+            type: 'paragraph',
+            text: translated(
+              'Wrap your layout with `SidebarProvider` and use `<AppSidebar />` alongside your main content. The `SidebarTrigger` component toggles the sidebar open/closed.',
+              '使用 `SidebarProvider` 包裹你的布局，将 `<AppSidebar />` 与主内容并列使用。`SidebarTrigger` 组件用于切换侧边栏的开合状态。'
+            )
+          },
+          {
+            type: 'code',
+            language: 'tsx',
+            title: translated('Layout Setup', '布局设置'),
+            code: 'import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"\nimport { AppSidebar } from "@/components/app-sidebar"\n\nexport default function Layout({ children }: { children: React.ReactNode }) {\n  return (\n    <SidebarProvider>\n      <AppSidebar />\n      <main>\n        <SidebarTrigger />\n        {children}\n      </main>\n    </SidebarProvider>\n  )\n}'
+          },
+          {
+            type: 'code',
+            language: 'tsx',
+            title: translated('AppSidebar Component', 'AppSidebar 组件'),
+            code: 'import {\n  Sidebar,\n  SidebarContent,\n  SidebarFooter,\n  SidebarGroup,\n  SidebarHeader,\n} from "@/components/ui/sidebar"\n\nexport function AppSidebar() {\n  return (\n    <Sidebar>\n      <SidebarHeader />\n      <SidebarContent>\n        <SidebarGroup />\n      </SidebarContent>\n      <SidebarFooter />\n    </Sidebar>\n  )\n}'
+          }
+        ]
+      },
+      {
+        title: translated('Composition', '组成'),
+        blocks: [
+          {
+            type: 'composition',
+            code: 'SidebarProvider\n├── Sidebar\n│   ├── SidebarHeader\n│   │   └── SidebarMenu\n│   │       └── SidebarMenuItem\n│   │           └── SidebarMenuButton\n│   ├── SidebarContent\n│   │   └── SidebarGroup\n│   │       ├── SidebarGroupLabel\n│   │       ├── SidebarGroupAction\n│   │       ├── SidebarGroupContent\n│   │       └── SidebarMenu\n│   │           ├── SidebarMenuItem\n│   │           │   ├── SidebarMenuButton\n│   │           │   ├── SidebarMenuAction\n│   │           │   ├── SidebarMenuBadge\n│   │           │   └── SidebarMenuSub\n│   │           │       └── SidebarMenuSubItem\n│   │           │           └── SidebarMenuSubButton\n│   │           └── SidebarMenuSkeleton\n│   ├── SidebarFooter\n│   │   └── SidebarMenu\n│   │       └── SidebarMenuItem\n│   │           └── SidebarMenuButton\n│   └── SidebarRail\n├── SidebarInset\n└── SidebarTrigger'
+          }
+        ]
+      },
+      {
+        title: translated('Examples', '示例'),
+        blocks: [
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'sidebar-header',
+            description: translated(
+              'A sidebar header with a workspace switcher using DropdownMenu.',
+              '带有工作空间切换器（使用 DropdownMenu）的侧边栏页头。'
+            )
+          },
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'sidebar-footer',
+            description: translated(
+              'A sidebar footer with a user menu showing account info.',
+              '展示用户信息菜单的侧边栏页脚。'
+            )
+          },
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'sidebar-collapsible',
+            description: translated(
+              'Collapsible sidebar groups using the Collapsible component.',
+              '使用 Collapsible 组件实现的可折叠侧边栏分组。'
+            )
+          },
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'sidebar-inset',
+            description: translated(
+              'Use `variant="inset"` with `SidebarInset` to wrap main content.',
+              '使用 `variant="inset"` 配合 `SidebarInset` 包裹主内容区域。'
+            )
+          },
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'sidebar-floating',
+            description: translated(
+              'Use `variant="floating"` for a floating sidebar with rounded corners.',
+              '使用 `variant="floating"` 获得带圆角的浮动侧边栏。'
+            )
+          },
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'sidebar-icon',
+            description: translated(
+              'Use `collapsible="icon"` to collapse the sidebar to icons only.',
+              '使用 `collapsible="icon"` 将侧边栏折叠为仅图标显示。'
+            )
+          }
+        ]
+      },
+      {
+        title: 'RTL',
+        blocks: [
+          {
+            type: 'paragraph',
+            text: translated(
+              'To enable RTL support in shadcn/ui, see the [RTL configuration guide](/docs/rtl). Use `dir="rtl"` and `side="right"` for RTL layouts.',
+              '如需启用 shadcn/ui 的 RTL 支持，请查看 [RTL configuration guide](/docs/rtl)。使用 `dir="rtl"` 和 `side="right"` 实现 RTL 布局。'
+            )
+          },
+          { type: 'preview', styleName: 'radix-nova', name: 'sidebar-rtl', direction: 'rtl' }
+        ]
+      },
+      {
+        title: translated('API Reference', 'API 参考'),
+        blocks: [
+          {
+            type: 'callout',
+            text: translated(
+              'SidebarProvider handles collapsible state and provides sidebar context. Sidebar is the main collapsible panel.',
+              'SidebarProvider 管理折叠状态并向子组件提供侧边栏上下文。Sidebar 是主折叠面板。'
+            )
+          },
+          {
+            type: 'table',
+            columns: [
+              translated('Prop', '属性'),
+              translated('Type', '类型'),
+              translated('Default', '默认值')
+            ],
+            rows: [
+              ['side', '"left" | "right"', '"left"'],
+              ['variant', '"sidebar" | "floating" | "inset"', '"sidebar"'],
+              ['collapsible', '"offcanvas" | "icon" | "none"', '"offcanvas"'],
+              ['defaultOpen', 'boolean', 'true'],
+              ['open', 'boolean', '-'],
+              ['onOpenChange', '(open: boolean) => void', '-']
+            ]
+          },
+          {
+            type: 'paragraph',
+            text: translated(
+              'The `useSidebar` hook returns `{ state, open, setOpen, openMobile, setOpenMobile, isMobile, toggleSidebar }`. Keyboard shortcut: `⌘+B` (Mac) / `Ctrl+B` (Windows).',
+              '`useSidebar` hook 返回 `{ state, open, setOpen, openMobile, setOpenMobile, isMobile, toggleSidebar }`。键盘快捷键：`⌘+B` (Mac) / `Ctrl+B` (Windows)。'
+            )
+          }
         ]
       }
     ]

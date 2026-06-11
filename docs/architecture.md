@@ -57,7 +57,7 @@ Renderer process
 设计组件
   开发期 shadcn/ui 组件索引和本地文档镜像。
   数据源：src/renderer/src/data/shadcn-docs.ts
-  已镜像 Button、Dialog、Table，支持中文阅读和英文原文切换。
+  已镜像 Accordion、Button、Dialog、Sidebar、Table，支持中文阅读和英文原文切换。
 
 基础规范
   开发期设计基础参考页。
