@@ -17,6 +17,7 @@ ComicToKindle 目前是一个桌面应用工作台基础，用于后续承载本
 - `src/renderer/src/App.tsx` 中的侧边栏工作台壳
 - 使用静态数据的漫画库占位工作区
 - 顶栏应用级深浅模式切换
+- 顶栏中英切换
 - 开发期使用的 shadcn 组件索引和本地文档镜像
 - 开发期使用的基础规范页，覆盖颜色、字体、字号和间距
 
@@ -56,6 +57,7 @@ Renderer process
 设计组件
   开发期 shadcn/ui 组件索引和本地文档镜像。
   数据源：src/renderer/src/data/shadcn-docs.ts
+  已镜像 Button、Dialog、Table，支持中文阅读和英文原文切换。
 
 基础规范
   开发期设计基础参考页。
@@ -129,6 +131,8 @@ renderer alias：
 ```
 
 顶栏的深浅模式按钮会切换 `document.documentElement` 上的 `.dark` class，并把用户选择保存到 `localStorage` 的 `comic-to-kindle-theme`。新增 UI 应优先使用语义 token，以便跟随该全局主题切换。
+
+顶栏的中英切换会设置 `document.documentElement.lang`，并把用户选择保存到 `localStorage` 的 `comic-to-kindle-language`。当前应用壳、开发期页面和 shadcn 镜像文档会跟随切换。shadcn 镜像数据使用可本地化文本结构保留英文原文和中文译文；代码块、命令、API、prop、className、路径、组件名、示例名和复制值保持英文源值。
 
 ## 计划中的领域边界
 

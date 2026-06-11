@@ -89,15 +89,11 @@ import {
   TableRow
 } from '@/components/ui/table'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger
-} from '@/components/ui/tooltip'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { designTokens } from '@/data/design-tokens'
 import {
   installedShadcnComponentSlugs,
+  type LocalizedText,
   mirroredShadcnDocs,
   shadcnComponents,
   shadcnDocsSource,
@@ -243,7 +239,8 @@ const uiText = {
       officialPage: 'Official page',
       sourceDetails: 'Source',
       foundationDescription: 'Colors, typography, type scale, spacing, and layout rhythm',
-      libraryDescription: 'Workspace shell for local collections, organization, and conversion prep',
+      libraryDescription:
+        'Workspace shell for local collections, organization, and conversion prep',
       searchComponents: 'Search components or slug',
       searchComics: 'Search title, author, or format',
       filter: 'Filter',
@@ -257,7 +254,8 @@ const uiText = {
     },
     library: {
       localComics: 'Local Comics',
-      localComicsDescription: 'The first version only shows library views, states, and placeholder actions.',
+      localComicsDescription:
+        'The first version only shows library views, states, and placeholder actions.',
       all: 'All',
       recent: 'Recent',
       todo: 'To Organize',
@@ -430,7 +428,18 @@ function getPreviewTitle(name: string): string {
     .join(' ')
 }
 
-function getPreviewHeader(block: Extract<ShadcnDocBlock, { type: 'preview' }>): {
+function getLocalizedText(text: LocalizedText, locale: LanguageMode): string {
+  if (typeof text === 'string') {
+    return text
+  }
+
+  return text[locale]
+}
+
+function getPreviewHeader(
+  block: Extract<ShadcnDocBlock, { type: 'preview' }>,
+  locale: LanguageMode
+): {
   title: string
   description?: string
 } {
@@ -438,18 +447,17 @@ function getPreviewHeader(block: Extract<ShadcnDocBlock, { type: 'preview' }>): 
     return { title: getPreviewTitle(block.name) }
   }
 
+  const description = getLocalizedText(block.description, locale)
   const isDescription =
-    block.description.length > 32 ||
-    block.description.includes('`') ||
-    /[.!?]$/.test(block.description)
+    description.length > 32 || description.includes('`') || /[.!?。！？]$/.test(description)
 
   if (!isDescription) {
-    return { title: block.description }
+    return { title: description }
   }
 
   return {
     title: getPreviewTitle(block.name),
-    description: block.description
+    description
   }
 }
 
@@ -472,11 +480,18 @@ function App(): React.JSX.Element {
 
     return shadcnComponents.filter((item) => {
       const doc = mirroredShadcnDocs[item.slug]
+      let localizedDescriptions: string[] = []
+
+      if (doc) {
+        const description = doc.description
+        localizedDescriptions =
+          typeof description === 'string' ? [description] : [description.en, description.zh]
+      }
 
       return (
         item.name.toLowerCase().includes(query) ||
         item.slug.includes(query) ||
-        doc?.description.toLowerCase().includes(query)
+        localizedDescriptions.some((description) => description.toLowerCase().includes(query))
       )
     })
   }, [componentSearch])
@@ -881,9 +896,7 @@ function FoundationStandardsView({ locale }: { locale: LanguageMode }): React.JS
                   <TableRow key={item.name}>
                     <TableCell className="font-medium">{item.name}</TableCell>
                     <TableCell>
-                      <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
-                        {item.token}
-                      </code>
+                      <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{item.token}</code>
                     </TableCell>
                     <TableCell>
                       <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
@@ -993,9 +1006,7 @@ function FoundationStandardsView({ locale }: { locale: LanguageMode }): React.JS
                   <TableRow key={item.token}>
                     <TableCell className="font-medium">{item.name}</TableCell>
                     <TableCell>
-                      <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
-                        {item.token}
-                      </code>
+                      <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{item.token}</code>
                     </TableCell>
                     <TableCell>
                       <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
@@ -1185,7 +1196,9 @@ function DesignComponentsView({
               <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div className="min-w-0">
                   <h2 className="text-2xl font-semibold">{selectedDoc.name}</h2>
-                  <p className="mt-2 text-sm text-muted-foreground">{selectedDoc.description}</p>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {getLocalizedText(selectedDoc.description, locale)}
+                  </p>
                 </div>
                 <div className="flex shrink-0 flex-wrap gap-2">
                   <span className="rounded-md border bg-muted/40 px-2 py-1 text-xs text-muted-foreground">
@@ -1200,20 +1213,24 @@ function DesignComponentsView({
               </div>
             </header>
             <div className="space-y-8">
-              {selectedDoc.sections.map((section) => (
-                <section className="scroll-mt-20 space-y-3" id={section.title} key={section.title}>
-                  <h2 className="text-lg font-semibold">{section.title}</h2>
-                  <div className="space-y-3">
-                    {section.blocks.map((block, index) => (
-                      <ShadcnDocBlockView
-                        block={block}
-                        key={`${section.title}-${index}`}
-                        locale={locale}
-                      />
-                    ))}
-                  </div>
-                </section>
-              ))}
+              {selectedDoc.sections.map((section) => {
+                const sectionTitle = getLocalizedText(section.title, locale)
+
+                return (
+                  <section className="scroll-mt-20 space-y-3" id={sectionTitle} key={sectionTitle}>
+                    <h2 className="text-lg font-semibold">{sectionTitle}</h2>
+                    <div className="space-y-3">
+                      {section.blocks.map((block, index) => (
+                        <ShadcnDocBlockView
+                          block={block}
+                          key={`${sectionTitle}-${index}`}
+                          locale={locale}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                )
+              })}
             </div>
           </div>
         ) : (
@@ -1322,7 +1339,7 @@ function ShadcnDocBlockView({
   if (block.type === 'paragraph') {
     return (
       <p className="text-sm leading-6 text-muted-foreground">
-        <InlineDocText text={block.text} />
+        <InlineDocText text={getLocalizedText(block.text, locale)} />
       </p>
     )
   }
@@ -1334,7 +1351,7 @@ function ShadcnDocBlockView({
       <div className="overflow-hidden rounded-lg border bg-muted/40">
         {block.type === 'code' && block.title ? (
           <div className="border-b px-3 py-2 text-xs font-medium text-muted-foreground">
-            <InlineDocText text={block.title} />
+            <InlineDocText text={getLocalizedText(block.title, locale)} />
           </div>
         ) : null}
         <pre className="overflow-x-auto p-3 text-xs leading-5">
@@ -1346,7 +1363,7 @@ function ShadcnDocBlockView({
 
   if (block.type === 'preview') {
     const isCopied = copiedPreviewName === block.name
-    const previewHeader = getPreviewHeader(block)
+    const previewHeader = getPreviewHeader(block, locale)
 
     return (
       <div className="overflow-hidden rounded-lg border bg-background">
@@ -1394,11 +1411,14 @@ function ShadcnDocBlockView({
     return (
       <ol className="space-y-2">
         {block.items.map((item, index) => (
-          <li className="flex gap-3 text-sm text-muted-foreground" key={item}>
+          <li
+            className="flex gap-3 text-sm text-muted-foreground"
+            key={`${index}-${getLocalizedText(item, locale)}`}
+          >
             <span className="flex size-6 shrink-0 items-center justify-center rounded-md border bg-muted/40 text-xs text-foreground">
               {index + 1}
             </span>
-            <span className="pt-0.5">{item}</span>
+            <span className="pt-0.5">{getLocalizedText(item, locale)}</span>
           </li>
         ))}
       </ol>
@@ -1412,7 +1432,9 @@ function ShadcnDocBlockView({
           <TableHeader>
             <TableRow className="bg-muted/40 hover:bg-muted/40">
               {block.columns.map((column) => (
-                <TableHead key={column}>{column}</TableHead>
+                <TableHead key={getLocalizedText(column, locale)}>
+                  {getLocalizedText(column, locale)}
+                </TableHead>
               ))}
             </TableRow>
           </TableHeader>
@@ -1441,14 +1463,14 @@ function ShadcnDocBlockView({
         target="_blank"
       >
         <ExternalLink className="size-4" />
-        {block.label}
+        {getLocalizedText(block.label, locale)}
       </a>
     )
   }
 
   return (
     <div className="rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">
-      {block.text}
+      <InlineDocText text={getLocalizedText(block.text, locale)} />
     </div>
   )
 }

@@ -87,15 +87,17 @@ sidebar, skeleton, sonner, table, tabs, tooltip
 
 顶栏有应用级深浅模式切换按钮，会在 `document.documentElement` 上切换 `.dark` class，并把选择保存到 `localStorage` 的 `comic-to-kindle-theme`。
 
+顶栏也有中英切换按钮，会更新 `document.documentElement.lang`，并把选择保存到 `localStorage` 的 `comic-to-kindle-language`。应用壳、开发期页面和 shadcn 镜像文档会跟随切换；代码、命令、API、组件名、示例名和复制值保持英文源值。
+
 `设计组件` 是开发期 shadcn/ui 组件本地镜像和选型入口。源数据位于：
 
 ```txt
 src/renderer/src/data/shadcn-docs.ts
 ```
 
-该镜像当前跟踪 shadcn Radix docs 路径，并有 Button、Dialog、Table 的本地文档内容；Button 预览已尽量贴近官方 Radix 页面。
+该镜像当前跟踪 shadcn Radix docs 路径，并有 Button、Dialog、Table 的本地文档内容；Button 预览已尽量贴近官方 Radix 页面。这三份文档支持中文阅读和英文原文切换，数据结构会保留英文官方文本。
 
-梳理 shadcn 设计组件时，完整规则见 `docs/agent-collaboration.md` 的 `shadcn 设计组件梳理规则`。核心原则是：官方文档路径、source ref 和 license 要可追溯；`索引中`、`已镜像`、`已安装` 三种状态必须分清；预览尽量贴近官方，但不要为了单个示例引入重依赖。
+梳理 shadcn 设计组件时，完整规则见 `docs/agent-collaboration.md` 的 `shadcn 设计组件梳理规则`。核心原则是：官方文档路径、source ref 和 license 要可追溯；`索引中`、`已镜像`、`已安装` 三种状态必须分清；预览尽量贴近官方，但不要为了单个示例引入重依赖；中文翻译只用于阅读，复制内容保持英文源值。
 
 `基础规范` 是开发期设计参考页，覆盖当前 renderer UI 系统中的颜色 token、字体栈、字号层级和间距层级。它不应被当作终端用户功能。
 

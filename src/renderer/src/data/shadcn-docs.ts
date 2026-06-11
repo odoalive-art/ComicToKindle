@@ -3,27 +3,33 @@ export type ShadcnComponent = {
   slug: string
 }
 
+export type LocalizedText = string | { en: string; zh: string }
+
+function translated(en: string, zh: string): LocalizedText {
+  return { en, zh }
+}
+
 export type ShadcnDocBlock =
   | {
       type: 'paragraph'
-      text: string
+      text: LocalizedText
     }
   | {
       type: 'code'
       language: string
-      title?: string
+      title?: LocalizedText
       code: string
     }
   | {
       type: 'preview'
       name: string
       styleName: string
-      description?: string
+      description?: LocalizedText
       direction?: string
     }
   | {
       type: 'steps'
-      items: string[]
+      items: LocalizedText[]
     }
   | {
       type: 'composition'
@@ -31,26 +37,26 @@ export type ShadcnDocBlock =
     }
   | {
       type: 'table'
-      columns: string[]
+      columns: LocalizedText[]
       rows: string[][]
     }
   | {
       type: 'callout'
-      text: string
+      text: LocalizedText
     }
   | {
       type: 'link'
-      label: string
+      label: LocalizedText
       href: string
     }
 
 export type ShadcnDocSection = {
-  title: string
+  title: LocalizedText
   blocks: ShadcnDocBlock[]
 }
 
 export type ShadcnComponentDoc = ShadcnComponent & {
-  description: string
+  description: LocalizedText
   featured?: boolean
   mirrored: true
   sourcePath: string
@@ -150,7 +156,10 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
   button: {
     name: 'Button',
     slug: 'button',
-    description: 'Displays a button or a component that looks like a button.',
+    description: translated(
+      'Displays a button or a component that looks like a button.',
+      '显示一个按钮，或一个视觉上像按钮的组件。'
+    ),
     featured: true,
     mirrored: true,
     sourcePath: 'apps/v4/content/docs/components/radix/button.mdx',
@@ -159,30 +168,39 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
     manualDependencies: ['radix-ui'],
     sections: [
       {
-        title: 'Preview',
+        title: translated('Preview', '预览'),
         blocks: [{ type: 'preview', styleName: 'radix-nova', name: 'button-demo' }]
       },
       {
-        title: 'Installation',
+        title: translated('Installation', '安装'),
         blocks: [
           {
             type: 'code',
             language: 'bash',
-            title: 'Command',
+            title: translated('Command', '命令'),
             code: 'npx shadcn@latest add button'
           },
           {
             type: 'steps',
             items: [
-              'Install the following dependencies: npm install radix-ui',
-              'Copy and paste the component source into your project.',
-              'Update the import paths to match your project setup.'
+              translated(
+                'Install the following dependencies: npm install radix-ui',
+                '安装以下依赖：npm install radix-ui'
+              ),
+              translated(
+                'Copy and paste the component source into your project.',
+                '将组件源码复制并粘贴到你的项目中。'
+              ),
+              translated(
+                'Update the import paths to match your project setup.',
+                '按你的项目配置更新 import 路径。'
+              )
             ]
           }
         ]
       },
       {
-        title: 'Usage',
+        title: translated('Usage', '用法'),
         blocks: [
           {
             type: 'code',
@@ -193,11 +211,14 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
         ]
       },
       {
-        title: 'Cursor',
+        title: translated('Cursor', '光标'),
         blocks: [
           {
             type: 'paragraph',
-            text: 'Tailwind v4 switched from cursor: pointer to cursor: default for the button component. If you want to keep the cursor: pointer behavior, add the following CSS or enable it during setup with npx shadcn@latest init --pointer.'
+            text: translated(
+              'Tailwind v4 switched from cursor: pointer to cursor: default for the button component. If you want to keep the cursor: pointer behavior, add the following CSS or enable it during setup with npx shadcn@latest init --pointer.',
+              'Tailwind v4 将 button 组件的光标从 cursor: pointer 改为 cursor: default。如果你想保留 cursor: pointer 行为，可以添加下面的 CSS，或在初始化时使用 npx shadcn@latest init --pointer。'
+            )
           },
           {
             type: 'code',
@@ -208,74 +229,103 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
         ]
       },
       {
-        title: 'Examples',
+        title: translated('Examples', '示例'),
         blocks: [
           {
             type: 'preview',
             styleName: 'radix-nova',
             name: 'button-size',
-            description: 'Use the `size` prop to change the size of the button.'
+            description: translated(
+              'Use the `size` prop to change the size of the button.',
+              '使用 `size` prop 调整按钮尺寸。'
+            )
           },
           {
             type: 'preview',
             styleName: 'radix-nova',
             name: 'button-default',
-            description: 'Default'
+            description: translated('Default', '默认')
           },
           {
             type: 'preview',
             styleName: 'radix-nova',
             name: 'button-outline',
-            description: 'Outline'
+            description: translated('Outline', '描边')
           },
           {
             type: 'preview',
             styleName: 'radix-nova',
             name: 'button-secondary',
-            description: 'Secondary'
+            description: translated('Secondary', '次要')
           },
-          { type: 'preview', styleName: 'radix-nova', name: 'button-ghost', description: 'Ghost' },
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'button-ghost',
+            description: translated('Ghost', '幽灵')
+          },
           {
             type: 'preview',
             styleName: 'radix-nova',
             name: 'button-destructive',
-            description: 'Destructive'
+            description: translated('Destructive', '危险')
           },
-          { type: 'preview', styleName: 'radix-nova', name: 'button-link', description: 'Link' },
-          { type: 'preview', styleName: 'radix-nova', name: 'button-icon', description: 'Icon' },
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'button-link',
+            description: translated('Link', '链接')
+          },
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'button-icon',
+            description: translated('Icon', '图标')
+          },
           {
             type: 'preview',
             styleName: 'radix-nova',
             name: 'button-with-icon',
-            description:
-              'Remember to add the `data-icon="inline-start"` or `data-icon="inline-end"` attribute to the icon for the correct spacing.'
+            description: translated(
+              'Remember to add the `data-icon="inline-start"` or `data-icon="inline-end"` attribute to the icon for the correct spacing.',
+              '记得为图标添加 `data-icon="inline-start"` 或 `data-icon="inline-end"` 属性，以获得正确间距。'
+            )
           },
           {
             type: 'preview',
             styleName: 'radix-nova',
             name: 'button-rounded',
-            description: 'Use the `rounded-full` class to make the button rounded.'
+            description: translated(
+              'Use the `rounded-full` class to make the button rounded.',
+              '使用 `rounded-full` 类让按钮变成圆角胶囊形。'
+            )
           },
           {
             type: 'preview',
             styleName: 'radix-nova',
             name: 'button-spinner',
-            description:
-              'Render a `<Spinner />` component inside the button to show a loading state. Remember to add the `data-icon="inline-start"` or `data-icon="inline-end"` attribute to the spinner for the correct spacing.'
+            description: translated(
+              'Render a `<Spinner />` component inside the button to show a loading state. Remember to add the `data-icon="inline-start"` or `data-icon="inline-end"` attribute to the spinner for the correct spacing.',
+              '在按钮内渲染 `<Spinner />` 组件来展示加载状态。记得为 spinner 添加 `data-icon="inline-start"` 或 `data-icon="inline-end"` 属性，以获得正确间距。'
+            )
           },
           {
             type: 'preview',
             styleName: 'radix-nova',
             name: 'button-group-demo',
-            description:
-              'To create a button group, use the `ButtonGroup` component. See the [Button Group](/docs/components/radix/button-group) documentation for more details.'
+            description: translated(
+              'To create a button group, use the `ButtonGroup` component. See the [Button Group](/docs/components/radix/button-group) documentation for more details.',
+              '要创建按钮组，请使用 `ButtonGroup` 组件。更多细节见 [Button Group](/docs/components/radix/button-group) 文档。'
+            )
           },
           {
             type: 'preview',
             styleName: 'radix-nova',
             name: 'button-aschild',
-            description:
-              "You can use the `asChild` prop on `<Button />` to make another component look like a button. Here's an example of a link that looks like a button."
+            description: translated(
+              "You can use the `asChild` prop on `<Button />` to make another component look like a button. Here's an example of a link that looks like a button.",
+              '你可以在 `<Button />` 上使用 `asChild` prop，让其他组件呈现为按钮样式。下面是一个看起来像按钮的链接示例。'
+            )
           }
         ]
       },
@@ -284,17 +334,24 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
         blocks: [
           {
             type: 'paragraph',
-            text: 'To enable RTL support in shadcn/ui, see the [RTL configuration guide](/docs/rtl).'
+            text: translated(
+              'To enable RTL support in shadcn/ui, see the [RTL configuration guide](/docs/rtl).',
+              '如需启用 shadcn/ui 的 RTL 支持，请查看 [RTL configuration guide](/docs/rtl)。'
+            )
           },
           { type: 'preview', styleName: 'radix-nova', name: 'button-rtl', direction: 'rtl' }
         ]
       },
       {
-        title: 'API Reference',
+        title: translated('API Reference', 'API 参考'),
         blocks: [
           {
             type: 'table',
-            columns: ['Prop', 'Type', 'Default'],
+            columns: [
+              translated('Prop', '属性'),
+              translated('Type', '类型'),
+              translated('Default', '默认值')
+            ],
             rows: [
               [
                 'variant',
@@ -316,8 +373,10 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
   dialog: {
     name: 'Dialog',
     slug: 'dialog',
-    description:
+    description: translated(
       'A window overlaid on either the primary window or another dialog window, rendering the content underneath inert.',
+      '覆盖在主窗口或另一个对话框窗口之上的窗口，并让下层内容不可交互。'
+    ),
     featured: true,
     mirrored: true,
     sourcePath: 'apps/v4/content/docs/components/radix/dialog.mdx',
@@ -326,37 +385,49 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
     manualDependencies: ['radix-ui'],
     sections: [
       {
-        title: 'Preview',
+        title: translated('Preview', '预览'),
         blocks: [
           {
             type: 'preview',
             styleName: 'radix-nova',
             name: 'dialog-demo',
-            description: 'A dialog for editing profile details.'
+            description: translated(
+              'A dialog for editing profile details.',
+              '用于编辑个人资料详情的对话框。'
+            )
           }
         ]
       },
       {
-        title: 'Installation',
+        title: translated('Installation', '安装'),
         blocks: [
           {
             type: 'code',
             language: 'bash',
-            title: 'Command',
+            title: translated('Command', '命令'),
             code: 'npx shadcn@latest add dialog'
           },
           {
             type: 'steps',
             items: [
-              'Install the following dependencies: npm install radix-ui',
-              'Copy and paste the component source into your project.',
-              'Update the import paths to match your project setup.'
+              translated(
+                'Install the following dependencies: npm install radix-ui',
+                '安装以下依赖：npm install radix-ui'
+              ),
+              translated(
+                'Copy and paste the component source into your project.',
+                '将组件源码复制并粘贴到你的项目中。'
+              ),
+              translated(
+                'Update the import paths to match your project setup.',
+                '按你的项目配置更新 import 路径。'
+              )
             ]
           }
         ]
       },
       {
-        title: 'Usage',
+        title: translated('Usage', '用法'),
         blocks: [
           {
             type: 'code',
@@ -371,7 +442,7 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
         ]
       },
       {
-        title: 'Composition',
+        title: translated('Composition', '组成'),
         blocks: [
           {
             type: 'composition',
@@ -380,31 +451,43 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
         ]
       },
       {
-        title: 'Examples',
+        title: translated('Examples', '示例'),
         blocks: [
           {
             type: 'preview',
             styleName: 'radix-nova',
             name: 'dialog-close-button',
-            description: 'Replace the default close control with your own button.'
+            description: translated(
+              'Replace the default close control with your own button.',
+              '用你自己的按钮替换默认关闭控件。'
+            )
           },
           {
             type: 'preview',
             styleName: 'radix-nova',
             name: 'dialog-no-close-button',
-            description: 'Use showCloseButton={false} to hide the close button.'
+            description: translated(
+              'Use showCloseButton={false} to hide the close button.',
+              '使用 showCloseButton={false} 隐藏关闭按钮。'
+            )
           },
           {
             type: 'preview',
             styleName: 'radix-nova',
             name: 'dialog-sticky-footer',
-            description: 'Keep actions visible while the content scrolls.'
+            description: translated(
+              'Keep actions visible while the content scrolls.',
+              '内容滚动时保持操作按钮可见。'
+            )
           },
           {
             type: 'preview',
             styleName: 'radix-nova',
             name: 'dialog-scrollable-content',
-            description: 'Long content can scroll while the header stays in view.'
+            description: translated(
+              'Long content can scroll while the header stays in view.',
+              '长内容可以滚动，同时标题区域保持可见。'
+            )
           }
         ]
       },
@@ -413,17 +496,20 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
         blocks: [
           {
             type: 'paragraph',
-            text: 'To enable RTL support in shadcn/ui, see the RTL configuration guide.'
+            text: translated(
+              'To enable RTL support in shadcn/ui, see the RTL configuration guide.',
+              '如需启用 shadcn/ui 的 RTL 支持，请查看 RTL configuration guide。'
+            )
           },
           { type: 'preview', styleName: 'radix-nova', name: 'dialog-rtl', direction: 'rtl' }
         ]
       },
       {
-        title: 'API Reference',
+        title: translated('API Reference', 'API 参考'),
         blocks: [
           {
             type: 'link',
-            label: 'Radix UI Dialog API Reference',
+            label: translated('Radix UI Dialog API Reference', 'Radix UI Dialog API 参考'),
             href: 'https://www.radix-ui.com/docs/primitives/components/dialog#api-reference'
           }
         ]
@@ -433,31 +519,42 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
   table: {
     name: 'Table',
     slug: 'table',
-    description: 'A responsive table component.',
+    description: translated('A responsive table component.', '响应式表格组件。'),
     mirrored: true,
     sourcePath: 'apps/v4/content/docs/components/radix/table.mdx',
     officialUrl: 'https://ui.shadcn.com/docs/components/radix/table',
     installCommand: 'npx shadcn@latest add table',
     sections: [
       {
-        title: 'Preview',
+        title: translated('Preview', '预览'),
         blocks: [{ type: 'preview', styleName: 'radix-nova', name: 'table-demo' }]
       },
       {
-        title: 'Installation',
+        title: translated('Installation', '安装'),
         blocks: [
-          { type: 'code', language: 'bash', title: 'Command', code: 'npx shadcn@latest add table' },
+          {
+            type: 'code',
+            language: 'bash',
+            title: translated('Command', '命令'),
+            code: 'npx shadcn@latest add table'
+          },
           {
             type: 'steps',
             items: [
-              'Copy and paste the component source into your project.',
-              'Update the import paths to match your project setup.'
+              translated(
+                'Copy and paste the component source into your project.',
+                '将组件源码复制并粘贴到你的项目中。'
+              ),
+              translated(
+                'Update the import paths to match your project setup.',
+                '按你的项目配置更新 import 路径。'
+              )
             ]
           }
         ]
       },
       {
-        title: 'Usage',
+        title: translated('Usage', '用法'),
         blocks: [
           {
             type: 'code',
@@ -472,7 +569,7 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
         ]
       },
       {
-        title: 'Composition',
+        title: translated('Composition', '组成'),
         blocks: [
           {
             type: 'composition',
@@ -481,35 +578,48 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
         ]
       },
       {
-        title: 'Examples',
+        title: translated('Examples', '示例'),
         blocks: [
           {
             type: 'preview',
             styleName: 'radix-nova',
             name: 'table-footer',
-            description: 'Use the TableFooter component to add a footer to the table.'
+            description: translated(
+              'Use the TableFooter component to add a footer to the table.',
+              '使用 TableFooter 组件为表格添加页脚。'
+            )
           },
           {
             type: 'preview',
             styleName: 'radix-nova',
             name: 'table-actions',
-            description: 'A table showing actions for each row using a DropdownMenu component.'
+            description: translated(
+              'A table showing actions for each row using a DropdownMenu component.',
+              '使用 DropdownMenu 组件展示每行操作的表格。'
+            )
           }
         ]
       },
       {
-        title: 'Data Table',
+        title: translated('Data Table', '数据表格'),
         blocks: [
           {
             type: 'paragraph',
-            text: 'You can use the Table component to build more complex data tables. Combine it with @tanstack/react-table to create tables with sorting, filtering and pagination.'
+            text: translated(
+              'You can use the Table component to build more complex data tables. Combine it with @tanstack/react-table to create tables with sorting, filtering and pagination.',
+              '你可以使用 Table 组件构建更复杂的数据表格。结合 @tanstack/react-table 可以实现排序、筛选和分页。'
+            )
           },
           {
             type: 'link',
-            label: 'Data Table documentation',
+            label: translated('Data Table documentation', 'Data Table 文档'),
             href: 'https://ui.shadcn.com/docs/components/data-table'
           },
-          { type: 'link', label: 'Tasks example', href: 'https://ui.shadcn.com/examples/tasks' }
+          {
+            type: 'link',
+            label: translated('Tasks example', 'Tasks 示例'),
+            href: 'https://ui.shadcn.com/examples/tasks'
+          }
         ]
       },
       {
@@ -517,7 +627,10 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
         blocks: [
           {
             type: 'paragraph',
-            text: 'To enable RTL support in shadcn/ui, see the RTL configuration guide.'
+            text: translated(
+              'To enable RTL support in shadcn/ui, see the RTL configuration guide.',
+              '如需启用 shadcn/ui 的 RTL 支持，请查看 RTL configuration guide。'
+            )
           },
           { type: 'preview', styleName: 'radix-nova', name: 'table-rtl', direction: 'rtl' }
         ]
