@@ -43,6 +43,9 @@ ComicToKindle 处于桌面应用基础阶段。技术底座已能运行和构建
   - 字号层级
   - 间距层级
 - 新增 `src/renderer/src/data/design-tokens.ts`，让基础规范页读取统一的项目级规范数据源。
+- 新增 `docs/agent-collaboration.md`，用于 Codex、Claude Code、Antigravity 接力开发时统一协作规则。
+- 明确多 Agent 协作时中文优先，包含用户回复、项目文档、UI 文案、交接记录和 commit message。
+- 补充 shadcn 设计组件梳理规则，明确官方来源、状态定义、字段要求、预览完成度和迁移流程。
 - 验证 `npm run build` 通过。
 
 ## 重要上下文
@@ -58,6 +61,8 @@ ComicToKindle 处于桌面应用基础阶段。技术底座已能运行和构建
 `设计组件` 和 `基础规范` 都是开发期提效页面，便于搭建 UI 时选择组件和 token。它们不是终端用户产品功能。
 
 真实产品能力仍未实现：本地扫描、元数据存储、转换流水线、图像处理、EPUB 生成、Kindle 投递和任务队列都还只是规划边界。
+
+Codex、Claude Code、Antigravity 接力开发前应先读 `docs/agent-collaboration.md`，并按其中的中文优先、验证、文档同步和交接格式收尾。
 
 ## 下一步建议
 

@@ -13,6 +13,7 @@ import {
   CircleFadingArrowUp,
   Clock3,
   Component,
+  Copy,
   ExternalLink,
   FileText,
   Info,
@@ -191,6 +192,59 @@ function getInitialThemeMode(): ThemeMode {
   }
 
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+}
+
+async function copyTextToClipboard(text: string): Promise<void> {
+  if (navigator.clipboard) {
+    try {
+      await navigator.clipboard.writeText(text)
+      return
+    } catch {
+      // Electron renderer may expose clipboard but still reject without a focused document.
+    }
+  }
+
+  const textarea = document.createElement('textarea')
+  textarea.value = text
+  textarea.style.position = 'fixed'
+  textarea.style.opacity = '0'
+  document.body.appendChild(textarea)
+  textarea.select()
+  document.execCommand('copy')
+  document.body.removeChild(textarea)
+}
+
+function getPreviewTitle(name: string): string {
+  const [componentPrefix, ...nameParts] = name.split('-')
+  const parts = nameParts.length > 0 ? nameParts : [componentPrefix]
+
+  return parts
+    .filter((part) => part !== 'demo')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
+}
+
+function getPreviewHeader(block: Extract<ShadcnDocBlock, { type: 'preview' }>): {
+  title: string
+  description?: string
+} {
+  if (!block.description) {
+    return { title: getPreviewTitle(block.name) }
+  }
+
+  const isDescription =
+    block.description.length > 32 ||
+    block.description.includes('`') ||
+    /[.!?]$/.test(block.description)
+
+  if (!isDescription) {
+    return { title: block.description }
+  }
+
+  return {
+    title: getPreviewTitle(block.name),
+    description: block.description
+  }
 }
 
 function App(): React.JSX.Element {
@@ -894,8 +948,14 @@ function DesignComponentsView({
         ) : (
           <div className="space-y-5">
             <header className="border-b pb-5">
-              <h2 className="text-2xl font-semibold">{selectedComponent.name}</h2>
-              <p className="mt-2 text-sm text-muted-foreground">这个组件还没有导入本地镜像数据。</p>
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div className="min-w-0">
+                  <h2 className="text-2xl font-semibold">{selectedComponent.name}</h2>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    这个组件还没有导入本地镜像数据。
+                  </p>
+                </div>
+              </div>
             </header>
             <div className="space-y-4">
               <code className="block overflow-x-auto rounded-md border bg-muted/50 px-3 py-2 text-xs">
@@ -965,6 +1025,14 @@ function ShadcnSourceDialog({ selectedPath }: { selectedPath?: string }): React.
 }
 
 function ShadcnDocBlockView({ block }: { block: ShadcnDocBlock }): React.JSX.Element {
+  const [copiedPreviewName, setCopiedPreviewName] = useState<string | null>(null)
+
+  async function handleCopyPreviewName(name: string): Promise<void> {
+    await copyTextToClipboard(name)
+    setCopiedPreviewName(name)
+    window.setTimeout(() => setCopiedPreviewName(null), 1600)
+  }
+
   if (block.type === 'paragraph') {
     return (
       <p className="text-sm leading-6 text-muted-foreground">
@@ -991,16 +1059,39 @@ function ShadcnDocBlockView({ block }: { block: ShadcnDocBlock }): React.JSX.Ele
   }
 
   if (block.type === 'preview') {
+    const isCopied = copiedPreviewName === block.name
+    const previewHeader = getPreviewHeader(block)
+
     return (
       <div className="overflow-hidden rounded-lg border bg-background">
-        <div className="border-b px-3 py-2">
-          <div className="text-sm font-medium">
-            <InlineDocText text={block.description ?? block.name} />
+        <div
+          className={`group flex justify-between gap-3 border-b px-4 ${
+            previewHeader.description ? 'items-start py-3' : 'min-h-12 items-center py-2'
+          }`}
+        >
+          <div className="min-w-0 space-y-1">
+            <div className="text-sm font-medium">
+              <InlineDocText text={previewHeader.title} />
+            </div>
+            {previewHeader.description ? (
+              <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
+                <InlineDocText text={previewHeader.description} />
+              </p>
+            ) : null}
           </div>
-          <div className="mt-1 truncate text-xs text-muted-foreground">
-            ComponentPreview · {block.name}
-            {block.direction ? ` · ${block.direction}` : ''}
-          </div>
+          <Button
+            aria-label={isCopied ? '已复制示例名称' : `复制 ${block.name}`}
+            className={`shrink-0 text-muted-foreground transition-opacity hover:text-foreground ${
+              isCopied ? 'opacity-100' : 'opacity-40 group-hover:opacity-100'
+            } ${previewHeader.description ? 'mt-0.5' : ''}`}
+            onClick={() => handleCopyPreviewName(block.name)}
+            size="icon-xs"
+            title={isCopied ? '已复制' : `复制 ${block.name}`}
+            type="button"
+            variant="ghost"
+          >
+            {isCopied ? <CheckCircle2 className="size-3.5" /> : <Copy className="size-3.5" />}
+          </Button>
         </div>
         <div className="p-4">
           <ShadcnComponentPreview name={block.name} direction={block.direction} />

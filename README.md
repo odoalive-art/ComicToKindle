@@ -71,8 +71,18 @@ src/renderer/src/assets/  Tailwind 和 shadcn CSS token
 src/renderer/src/components/ui/
                           shadcn/ui 生成组件
 src/renderer/src/data/    开发期本地数据，包括设计 token 和 shadcn 文档镜像数据
-docs/                     架构、运行手册和交接记录
+docs/                     架构、运行手册、交接记录和多 Agent 协作规则
 ```
+
+## 多 Agent 协作
+
+如果使用 Codex、Claude Code、Antigravity 接力开发，先阅读：
+
+```txt
+docs/agent-collaboration.md
+```
+
+该文档记录共同入口、验证命令、文档同步规则和交接格式。
 
 ## shadcn/ui
 
