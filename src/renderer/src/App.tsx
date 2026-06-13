@@ -40,6 +40,8 @@ import {
   SlidersHorizontal,
   Sun,
   SwatchBook,
+  Terminal,
+  AlertCircle,
   Type
 } from 'lucide-react'
 
@@ -1607,6 +1609,131 @@ function InlineDocText({ text }: { text: string }): React.JSX.Element {
   )
 }
 
+function AlertPreview({
+  direction,
+  name
+}: {
+  direction?: string
+  name: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+
+  if (name === 'alert-destructive') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <div className="relative w-full max-w-xl rounded-lg border border-destructive/50 p-4 text-destructive dark:border-destructive [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-destructive">
+          <AlertCircle className="size-4" />
+          <h5 className="mb-1 font-medium leading-none tracking-tight">Error</h5>
+          <div className="text-sm opacity-90">
+            Your session has expired. Please log in again.
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // alert-demo
+  return (
+    <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+      <div className="relative w-full max-w-xl rounded-lg border p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-foreground">
+        <Terminal className="size-4" />
+        <h5 className="mb-1 font-medium leading-none tracking-tight">Heads up!</h5>
+        <div className="text-sm text-muted-foreground">
+          You can add components to your app using the cli.
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function AlertDialogPreview({
+  direction
+}: {
+  direction?: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+
+  return (
+    <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+      <Dialog>
+        <DialogTrigger asChild>
+          <Button variant="outline">Open alert dialog</Button>
+        </DialogTrigger>
+        <DialogContent showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle>Are you absolutely sure?</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. This will permanently delete your account
+              and remove your data from our servers.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex justify-end gap-2">
+            <DialogTrigger asChild>
+              <Button variant="outline">Cancel</Button>
+            </DialogTrigger>
+            <DialogTrigger asChild>
+              <Button variant="destructive">Continue</Button>
+            </DialogTrigger>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}
+
+function AspectRatioPreview({
+  direction
+}: {
+  direction?: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+
+  return (
+    <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+      <div className="w-full max-w-[400px] overflow-hidden rounded-xl border bg-muted/30 p-2 shadow-xs">
+        <div className="relative aspect-video w-full overflow-hidden rounded-lg">
+          <img
+            src="https://images.unsplash.com/photo-1588345921523-c2dcdb7f1dcd?w=800&dpr=2&auto=format&fit=crop"
+            alt="Unsplash Cover"
+            className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function AvatarPreview({
+  direction
+}: {
+  direction?: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+
+  return (
+    <div className="flex min-h-24 items-center justify-center gap-6 p-4" dir={dir}>
+      <div className="flex items-center gap-4">
+        {/* Avatar with Image */}
+        <div className="relative flex size-10 shrink-0 overflow-hidden rounded-full border bg-muted">
+          <img
+            className="aspect-square h-full w-full object-cover"
+            src="https://github.com/shadcn.png"
+            alt="@shadcn"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none'
+            }}
+          />
+        </div>
+
+        {/* Avatar with Fallback */}
+        <div className="relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full border bg-muted text-sm font-medium text-muted-foreground select-none">
+          CN
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function ShadcnComponentPreview({
   direction,
   name
@@ -1614,6 +1741,22 @@ function ShadcnComponentPreview({
   direction?: string
   name: string
 }): React.JSX.Element {
+  if (name.startsWith('alert-dialog')) {
+    return <AlertDialogPreview direction={direction} />
+  }
+
+  if (name.startsWith('alert')) {
+    return <AlertPreview name={name} direction={direction} />
+  }
+
+  if (name.startsWith('aspect-ratio')) {
+    return <AspectRatioPreview direction={direction} />
+  }
+
+  if (name.startsWith('avatar')) {
+    return <AvatarPreview direction={direction} />
+  }
+
   if (name.startsWith('button') || name === 'spinner-button') {
     return <ButtonPreview name={name} direction={direction} />
   }

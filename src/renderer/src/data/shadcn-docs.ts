@@ -327,6 +327,371 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
       }
     ]
   },
+  alert: {
+    name: 'Alert',
+    slug: 'alert',
+    description: translated(
+      'Displays a callout for user attention.',
+      '显示一个警告提示，以吸引用户的注意力。'
+    ),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/alert.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/alert',
+    installCommand: 'npx shadcn@latest add alert',
+    sections: [
+      {
+        title: translated('Preview', '预览'),
+        blocks: [
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'alert-demo'
+          }
+        ]
+      },
+      {
+        title: translated('Installation', '安装'),
+        blocks: [
+          {
+            type: 'code',
+            language: 'bash',
+            title: translated('Command', '命令'),
+            code: 'npx shadcn@latest add alert'
+          },
+          {
+            type: 'steps',
+            items: [
+              translated(
+                'Copy and paste the component source into your project.',
+                '将组件源码复制并粘贴到你的项目中。'
+              ),
+              translated(
+                'Update the import paths to match your project setup.',
+                '按你的项目配置更新 import 路径。'
+              )
+            ]
+          }
+        ]
+      },
+      {
+        title: translated('Usage', '用法'),
+        blocks: [
+          {
+            type: 'code',
+            language: 'tsx',
+            code: 'import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"'
+          },
+          {
+            type: 'code',
+            language: 'tsx',
+            code: '<Alert>\n  <Terminal className="h-4 w-4" />\n  <AlertTitle>Heads up!</AlertTitle>\n  <AlertDescription>\n    You can add components to your app using the cli.\n  </AlertDescription>\n</Alert>'
+          }
+        ]
+      },
+      {
+        title: translated('Composition', '组成'),
+        blocks: [
+          {
+            type: 'composition',
+            code: 'Alert\n├── AlertTitle\n└── AlertDescription'
+          }
+        ]
+      },
+      {
+        title: translated('Examples', '示例'),
+        blocks: [
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'alert-destructive',
+            description: translated(
+              'Use the `variant="destructive"` prop to display a destructive alert.',
+              '使用 `variant="destructive"` 属性显示危险/破坏性的警告提示。'
+            )
+          }
+        ]
+      },
+      {
+        title: translated('API Reference', 'API 参考'),
+        blocks: [
+          {
+            type: 'table',
+            columns: [
+              translated('Prop', '属性'),
+              translated('Type', '类型'),
+              translated('Default', '默认值')
+            ],
+            rows: [
+              ['variant', '"default" | "destructive"', '"default"']
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  'alert-dialog': {
+    name: 'Alert Dialog',
+    slug: 'alert-dialog',
+    description: translated(
+      'A modal dialog that interrupts the user with important content and expects a response.',
+      '一个模态对话框，用重要的内容中断用户并期待其响应。'
+    ),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/radix/alert-dialog.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/radix/alert-dialog',
+    installCommand: 'npx shadcn@latest add alert-dialog',
+    manualDependencies: ['radix-ui'],
+    sections: [
+      {
+        title: translated('Preview', '预览'),
+        blocks: [
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'alert-dialog-demo'
+          }
+        ]
+      },
+      {
+        title: translated('Installation', '安装'),
+        blocks: [
+          {
+            type: 'code',
+            language: 'bash',
+            title: translated('Command', '命令'),
+            code: 'npx shadcn@latest add alert-dialog'
+          },
+          {
+            type: 'steps',
+            items: [
+              translated(
+                'Install the following dependencies: npm install radix-ui',
+                '安装以下依赖：npm install radix-ui'
+              ),
+              translated(
+                'Copy and paste the component source into your project.',
+                '将组件源码复制并粘贴到你的项目中。'
+              ),
+              translated(
+                'Update the import paths to match your project setup.',
+                '按你的项目配置更新 import 路径。'
+              )
+            ]
+          }
+        ]
+      },
+      {
+        title: translated('Usage', '用法'),
+        blocks: [
+          {
+            type: 'code',
+            language: 'tsx',
+            code: 'import {\n  AlertDialog,\n  AlertDialogAction,\n  AlertDialogCancel,\n  AlertDialogContent,\n  AlertDialogDescription,\n  AlertDialogFooter,\n  AlertDialogHeader,\n  AlertDialogTitle,\n  AlertDialogTrigger,\n} from "@/components/ui/alert-dialog"'
+          },
+          {
+            type: 'code',
+            language: 'tsx',
+            code: '<AlertDialog>\n  <AlertDialogTrigger>Open</AlertDialogTrigger>\n  <AlertDialogContent>\n    <AlertDialogHeader>\n      <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>\n      <AlertDialogDescription>\n        This action cannot be undone. This will permanently delete your account\n        and remove your data from our servers.\n      </AlertDialogDescription>\n    </AlertDialogHeader>\n    <AlertDialogFooter>\n      <AlertDialogCancel>Cancel</AlertDialogCancel>\n      <AlertDialogAction>Continue</AlertDialogAction>\n    </AlertDialogFooter>\n  </AlertDialogContent>\n</AlertDialog>'
+          }
+        ]
+      },
+      {
+        title: translated('Composition', '组成'),
+        blocks: [
+          {
+            type: 'composition',
+            code: 'AlertDialog\n├── AlertDialogTrigger\n└── AlertDialogContent\n    ├── AlertDialogHeader\n    │   ├── AlertDialogTitle\n    │   └── AlertDialogDescription\n    └── AlertDialogFooter\n        ├── AlertDialogCancel\n        └── AlertDialogAction'
+          }
+        ]
+      },
+      {
+        title: translated('API Reference', 'API 参考'),
+        blocks: [
+          {
+            type: 'link',
+            label: translated('Radix UI Alert Dialog API Reference', 'Radix UI Alert Dialog API 参考'),
+            href: 'https://www.radix-ui.com/primitives/docs/components/alert-dialog#api-reference'
+          }
+        ]
+      }
+    ]
+  },
+  'aspect-ratio': {
+    name: 'Aspect Ratio',
+    slug: 'aspect-ratio',
+    description: translated(
+      'Displays content within a desired ratio.',
+      '在指定的比例内显示内容。'
+    ),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/radix/aspect-ratio.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/radix/aspect-ratio',
+    installCommand: 'npx shadcn@latest add aspect-ratio',
+    manualDependencies: ['radix-ui'],
+    sections: [
+      {
+        title: translated('Preview', '预览'),
+        blocks: [
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'aspect-ratio-demo'
+          }
+        ]
+      },
+      {
+        title: translated('Installation', '安装'),
+        blocks: [
+          {
+            type: 'code',
+            language: 'bash',
+            title: translated('Command', '命令'),
+            code: 'npx shadcn@latest add aspect-ratio'
+          },
+          {
+            type: 'steps',
+            items: [
+              translated(
+                'Install the following dependencies: npm install radix-ui',
+                '安装以下依赖：npm install radix-ui'
+              ),
+              translated(
+                'Copy and paste the component source into your project.',
+                '将组件源码复制并粘贴到你的项目中。'
+              ),
+              translated(
+                'Update the import paths to match your project setup.',
+                '按你的项目配置更新 import 路径。'
+              )
+            ]
+          }
+        ]
+      },
+      {
+        title: translated('Usage', '用法'),
+        blocks: [
+          {
+            type: 'code',
+            language: 'tsx',
+            code: 'import { AspectRatio } from "@/components/ui/aspect-ratio"'
+          },
+          {
+            type: 'code',
+            language: 'tsx',
+            code: '<div className="w-[450px]">\n  <AspectRatio ratio={16 / 9}>\n    <img src="..." alt="Image" className="rounded-md object-cover w-full h-full" />\n  </AspectRatio>\n</div>'
+          }
+        ]
+      },
+      {
+        title: translated('API Reference', 'API 参考'),
+        blocks: [
+          {
+            type: 'table',
+            columns: [
+              translated('Prop', '属性'),
+              translated('Type', '类型'),
+              translated('Default', '默认值')
+            ],
+            rows: [
+              ['ratio', 'number', '16 / 9']
+            ]
+          },
+          {
+            type: 'link',
+            label: translated('Radix UI Aspect Ratio API Reference', 'Radix UI Aspect Ratio API 参考'),
+            href: 'https://www.radix-ui.com/primitives/docs/components/aspect-ratio#api-reference'
+          }
+        ]
+      }
+    ]
+  },
+  avatar: {
+    name: 'Avatar',
+    slug: 'avatar',
+    description: translated(
+      'An image element with a fallback for representing the user.',
+      '带有回退机制的头像图像元素，用于展示用户。'
+    ),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/radix/avatar.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/radix/avatar',
+    installCommand: 'npx shadcn@latest add avatar',
+    manualDependencies: ['radix-ui'],
+    sections: [
+      {
+        title: translated('Preview', '预览'),
+        blocks: [
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'avatar-demo'
+          }
+        ]
+      },
+      {
+        title: translated('Installation', '安装'),
+        blocks: [
+          {
+            type: 'code',
+            language: 'bash',
+            title: translated('Command', '命令'),
+            code: 'npx shadcn@latest add avatar'
+          },
+          {
+            type: 'steps',
+            items: [
+              translated(
+                'Install the following dependencies: npm install radix-ui',
+                '安装以下依赖：npm install radix-ui'
+              ),
+              translated(
+                'Copy and paste the component source into your project.',
+                '将组件源码复制并粘贴到你的项目中。'
+              ),
+              translated(
+                'Update the import paths to match your project setup.',
+                '按你的项目配置更新 import 路径。'
+              )
+            ]
+          }
+        ]
+      },
+      {
+        title: translated('Usage', '用法'),
+        blocks: [
+          {
+            type: 'code',
+            language: 'tsx',
+            code: 'import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"'
+          },
+          {
+            type: 'code',
+            language: 'tsx',
+            code: '<Avatar>\n  <AvatarImage src="https://github.com/shadcn.png" alt="@shadcn" />\n  <AvatarFallback>CN</AvatarFallback>\n</Avatar>'
+          }
+        ]
+      },
+      {
+        title: translated('Composition', '组成'),
+        blocks: [
+          {
+            type: 'composition',
+            code: 'Avatar\n├── AvatarImage\n└── AvatarFallback'
+          }
+        ]
+      },
+      {
+        title: translated('API Reference', 'API 参考'),
+        blocks: [
+          {
+            type: 'link',
+            label: translated('Radix UI Avatar API Reference', 'Radix UI Avatar API 参考'),
+            href: 'https://www.radix-ui.com/primitives/docs/components/avatar#api-reference'
+          }
+        ]
+      }
+    ]
+  },
   button: {
     name: 'Button',
     slug: 'button',
