@@ -19,9 +19,11 @@ function Accordion({
     <AccordionPrimitive.Root
       data-slot="accordion"
       className={cn(className)}
-      type={type as "single" | "multiple"}
-      collapsible={collapsible}
-      {...props}
+      {...({
+        type,
+        collapsible,
+        ...props
+      } as any)}
     />
   )
 }

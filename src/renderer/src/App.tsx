@@ -29,6 +29,7 @@ import {
   Loader2,
   Moon,
   MoreHorizontal,
+  Package,
   Palette,
   Plus,
   Rows3,
@@ -119,6 +120,7 @@ type NavItem = {
 
 type ViewId =
   | 'library'
+  | 'app-components'
   | 'design-components'
   | 'foundation-standards'
   | 'inbox'
@@ -141,8 +143,9 @@ type LanguageMode = 'zh' | 'en'
 const uiText = {
   zh: {
     nav: {
-      library: '漫画库',
-      'design-components': '设计组件',
+      library: '所有漫画',
+      'app-components': '应用组件',
+      'design-components': 'Shadcn 组件',
       'foundation-standards': '基础规范',
       inbox: '导入收件箱',
       queue: '转换队列',
@@ -151,6 +154,7 @@ const uiText = {
     },
     header: {
       componentDescription: 'shadcn/ui 官方组件索引，搭建界面时快速选型',
+      appComponentsDescription: '当前项目中已正式安装并使用的基础 UI 组件',
       officialPage: '官方页面',
       sourceDetails: '来源详情',
       foundationDescription: '颜色、字体、字号、间距与基础界面节奏',
@@ -202,7 +206,7 @@ const uiText = {
     },
     sidebar: {
       tagline: '本地漫画工作台',
-      workspace: '工作区',
+      workspace: '漫画库',
       folders: '库目录',
       settings: '设置',
       folderNames: ['全部漫画', '新导入', '待整理', 'Kindle 预备区'],
@@ -235,8 +239,9 @@ const uiText = {
   },
   en: {
     nav: {
-      library: 'Library',
-      'design-components': 'Components',
+      library: 'All Comics',
+      'app-components': 'App Components',
+      'design-components': 'Shadcn Components',
       'foundation-standards': 'Foundations',
       inbox: 'Inbox',
       queue: 'Queue',
@@ -245,6 +250,7 @@ const uiText = {
     },
     header: {
       componentDescription: 'shadcn/ui component index for faster UI assembly',
+      appComponentsDescription: 'Core UI components installed and used in the current project',
       officialPage: 'Official page',
       sourceDetails: 'Source',
       foundationDescription: 'Colors, typography, type scale, spacing, and layout rhythm',
@@ -298,7 +304,7 @@ const uiText = {
     },
     sidebar: {
       tagline: 'Local comic workspace',
-      workspace: 'Workspaces',
+      workspace: 'Library',
       folders: 'Library',
       settings: 'Settings',
       folderNames: ['All Comics', 'New Imports', 'To Organize', 'Kindle Prep'],
@@ -332,8 +338,9 @@ const uiText = {
 } as const
 
 const primaryNav: NavItem[] = [
-  { id: 'library', title: '漫画库', icon: Library, badge: '128' },
-  { id: 'design-components', title: '设计组件', icon: Component, badge: '59' },
+  { id: 'library', title: '所有漫画', icon: Library, badge: '128' },
+  { id: 'app-components', title: '应用组件', icon: Package, badge: '15' },
+  { id: 'design-components', title: 'Shadcn 组件', icon: Component, badge: '59' },
   { id: 'foundation-standards', title: '基础规范', icon: SwatchBook },
   { id: 'inbox', title: '导入收件箱', icon: Inbox, badge: '6' },
   { id: 'queue', title: '转换队列', icon: BookOpenCheck, badge: '2' },
@@ -473,6 +480,7 @@ function getPreviewHeader(
 function App(): React.JSX.Element {
   const [activeView, setActiveView] = useState<ViewId>('library')
   const [componentSearch, setComponentSearch] = useState('')
+  const [appComponentSearch, setAppComponentSearch] = useState('')
   const [selectedComponentSlug, setSelectedComponentSlug] = useState('button')
   const [themeMode, setThemeMode] = useState<ThemeMode>(getInitialThemeMode)
   const [languageMode, setLanguageMode] = useState<LanguageMode>(getInitialLanguageMode)
@@ -505,6 +513,35 @@ function App(): React.JSX.Element {
     })
   }, [componentSearch])
 
+  const filteredAppComponents = useMemo(() => {
+    const query = appComponentSearch.trim().toLowerCase()
+
+    return shadcnComponents.filter((item) => {
+      if (!installedShadcnComponentSlugs.has(item.slug)) {
+        return false
+      }
+
+      if (!query) {
+        return true
+      }
+
+      const doc = mirroredShadcnDocs[item.slug]
+      let localizedDescriptions: string[] = []
+
+      if (doc) {
+        const description = doc.description
+        localizedDescriptions =
+          typeof description === 'string' ? [description] : [description.en, description.zh]
+      }
+
+      return (
+        item.name.toLowerCase().includes(query) ||
+        item.slug.includes(query) ||
+        localizedDescriptions.some((description) => description.toLowerCase().includes(query))
+      )
+    })
+  }, [appComponentSearch])
+
   useEffect(() => {
     const root = document.documentElement
 
@@ -523,12 +560,21 @@ function App(): React.JSX.Element {
       <div className="flex h-dvh w-full bg-background text-foreground">
         <AppSidebar activeView={activeView} locale={languageMode} onSelect={setActiveView} />
         <SidebarInset className="flex min-w-0 flex-col overflow-hidden">
-          <header className="flex min-h-14 shrink-0 items-center gap-3 border-b bg-background px-4 py-2">
-            <SidebarTrigger className="md:hidden" />
+          <header
+            className="flex min-h-14 shrink-0 items-center gap-3 border-b bg-background px-4 py-2"
+            style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
+          >
+            <SidebarTrigger
+              className="md:hidden"
+              style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+            />
             <div className="min-w-0 flex-1">
               <h1 className="truncate text-base font-semibold">{text.nav[activeNavItem.id]}</h1>
               {isComponentView ? (
-                <div className="flex max-w-full flex-wrap items-center gap-x-2 gap-y-1 overflow-hidden text-xs text-muted-foreground">
+                <div
+                  className="flex max-w-full flex-wrap items-center gap-x-2 gap-y-1 overflow-hidden text-xs text-muted-foreground"
+                  style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+                >
                   <span>{shadcnDocsSource.repository}</span>
                   <span>·</span>
                   <span>{shadcnDocsSource.license}</span>
@@ -550,6 +596,10 @@ function App(): React.JSX.Element {
                     selectedPath={mirroredShadcnDocs[selectedComponentSlug]?.sourcePath}
                   />
                 </div>
+              ) : activeView === 'app-components' ? (
+                <p className="truncate text-xs text-muted-foreground">
+                  {text.header.appComponentsDescription}
+                </p>
               ) : isFoundationView ? (
                 <p className="truncate text-xs text-muted-foreground">
                   {text.header.foundationDescription}
@@ -560,8 +610,11 @@ function App(): React.JSX.Element {
                 </p>
               )}
             </div>
-            {!isFoundationView ? (
-              <div className="hidden min-w-64 items-center gap-2 rounded-md border bg-background px-3 md:flex">
+            {!isFoundationView && activeView !== 'app-components' ? (
+              <div
+                className="hidden min-w-64 items-center gap-2 rounded-md border bg-background px-3 md:flex"
+                style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+              >
                 <Search className="size-4 text-muted-foreground" />
                 {isComponentView ? (
                   <Input
@@ -579,9 +632,26 @@ function App(): React.JSX.Element {
                   />
                 )}
               </div>
+            ) : activeView === 'app-components' ? (
+              <div
+                className="hidden min-w-64 items-center gap-2 rounded-md border bg-background px-3 md:flex"
+                style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+              >
+                <Search className="size-4 text-muted-foreground" />
+                <Input
+                  aria-label="搜索应用组件"
+                  className="h-9 border-0 px-0 shadow-none focus-visible:ring-0"
+                  onChange={(event) => setAppComponentSearch(event.target.value)}
+                  placeholder="搜索应用组件..."
+                  value={appComponentSearch}
+                />
+              </div>
             ) : null}
             <TooltipProvider>
-              <div className="flex shrink-0 items-center gap-2">
+              <div
+                className="flex shrink-0 items-center gap-2"
+                style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+              >
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
@@ -641,8 +711,11 @@ function App(): React.JSX.Element {
                 ) : null}
               </div>
             </TooltipProvider>
-            {isComponentView || isFoundationView ? null : (
-              <>
+            {isComponentView || isFoundationView || activeView === 'app-components' ? null : (
+              <div
+                className="flex items-center gap-2"
+                style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+              >
                 <Button variant="outline" size="sm">
                   <SlidersHorizontal />
                   {text.header.filter}
@@ -651,16 +724,24 @@ function App(): React.JSX.Element {
                   <Plus />
                   {text.header.add}
                 </Button>
-              </>
+              </div>
             )}
           </header>
 
-          {isComponentView ? (
+          {isComponentView || activeView === 'app-components' ? (
             <DesignComponentsView
-              components={filteredDesignComponents}
+              components={
+                activeView === 'app-components' ? filteredAppComponents : filteredDesignComponents
+              }
               onSelect={setSelectedComponentSlug}
-              query={componentSearch}
-              selectedSlug={selectedComponentSlug}
+              query={activeView === 'app-components' ? appComponentSearch : componentSearch}
+              selectedSlug={
+                activeView === 'app-components'
+                  ? filteredAppComponents.some((c) => c.slug === selectedComponentSlug)
+                    ? selectedComponentSlug
+                    : filteredAppComponents[0]?.slug || 'button'
+                  : selectedComponentSlug
+              }
               locale={languageMode}
             />
           ) : isFoundationView ? (
@@ -2802,24 +2883,10 @@ function AppSidebar({
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="border-b">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton size="lg" tooltip="ComicToKindle">
-              <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                <BookOpen className="size-4" />
-              </div>
-              <div className="min-w-0">
-                <div className="truncate text-sm font-semibold">ComicToKindle</div>
-                <div className="truncate text-xs text-sidebar-foreground/60">
-                  {text.sidebar.tagline}
-                </div>
-              </div>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarHeader>
-
+      <div
+        className="h-9 w-full shrink-0"
+        style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
+      />
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>{text.sidebar.workspace}</SidebarGroupLabel>
