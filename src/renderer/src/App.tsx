@@ -60,7 +60,8 @@ import {
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle
+  CardTitle,
+  CardFooter
 } from '@/components/ui/card'
 import {
   Dialog,
@@ -104,6 +105,17 @@ import {
 } from '@/components/ui/table'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Calendar } from '@/components/ui/calendar'
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel'
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle, DrawerTrigger } from '@/components/ui/drawer'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from '@/components/ui/command'
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger, ContextMenuSeparator } from '@/components/ui/context-menu'
+import { Area, AreaChart, CartesianGrid, XAxis } from 'recharts'
 import { designTokens } from '@/data/design-tokens'
 import {
   installedShadcnComponentSlugs,
@@ -1887,6 +1899,529 @@ function BreadcrumbPreview({
   )
 }
 
+function CalendarPreview({
+  direction
+}: {
+  direction?: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+  const [date, setDate] = useState<Date | undefined>(new Date())
+
+  return (
+    <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+      <Calendar
+        mode="single"
+        selected={date}
+        onSelect={setDate}
+        className="rounded-md border bg-background shadow-xs"
+      />
+    </div>
+  )
+}
+
+function CardPreview({
+  direction
+}: {
+  direction?: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+
+  return (
+    <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+      <Card className="w-full max-w-sm">
+        <CardHeader>
+          <CardTitle>Create project</CardTitle>
+          <CardDescription>Deploy your new project in one-click.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-sm text-muted-foreground">
+            This is a simulated preview showing a card component containing project status.
+          </div>
+        </CardContent>
+        <CardFooter className="flex justify-between">
+          <Button variant="outline">Cancel</Button>
+          <Button>Deploy</Button>
+        </CardFooter>
+      </Card>
+    </div>
+  )
+}
+
+function CarouselPreview({
+  direction
+}: {
+  direction?: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+
+  return (
+    <div className="flex min-h-24 items-center justify-center p-8" dir={dir}>
+      <Carousel className="w-full max-w-xs">
+        <CarouselContent>
+          {Array.from({ length: 5 }).map((_, index) => (
+            <CarouselItem key={index}>
+              <div className="p-1">
+                <Card>
+                  <CardContent className="flex aspect-square items-center justify-center p-6">
+                    <span className="text-4xl font-semibold">{index + 1}</span>
+                  </CardContent>
+                </Card>
+              </div>
+            </CarouselItem>
+          ))}
+        </CarouselContent>
+        <CarouselPrevious />
+        <CarouselNext />
+      </Carousel>
+    </div>
+  )
+}
+
+function ChartPreview({
+  direction
+}: {
+  direction?: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+  const chartData = [
+    { month: 'January', desktop: 186, mobile: 80 },
+    { month: 'February', desktop: 305, mobile: 200 },
+    { month: 'March', desktop: 237, mobile: 120 },
+    { month: 'April', desktop: 73, mobile: 190 },
+    { month: 'May', desktop: 209, mobile: 130 },
+    { month: 'June', desktop: 214, mobile: 140 }
+  ]
+
+  const chartConfig = {
+    desktop: {
+      label: 'Desktop',
+      color: 'hsl(var(--primary))'
+    },
+    mobile: {
+      label: 'Mobile',
+      color: 'hsl(var(--chart-2, 210 100% 50%))'
+    }
+  }
+
+  return (
+    <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle>Area Chart - Interactive</CardTitle>
+          <CardDescription>Showing mobile and desktop traffic.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ChartContainer config={chartConfig} className="h-[200px] w-full">
+            <AreaChart data={chartData} margin={{ left: 12, right: 12 }}>
+              <CartesianGrid vertical={false} />
+              <XAxis
+                dataKey="month"
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                tickFormatter={(value) => value.slice(0, 3)}
+              />
+              <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
+              <Area
+                dataKey="mobile"
+                type="natural"
+                fill="var(--color-mobile)"
+                fillOpacity={0.4}
+                stroke="var(--color-mobile)"
+                stackId="a"
+              />
+              <Area
+                dataKey="desktop"
+                type="natural"
+                fill="var(--color-desktop)"
+                fillOpacity={0.4}
+                stroke="var(--color-desktop)"
+                stackId="a"
+              />
+            </AreaChart>
+          </ChartContainer>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+function CheckboxPreview({
+  direction
+}: {
+  direction?: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+
+  return (
+    <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+      <div className="flex items-center space-x-2">
+        <Checkbox id="terms" />
+        <label
+          htmlFor="terms"
+          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+        >
+          Accept terms and conditions
+        </label>
+      </div>
+    </div>
+  )
+}
+
+function CollapsiblePreview({
+  direction
+}: {
+  direction?: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+  const [isOpen, setIsOpen] = useState(false)
+
+  return (
+    <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+      <Collapsible open={isOpen} onOpenChange={setIsOpen} className="w-[350px] space-y-2">
+        <div className="flex items-center justify-between space-x-4 px-4">
+          <h4 className="text-sm font-semibold">@peduarte starred 3 repositories</h4>
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" size="sm" className="w-9 p-0">
+              <ChevronDown className="h-4 w-4" />
+              <span className="sr-only">Toggle</span>
+            </Button>
+          </CollapsibleTrigger>
+        </div>
+        <div className="rounded-md border px-4 py-3 font-mono text-sm">
+          @radix-ui/primitives
+        </div>
+        <CollapsibleContent className="space-y-2">
+          <div className="rounded-md border px-4 py-3 font-mono text-sm">
+            @radix-ui/colors
+          </div>
+          <div className="rounded-md border px-4 py-3 font-mono text-sm">
+            @stitches/react
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+    </div>
+  )
+}
+
+function ComboboxPreview({
+  direction
+}: {
+  direction?: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+  const [open, setOpen] = useState(false)
+  const [value, setValue] = useState("")
+
+  const frameworks = [
+    { value: "next.js", label: "Next.js" },
+    { value: "sveltekit", label: "SvelteKit" },
+    { value: "nuxt.js", label: "Nuxt.js" },
+    { value: "remix", label: "Remix" },
+    { value: "astro", label: "Astro" }
+  ]
+
+  return (
+    <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className="w-[200px] justify-between"
+          >
+            {value
+              ? frameworks.find((framework) => framework.value === value)?.label
+              : "Select framework..."}
+            <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[200px] p-0">
+          <Command>
+            <CommandInput placeholder="Search framework..." />
+            <CommandList>
+              <CommandEmpty>No framework found.</CommandEmpty>
+              <CommandGroup>
+                {frameworks.map((framework) => (
+                  <CommandItem
+                    key={framework.value}
+                    value={framework.value}
+                    onSelect={(currentValue) => {
+                      setValue(currentValue === value ? "" : currentValue)
+                      setOpen(false)
+                    }}
+                  >
+                    {framework.label}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    </div>
+  )
+}
+
+function CommandPreview({
+  direction
+}: {
+  direction?: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+  return (
+    <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+      <Command className="rounded-lg border shadow-md max-w-[450px]">
+        <CommandInput placeholder="Type a command or search..." />
+        <CommandList>
+          <CommandEmpty>No results found.</CommandEmpty>
+          <CommandGroup heading="Suggestions">
+            <CommandItem>Calendar</CommandItem>
+            <CommandItem>Search Emoji</CommandItem>
+            <CommandItem>Calculator</CommandItem>
+          </CommandGroup>
+          <CommandSeparator />
+          <CommandGroup heading="Settings">
+            <CommandItem>Profile</CommandItem>
+            <CommandItem>Billing</CommandItem>
+            <CommandItem>Settings</CommandItem>
+          </CommandGroup>
+        </CommandList>
+      </Command>
+    </div>
+  )
+}
+
+function ContextMenuPreview({
+  direction
+}: {
+  direction?: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+  return (
+    <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+      <ContextMenu>
+        <ContextMenuTrigger className="flex h-[150px] w-[300px] items-center justify-center rounded-md border border-dashed text-sm">
+          Right click here
+        </ContextMenuTrigger>
+        <ContextMenuContent className="w-64">
+          <ContextMenuItem inset>Back</ContextMenuItem>
+          <ContextMenuItem inset disabled>Forward</ContextMenuItem>
+          <ContextMenuItem inset>Reload</ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem inset>Bookmark this page</ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
+    </div>
+  )
+}
+
+function DataTablePreview({
+  direction
+}: {
+  direction?: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+  const [filterValue, setFilterValue] = useState("")
+  const [currentPage, setCurrentPage] = useState(1)
+
+  const allData = [
+    { id: "INV001", status: "Paid", method: "Credit Card", amount: "$250.00" },
+    { id: "INV002", status: "Pending", method: "PayPal", amount: "$150.00" },
+    { id: "INV003", status: "Unpaid", method: "Bank Transfer", amount: "$350.00" },
+    { id: "INV004", status: "Paid", method: "Credit Card", amount: "$450.00" },
+    { id: "INV005", status: "Paid", method: "Apple Pay", amount: "$550.00" }
+  ]
+
+  const filtered = allData.filter(item => 
+    item.id.toLowerCase().includes(filterValue.toLowerCase()) ||
+    item.method.toLowerCase().includes(filterValue.toLowerCase())
+  )
+
+  const itemsPerPage = 3
+  const totalPages = Math.ceil(filtered.length / itemsPerPage)
+  const displayedData = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+
+  return (
+    <div className="w-full space-y-4 p-4" dir={dir}>
+      <div className="flex items-center justify-between gap-4">
+        <Input
+          placeholder="Filter invoices..."
+          value={filterValue}
+          onChange={(e) => {
+            setFilterValue(e.target.value)
+            setCurrentPage(1)
+          }}
+          className="max-w-xs"
+        />
+      </div>
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[100px]">Invoice</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Method</TableHead>
+              <TableHead className="text-right">Amount</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {displayedData.length > 0 ? (
+              displayedData.map((row) => (
+                <TableRow key={row.id}>
+                  <TableCell className="font-medium">{row.id}</TableCell>
+                  <TableCell>{row.status}</TableCell>
+                  <TableCell>{row.method}</TableCell>
+                  <TableCell className="text-right">{row.amount}</TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={4} className="h-24 text-center">
+                  No results.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+      <div className="flex items-center justify-end space-x-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+          disabled={currentPage === 1}
+        >
+          Previous
+        </Button>
+        <span className="text-xs text-muted-foreground">Page {currentPage} of {totalPages || 1}</span>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+          disabled={currentPage === totalPages || totalPages === 0}
+        >
+          Next
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+function DatePickerPreview({
+  direction
+}: {
+  direction?: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+  const [date, setDate] = useState<Date | undefined>(new Date())
+
+  return (
+    <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant={"outline"}
+            className="w-[240px] justify-start text-left font-normal"
+          >
+            <Terminal className="mr-2 h-4 w-4" />
+            {date ? date.toDateString() : <span>Pick a date</span>}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar
+            mode="single"
+            selected={date}
+            onSelect={setDate}
+          />
+        </PopoverContent>
+      </Popover>
+    </div>
+  )
+}
+
+function DirectionPreview({
+  direction
+}: {
+  direction?: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+  const [localDir, setLocalDir] = useState<'ltr' | 'rtl'>('ltr')
+
+  return (
+    <div className="flex flex-col min-h-24 items-center justify-center gap-4 p-4" dir={dir}>
+      <div className="flex gap-2">
+        <Button size="sm" variant={localDir === 'ltr' ? 'default' : 'outline'} onClick={() => setLocalDir('ltr')}>LTR</Button>
+        <Button size="sm" variant={localDir === 'rtl' ? 'default' : 'outline'} onClick={() => setLocalDir('rtl')}>RTL</Button>
+      </div>
+      <div className="rounded-md border p-4 w-64 text-sm" dir={localDir}>
+        {localDir === 'rtl' ? 'هذا النص مكتوب من اليمين إلى اليسار.' : 'This text is rendered from left to right.'}
+      </div>
+    </div>
+  )
+}
+
+function DrawerPreview({
+  direction
+}: {
+  direction?: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+  return (
+    <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+      <Drawer>
+        <DrawerTrigger asChild>
+          <Button variant="outline">Open Drawer</Button>
+        </DrawerTrigger>
+        <DrawerContent>
+          <div className="mx-auto w-full max-w-sm">
+            <DrawerHeader>
+              <DrawerTitle>Move Goal</DrawerTitle>
+              <DrawerDescription>Set your daily activity goal.</DrawerDescription>
+            </DrawerHeader>
+            <div className="p-4 pb-0 text-center text-sm">
+              Simulated sliding drawer content area.
+            </div>
+            <DrawerFooter>
+              <Button>Submit</Button>
+              <DrawerClose asChild>
+                <Button variant="outline">Cancel</Button>
+              </DrawerClose>
+            </DrawerFooter>
+          </div>
+        </DrawerContent>
+      </Drawer>
+    </div>
+  )
+}
+
+function DropdownMenuPreview({
+  direction
+}: {
+  direction?: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+  return (
+    <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline">Open Menu</Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="w-56">
+          <DropdownMenuLabel>My Account</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem>Profile</DropdownMenuItem>
+          <DropdownMenuItem>Billing</DropdownMenuItem>
+          <DropdownMenuItem>Settings</DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem>Keyboard shortcuts</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  )
+}
+
 function ShadcnComponentPreview({
   direction,
   name
@@ -1894,6 +2429,62 @@ function ShadcnComponentPreview({
   direction?: string
   name: string
 }): React.JSX.Element {
+  if (name.startsWith('calendar')) {
+    return <CalendarPreview direction={direction} />
+  }
+
+  if (name.startsWith('card')) {
+    return <CardPreview direction={direction} />
+  }
+
+  if (name.startsWith('carousel')) {
+    return <CarouselPreview direction={direction} />
+  }
+
+  if (name.startsWith('chart')) {
+    return <ChartPreview direction={direction} />
+  }
+
+  if (name.startsWith('checkbox')) {
+    return <CheckboxPreview direction={direction} />
+  }
+
+  if (name.startsWith('collapsible')) {
+    return <CollapsiblePreview direction={direction} />
+  }
+
+  if (name.startsWith('combobox')) {
+    return <ComboboxPreview direction={direction} />
+  }
+
+  if (name.startsWith('command')) {
+    return <CommandPreview direction={direction} />
+  }
+
+  if (name.startsWith('context-menu')) {
+    return <ContextMenuPreview direction={direction} />
+  }
+
+  if (name.startsWith('data-table')) {
+    return <DataTablePreview direction={direction} />
+  }
+
+  if (name.startsWith('date-picker')) {
+    return <DatePickerPreview direction={direction} />
+  }
+
+  if (name.startsWith('direction')) {
+    return <DirectionPreview direction={direction} />
+  }
+
+  if (name.startsWith('drawer')) {
+    return <DrawerPreview direction={direction} />
+  }
+
+  if (name.startsWith('dropdown-menu')) {
+    return <DropdownMenuPreview direction={direction} />
+  }
+
   if (name.startsWith('alert-dialog')) {
     return <AlertDialogPreview direction={direction} />
   }

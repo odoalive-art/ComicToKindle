@@ -143,7 +143,17 @@ export const installedShadcnComponentSlugs = new Set([
   'sonner',
   'table',
   'tabs',
-  'tooltip'
+  'tooltip',
+  'calendar',
+  'carousel',
+  'chart',
+  'checkbox',
+  'collapsible',
+  'command',
+  'context-menu',
+  'drawer',
+  'dropdown-menu',
+  'popover'
 ])
 
 export const shadcnDocsSource = {
@@ -1158,6 +1168,262 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
       }
     ]
   },
+  calendar: {
+    name: 'Calendar',
+    slug: 'calendar',
+    description: translated('A date picker component or calendar component.', '日历及日期选择组件。'),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/radix/calendar.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/calendar',
+    installCommand: 'npx shadcn@latest add calendar',
+    manualDependencies: ['react-day-picker', 'date-fns'],
+    sections: [
+      {
+        title: translated('Preview', '预览'),
+        blocks: [{ type: 'preview', styleName: 'radix-nova', name: 'calendar-demo' }]
+      },
+      {
+        title: translated('Installation', '安装'),
+        blocks: [
+          { type: 'code', language: 'bash', title: translated('Command', '命令'), code: 'npx shadcn@latest add calendar' }
+        ]
+      },
+      {
+        title: translated('Usage', '用法'),
+        blocks: [
+          { type: 'code', language: 'tsx', code: 'import { Calendar } from "@/components/ui/calendar"' },
+          { type: 'code', language: 'tsx', code: 'const [date, setDate] = useState<Date | undefined>(new Date())\n\n<Calendar\n  mode="single"\n  selected={date}\n  onSelect={setDate}\n  className="rounded-md border"\n/>' }
+        ]
+      }
+    ]
+  },
+  card: {
+    name: 'Card',
+    slug: 'card',
+    description: translated('Displays a card with header, content, and footer.', '显示一个包含页头、内容和页脚的卡片。'),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/card.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/card',
+    installCommand: 'npx shadcn@latest add card',
+    sections: [
+      {
+        title: translated('Preview', '预览'),
+        blocks: [{ type: 'preview', styleName: 'radix-nova', name: 'card-demo' }]
+      },
+      {
+        title: translated('Installation', '安装'),
+        blocks: [
+          { type: 'code', language: 'bash', title: translated('Command', '命令'), code: 'npx shadcn@latest add card' }
+        ]
+      },
+      {
+        title: translated('Usage', '用法'),
+        blocks: [
+          { type: 'code', language: 'tsx', code: 'import {\n  Card,\n  CardContent,\n  CardDescription,\n  CardFooter,\n  CardHeader,\n  CardTitle,\n} from "@/components/ui/card"' },
+          { type: 'code', language: 'tsx', code: '<Card>\n  <CardHeader>\n    <CardTitle>Card Title</CardTitle>\n    <CardDescription>Card Description</CardDescription>\n  </CardHeader>\n  <CardContent>\n    <p>Card Content</p>\n  </CardContent>\n  <CardFooter>\n    <p>Card Footer</p>\n  </CardFooter>\n</Card>' }
+        ]
+      }
+    ]
+  },
+  carousel: {
+    name: 'Carousel',
+    slug: 'carousel',
+    description: translated('A carousel component with motion and swipe support.', '支持手势滑动与动画效果的轮播组件。'),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/carousel.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/carousel',
+    installCommand: 'npx shadcn@latest add carousel',
+    manualDependencies: ['embla-carousel-react'],
+    sections: [
+      {
+        title: translated('Preview', '预览'),
+        blocks: [{ type: 'preview', styleName: 'radix-nova', name: 'carousel-demo' }]
+      },
+      {
+        title: translated('Installation', '安装'),
+        blocks: [
+          { type: 'code', language: 'bash', title: translated('Command', '命令'), code: 'npx shadcn@latest add carousel' }
+        ]
+      },
+      {
+        title: translated('Usage', '用法'),
+        blocks: [
+          { type: 'code', language: 'tsx', code: 'import {\n  Carousel,\n  CarouselContent,\n  CarouselItem,\n  CarouselNext,\n  CarouselPrevious,\n} from "@/components/ui/carousel"' },
+          { type: 'code', language: 'tsx', code: '<Carousel>\n  <CarouselContent>\n    <CarouselItem>...</CarouselItem>\n    <CarouselItem>...</CarouselItem>\n  </CarouselContent>\n  <CarouselPrevious />\n  <CarouselNext />\n</Carousel>' }
+        ]
+      }
+    ]
+  },
+  chart: {
+    name: 'Chart',
+    slug: 'chart',
+    description: translated('Beautiful charts built using Recharts.', '使用 Recharts 构建的美观图表组件。'),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/chart.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/chart',
+    installCommand: 'npx shadcn@latest add chart',
+    manualDependencies: ['recharts'],
+    sections: [
+      {
+        title: translated('Preview', '预览'),
+        blocks: [{ type: 'preview', styleName: 'radix-nova', name: 'chart-demo' }]
+      },
+      {
+        title: translated('Installation', '安装'),
+        blocks: [
+          { type: 'code', language: 'bash', title: translated('Command', '命令'), code: 'npx shadcn@latest add chart' }
+        ]
+      },
+      {
+        title: translated('Usage', '用法'),
+        blocks: [
+          { type: 'code', language: 'tsx', code: 'import { ChartContainer, ChartTooltip } from "@/components/ui/chart"' }
+        ]
+      }
+    ]
+  },
+  checkbox: {
+    name: 'Checkbox',
+    slug: 'checkbox',
+    description: translated('A control that allows the user to toggle between checked and unchecked states.', '允许用户在选中和未选中状态之间切换的控制组件。'),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/radix/checkbox.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/checkbox',
+    installCommand: 'npx shadcn@latest add checkbox',
+    manualDependencies: ['radix-ui'],
+    sections: [
+      {
+        title: translated('Preview', '预览'),
+        blocks: [{ type: 'preview', styleName: 'radix-nova', name: 'checkbox-demo' }]
+      },
+      {
+        title: translated('Installation', '安装'),
+        blocks: [
+          { type: 'code', language: 'bash', title: translated('Command', '命令'), code: 'npx shadcn@latest add checkbox' }
+        ]
+      },
+      {
+        title: translated('Usage', '用法'),
+        blocks: [
+          { type: 'code', language: 'tsx', code: 'import { Checkbox } from "@/components/ui/checkbox"' },
+          { type: 'code', language: 'tsx', code: '<div className="flex items-center space-x-2">\n  <Checkbox id="terms" />\n  <label htmlFor="terms">Accept terms and conditions</label>\n</div>' }
+        ]
+      }
+    ]
+  },
+  collapsible: {
+    name: 'Collapsible',
+    slug: 'collapsible',
+    description: translated('An interactive component which can be toggled between expanded and collapsed states.', '一个可在展开和折叠状态之间切换的交互式组件。'),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/radix/collapsible.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/collapsible',
+    installCommand: 'npx shadcn@latest add collapsible',
+    manualDependencies: ['radix-ui'],
+    sections: [
+      {
+        title: translated('Preview', '预览'),
+        blocks: [{ type: 'preview', styleName: 'radix-nova', name: 'collapsible-demo' }]
+      },
+      {
+        title: translated('Installation', '安装'),
+        blocks: [
+          { type: 'code', language: 'bash', title: translated('Command', '命令'), code: 'npx shadcn@latest add collapsible' }
+        ]
+      },
+      {
+        title: translated('Usage', '用法'),
+        blocks: [
+          { type: 'code', language: 'tsx', code: 'import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"' },
+          { type: 'code', language: 'tsx', code: '<Collapsible>\n  <CollapsibleTrigger>Can I use this in my project?</CollapsibleTrigger>\n  <CollapsibleContent>\n    Yes. Free for personal and commercial use. No attribution required.\n  </CollapsibleContent>\n</Collapsible>' }
+        ]
+      }
+    ]
+  },
+  combobox: {
+    name: 'Combobox',
+    slug: 'combobox',
+    description: translated('Autocomplete input and command selector.', '带有自动填充输入与命令选择器的组件。'),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/combobox.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/combobox',
+    installCommand: 'npx shadcn@latest add popover command',
+    sections: [
+      {
+        title: translated('Preview', '预览'),
+        blocks: [{ type: 'preview', styleName: 'radix-nova', name: 'combobox-demo' }]
+      },
+      {
+        title: translated('Installation', '安装'),
+        blocks: [
+          { type: 'code', language: 'bash', title: translated('Command', '命令'), code: 'npx shadcn@latest add popover command' }
+        ]
+      },
+      {
+        title: translated('Usage', '用法'),
+        blocks: [
+          { type: 'paragraph', text: translated('A Combobox is built by combining the `<Popover />` and `<Command />` components.', 'Combobox 是通过组合 `<Popover />` 和 `<Command />` 组件构建的。') }
+        ]
+      }
+    ]
+  },
+  command: {
+    name: 'Command',
+    slug: 'command',
+    description: translated('A fast and extensible command menu.', '快速且可扩展的命令菜单组件。'),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/radix/command.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/command',
+    installCommand: 'npx shadcn@latest add command',
+    manualDependencies: ['cmdk'],
+    sections: [
+      {
+        title: translated('Preview', '预览'),
+        blocks: [{ type: 'preview', styleName: 'radix-nova', name: 'command-demo' }]
+      },
+      {
+        title: translated('Installation', '安装'),
+        blocks: [
+          { type: 'code', language: 'bash', title: translated('Command', '命令'), code: 'npx shadcn@latest add command' }
+        ]
+      },
+      {
+        title: translated('Usage', '用法'),
+        blocks: [
+          { type: 'code', language: 'tsx', code: 'import {\n  Command,\n  CommandEmpty,\n  CommandGroup,\n  CommandInput,\n  CommandItem,\n  CommandList,\n  CommandSeparator,\n} from "@/components/ui/command"' },
+          { type: 'code', language: 'tsx', code: '<Command>\n  <CommandInput placeholder="Type a command or search..." />\n  <CommandList>\n    <CommandEmpty>No results found.</CommandEmpty>\n    <CommandGroup heading="Suggestions">\n      <CommandItem>Calendar</CommandItem>\n      <CommandItem>Search Emoji</CommandItem>\n    </CommandGroup>\n  </CommandList>\n</Command>' }
+        ]
+      }
+    ]
+  },
+  'context-menu': {
+    name: 'Context Menu',
+    slug: 'context-menu',
+    description: translated('Displays a menu triggered by a right click.', '由右键点击触发的菜单组件。'),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/radix/context-menu.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/context-menu',
+    installCommand: 'npx shadcn@latest add context-menu',
+    manualDependencies: ['radix-ui'],
+    sections: [
+      {
+        title: translated('Preview', '预览'),
+        blocks: [{ type: 'preview', styleName: 'radix-nova', name: 'context-menu-demo' }]
+      },
+      {
+        title: translated('Installation', '安装'),
+        blocks: [
+          { type: 'code', language: 'bash', title: translated('Command', '命令'), code: 'npx shadcn@latest add context-menu' }
+        ]
+      },
+      {
+        title: translated('Usage', '用法'),
+        blocks: [
+          { type: 'code', language: 'tsx', code: 'import {\n  ContextMenu,\n  ContextMenuContent,\n  ContextMenuItem,\n  ContextMenuTrigger,\n} from "@/components/ui/context-menu"' }
+        ]
+      }
+    ]
+  },
   dialog: {
     name: 'Dialog',
     slug: 'dialog',
@@ -1300,6 +1566,137 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
             label: translated('Radix UI Dialog API Reference', 'Radix UI Dialog API 参考'),
             href: 'https://www.radix-ui.com/docs/primitives/components/dialog#api-reference'
           }
+        ]
+      }
+    ]
+  },
+  'data-table': {
+    name: 'Data Table',
+    slug: 'data-table',
+    description: translated('A table component that supports sorting, filtering, and pagination.', '支持排序、过滤和分页的表格。'),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/data-table.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/data-table',
+    installCommand: 'npm install @tanstack/react-table',
+    sections: [
+      {
+        title: translated('Preview', '预览'),
+        blocks: [{ type: 'preview', styleName: 'radix-nova', name: 'data-table-demo' }]
+      },
+      {
+        title: translated('Installation', '安装'),
+        blocks: [
+          { type: 'code', language: 'bash', title: translated('Command', '命令'), code: 'npm install @tanstack/react-table' }
+        ]
+      },
+      {
+        title: translated('Usage', '用法'),
+        blocks: [
+          { type: 'paragraph', text: translated('Data Table is built using `@tanstack/react-table` combined with `<Table />` component.', 'Data Table 使用 `@tanstack/react-table` 配合 `<Table />` 组件构建。') }
+        ]
+      }
+    ]
+  },
+  'date-picker': {
+    name: 'Date Picker',
+    slug: 'date-picker',
+    description: translated('A date picker selector that allows selection of single or range dates.', '允许选择单个或范围日期的选择器。'),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/date-picker.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/date-picker',
+    installCommand: 'npx shadcn@latest add popover calendar',
+    sections: [
+      {
+        title: translated('Preview', '预览'),
+        blocks: [{ type: 'preview', styleName: 'radix-nova', name: 'date-picker-demo' }]
+      },
+      {
+        title: translated('Installation', '安装'),
+        blocks: [
+          { type: 'code', language: 'bash', title: translated('Command', '命令'), code: 'npx shadcn@latest add popover calendar' }
+        ]
+      },
+      {
+        title: translated('Usage', '用法'),
+        blocks: [
+          { type: 'paragraph', text: translated('Date Picker is built combining `<Popover />` and `<Calendar />` components.', 'Date Picker 是组合 `<Popover />` 和 `<Calendar />` 组件构建的。') }
+        ]
+      }
+    ]
+  },
+  direction: {
+    name: 'Direction',
+    slug: 'direction',
+    description: translated('A wrapper that provides LTR/RTL direction support to children.', '为子组件提供文本方向切换支持的包装器。'),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/direction.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/direction',
+    installCommand: 'npm install radix-ui',
+    sections: [
+      {
+        title: translated('Preview', '预览'),
+        blocks: [{ type: 'preview', styleName: 'radix-nova', name: 'direction-demo' }]
+      },
+      {
+        title: translated('Usage', '用法'),
+        blocks: [
+          { type: 'code', language: 'tsx', code: 'import { DirectionProvider } from "radix-ui"' }
+        ]
+      }
+    ]
+  },
+  drawer: {
+    name: 'Drawer',
+    slug: 'drawer',
+    description: translated('A drawer component that slides in from the edge of the screen.', '从屏幕边缘滑出的抽屉组件。'),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/radix/drawer.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/drawer',
+    installCommand: 'npx shadcn@latest add drawer',
+    manualDependencies: ['vaul'],
+    sections: [
+      {
+        title: translated('Preview', '预览'),
+        blocks: [{ type: 'preview', styleName: 'radix-nova', name: 'drawer-demo' }]
+      },
+      {
+        title: translated('Installation', '安装'),
+        blocks: [
+          { type: 'code', language: 'bash', title: translated('Command', '命令'), code: 'npx shadcn@latest add drawer' }
+        ]
+      },
+      {
+        title: translated('Usage', '用法'),
+        blocks: [
+          { type: 'code', language: 'tsx', code: 'import {\n  Drawer,\n  DrawerClose,\n  DrawerContent,\n  DrawerDescription,\n  DrawerFooter,\n  DrawerHeader,\n  DrawerTitle,\n  DrawerTrigger,\n} from "@/components/ui/drawer"' }
+        ]
+      }
+    ]
+  },
+  'dropdown-menu': {
+    name: 'Dropdown Menu',
+    slug: 'dropdown-menu',
+    description: translated('Displays a menu to the user, triggered by a button click.', '由按钮点击触发的下拉菜单。'),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/radix/dropdown-menu.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/dropdown-menu',
+    installCommand: 'npx shadcn@latest add dropdown-menu',
+    manualDependencies: ['radix-ui'],
+    sections: [
+      {
+        title: translated('Preview', '预览'),
+        blocks: [{ type: 'preview', styleName: 'radix-nova', name: 'dropdown-menu-demo' }]
+      },
+      {
+        title: translated('Installation', '安装'),
+        blocks: [
+          { type: 'code', language: 'bash', title: translated('Command', '命令'), code: 'npx shadcn@latest add dropdown-menu' }
+        ]
+      },
+      {
+        title: translated('Usage', '用法'),
+        blocks: [
+          { type: 'code', language: 'tsx', code: 'import {\n  DropdownMenu,\n  DropdownMenuContent,\n  DropdownMenuItem,\n  DropdownMenuLabel,\n  DropdownMenuSeparator,\n  DropdownMenuTrigger,\n} from "@/components/ui/dropdown-menu"' }
         ]
       }
     ]
