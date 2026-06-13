@@ -19,6 +19,8 @@ ComicToKindle 处于桌面应用基础阶段。已微调侧边栏导航，并支
 - 在侧边栏新增“应用组件”菜单，直接复用 `DesignComponentsView` 的两栏文档预览布局，仅列出当前项目已正式安装并使用的 15 个基础 UI 组件。
 - 配置 macOS 无标题栏内嵌交通灯样式（`titleBarStyle: 'hiddenInset'`），在侧边栏顶部和主头部设置了安全高度并支持窗口拖动（`-webkit-app-region: drag`），同时屏蔽了各交互子元素的拖动。
 - 修复了 `accordion.tsx` 中由于 Radix 联合类型报错导致的既有 TS 类型错误，使应用构建完全通畅。
+- 完成了以 A 开头的 Shadcn 组件文档镜像补全及高保真模拟预览（Alert, Alert Dialog, Aspect Ratio, Avatar）。
+- 完成了以 B 开头的 Shadcn 组件文档镜像补全及高保真模拟预览（Badge, Breadcrumb, Button Group）。
 - 验证 `npm run build` 通过。
 
 ## 重要上下文
