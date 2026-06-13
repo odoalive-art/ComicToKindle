@@ -1,0 +1,64 @@
+{
+  "fontFamily": {
+    "sans": {
+      "token": "font-sans",
+      "value": "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif",
+      "usage": "Global application font stack for product UI, tables, forms, and panels."
+    }
+  },
+  "typeScale": [
+    {
+      "name": "caption",
+      "token": "type.caption",
+      "fontSize": "12px",
+      "lineHeight": "16px",
+      "tailwindClass": "text-xs",
+      "usage": "Status labels, metadata, helper rows, and secondary table text."
+    },
+    {
+      "name": "body-sm",
+      "token": "type.body-sm",
+      "fontSize": "14px",
+      "lineHeight": "20px",
+      "tailwindClass": "text-sm",
+      "usage": "Primary body copy, lists, controls, and compact descriptions."
+    },
+    {
+      "name": "body",
+      "token": "type.body",
+      "fontSize": "16px",
+      "lineHeight": "24px",
+      "tailwindClass": "text-base",
+      "usage": "Long-form text, input values, and reading-focused content."
+    },
+    {
+      "name": "section",
+      "token": "type.section",
+      "fontSize": "18px",
+      "lineHeight": "28px",
+      "tailwindClass": "text-lg",
+      "usage": "Section headers inside dashboards and content modules."
+    },
+    {
+      "name": "panel-title",
+      "token": "type.panel-title",
+      "fontSize": "20px",
+      "lineHeight": "28px",
+      "tailwindClass": "text-xl",
+      "usage": "Card or detail panel titles with stronger hierarchy."
+    },
+    {
+      "name": "page-title",
+      "token": "type.page-title",
+      "fontSize": "24px",
+      "lineHeight": "32px",
+      "tailwindClass": "text-2xl",
+      "usage": "Workspace-level page titles and top-level content headings."
+    }
+  ],
+  "fontWeight": {
+    "medium": 500,
+    "semibold": 600,
+    "usage": "Use 500 for dense UI labels, 600 for titles and active navigation."
+  }
+}

@@ -2422,6 +2422,483 @@ function DropdownMenuPreview({
   )
 }
 
+function EmptyPreview({
+  direction,
+  name
+}: {
+  direction?: string
+  name: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+
+  if (name === 'empty-search') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <div className="w-full max-w-xl rounded-xl border bg-gradient-to-b from-muted/20 via-background to-background p-6 text-center shadow-xs">
+          <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full border bg-muted/40">
+            <Search className="size-5 text-muted-foreground" />
+          </div>
+          <div className="space-y-1">
+            <h4 className="text-lg font-semibold">404 - Not Found</h4>
+            <p className="text-sm text-muted-foreground">
+              The page you&apos;re looking for doesn&apos;t exist. Try searching for what you need below.
+            </p>
+          </div>
+          <div className="mx-auto mt-5 flex max-w-md gap-2">
+            <Input defaultValue="/" className="text-center" />
+            <Button variant="outline">Search</Button>
+          </div>
+          <Button variant="link" className="mt-3 text-sm text-muted-foreground">
+            Need help? Contact support
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  if (name === 'empty-outline') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <div className="w-full max-w-lg rounded-xl border border-dashed bg-background p-6 text-center">
+          <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full border bg-muted/30">
+            <HardDrive className="size-5 text-muted-foreground" />
+          </div>
+          <h4 className="text-lg font-semibold">Cloud Storage Empty</h4>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Upload files to your cloud storage to access them anywhere.
+          </p>
+          <Button className="mt-5">Upload Files</Button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+      <div className="w-full max-w-lg rounded-2xl border bg-background p-6 text-center shadow-xs">
+        <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-muted/40">
+          <FolderOpen className="size-6 text-muted-foreground" />
+        </div>
+        <div className="space-y-1">
+          <h4 className="text-lg font-semibold">
+            {name === 'empty-rtl' ? 'لا توجد مشاريع بعد' : 'No Projects Yet'}
+          </h4>
+          <p className="text-sm text-muted-foreground">
+            {name === 'empty-rtl'
+              ? 'لم تقم بإنشاء أي مشاريع بعد. ابدأ بإنشاء مشروعك الأول.'
+              : "You haven't created any projects yet. Get started by creating your first project."}
+          </p>
+        </div>
+        <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+          <Button>Create Project</Button>
+          <Button variant="outline">Import Project</Button>
+        </div>
+        <Button variant="link" className="mt-3 gap-1.5 text-muted-foreground">
+          Learn More
+          <ArrowUpRight className="size-4" />
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+function FieldPreview({
+  direction,
+  name
+}: {
+  direction?: string
+  name: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+
+  if (name === 'field-grouped') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Card className="w-full max-w-2xl">
+          <CardHeader>
+            <CardTitle>Profile</CardTitle>
+            <CardDescription>This appears on invoices and emails.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Full name</label>
+                <Input placeholder="Evil Rabbit" />
+                <p className="text-xs text-muted-foreground">
+                  This appears on invoices and emails.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Username</label>
+                <Input placeholder="@evilrabbit" />
+              </div>
+            </div>
+            <div className="h-px bg-border" />
+            <div className="flex items-center gap-3 rounded-lg border p-3">
+              <Checkbox id="field-notify" defaultChecked />
+              <div className="space-y-1">
+                <label htmlFor="field-notify" className="text-sm font-medium">
+                  Email me product updates
+                </label>
+                <p className="text-xs text-muted-foreground">
+                  Weekly release notes and security alerts.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+          <CardFooter className="justify-end gap-2">
+            <Button variant="outline">Cancel</Button>
+            <Button>Save Changes</Button>
+          </CardFooter>
+        </Card>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+      <Card className="w-full max-w-2xl">
+        <CardHeader>
+          <CardTitle>Payment Method</CardTitle>
+          <CardDescription>All transactions are secure and encrypted</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Name on Card</label>
+            <Input placeholder="Evil Rabbit" />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Card Number</label>
+            <Input placeholder="1234 5678 9012 3456" />
+            <p className="text-xs text-muted-foreground">Enter your 16-digit card number</p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Month</label>
+              <Input placeholder="MM" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Year</label>
+              <Input placeholder="YYYY" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">CVV</label>
+              <Input placeholder="123" />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Billing Address</label>
+            <p className="text-xs text-muted-foreground">
+              The billing address associated with your payment method
+            </p>
+            <div className="flex items-center gap-3 rounded-lg border p-3">
+              <Checkbox id="same-as-shipping" defaultChecked />
+              <label htmlFor="same-as-shipping" className="text-sm">
+                Same as shipping address
+              </label>
+            </div>
+          </div>
+        </CardContent>
+        <CardFooter className="justify-end gap-2">
+          <Button variant="outline">Cancel</Button>
+          <Button>Submit</Button>
+        </CardFooter>
+      </Card>
+    </div>
+  )
+}
+
+function HoverCardPreview({
+  direction,
+  name
+}: {
+  direction?: string
+  name: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+  const title = name === 'hover-card-delay' ? 'Open with Delays' : '@shadcn'
+  const description =
+    name === 'hover-card-delay'
+      ? 'Use openDelay and closeDelay to slow the interaction for dense interfaces.'
+      : 'The React Framework creator toolkit with fast iteration and polished defaults.'
+
+  return (
+    <div className="flex min-h-32 items-center justify-center p-8" dir={dir}>
+      <div className="group flex w-full max-w-sm flex-col items-center gap-4">
+        <Button variant="outline">
+          {name === 'hover-card-delay' ? 'Hover with Delay' : 'Hover Here'}
+        </Button>
+        <div className="w-full rounded-xl border bg-background p-4 shadow-sm transition-all duration-200 group-hover:-translate-y-1 group-hover:shadow-lg">
+          <div className="flex items-start gap-3">
+            <div className="flex size-10 items-center justify-center rounded-full bg-muted text-sm font-semibold">
+              CN
+            </div>
+            <div className="space-y-1">
+              <div className="text-sm font-semibold">{title}</div>
+              <p className="text-sm text-muted-foreground">{description}</p>
+              <div className="flex items-center gap-2 pt-1 text-xs text-muted-foreground">
+                <Clock3 className="size-3.5" />
+                Joined December 2020
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function InputPreview({
+  direction,
+  name
+}: {
+  direction?: string
+  name: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+
+  if (name === 'input-disabled') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <div className="w-full max-w-md space-y-2">
+          <label className="text-sm font-medium text-muted-foreground">Email</label>
+          <Input disabled value="editor@comic-to-kindle.dev" />
+          <p className="text-xs text-muted-foreground">This field is currently disabled.</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (name === 'input-field') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <div className="w-full max-w-md space-y-2">
+          <label className="text-sm font-medium">Username</label>
+          <Input placeholder="shadcn" />
+          <p className="text-xs text-muted-foreground">
+            Choose a unique username for your account.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+      <div className="w-full max-w-md space-y-2">
+        <label className="text-sm font-medium">API Key</label>
+        <Input defaultValue="sk_live_xxxxxxxxxxxxxxxxxxxx" />
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs text-muted-foreground">
+            Your API key is encrypted and stored securely.
+          </p>
+          <Button size="sm" variant="outline">
+            Copy
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function InputGroupPreview({
+  direction,
+  name
+}: {
+  direction?: string
+  name: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+
+  if (name === 'input-group-textarea') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <div className="w-full max-w-xl space-y-2">
+          <div className="rounded-xl border bg-background p-3 shadow-xs">
+            <textarea
+              className="min-h-28 w-full resize-none border-0 bg-transparent text-sm outline-hidden"
+              defaultValue={'Line 1, Column 1'}
+            />
+            <div className="mt-3 flex items-center justify-between border-t pt-3 text-xs text-muted-foreground">
+              <span>script.js</span>
+              <div className="flex items-center gap-2">
+                <span>0/280</span>
+                <Button size="sm" variant="ghost">
+                  Run
+                </Button>
+              </div>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Footer positioned below the textarea.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  if (name === 'input-group-button') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <div className="w-full max-w-xl space-y-2">
+          <div className="flex overflow-hidden rounded-xl border bg-background shadow-xs">
+            <div className="flex items-center border-r bg-muted/30 px-3 text-sm text-muted-foreground">
+              https://
+            </div>
+            <Input
+              className="h-11 rounded-none border-0 shadow-none focus-visible:ring-0"
+              placeholder="comictokindle.dev"
+            />
+            <Button className="m-1">Search</Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Inline button actions keep the control compact.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+      <div className="w-full max-w-lg space-y-2">
+        <div className="flex overflow-hidden rounded-xl border bg-background shadow-xs">
+          <Input
+            className="h-11 rounded-none border-0 shadow-none focus-visible:ring-0"
+            placeholder="Search documentation..."
+          />
+          <div className="flex items-center border-l px-3 text-muted-foreground">
+            <Search className="size-4" />
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground">Icon positioned at the end.</p>
+      </div>
+    </div>
+  )
+}
+
+function InputOtpPreview({
+  direction,
+  name
+}: {
+  direction?: string
+  name: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+  const [otp, setOtp] = useState(name === 'input-otp-separator' ? '826491' : '123456')
+  const slots = otp.padEnd(6, ' ').slice(0, 6).split('')
+
+  return (
+    <div className="flex min-h-24 flex-col items-center justify-center gap-4 p-4" dir={dir}>
+      <div className="flex items-center gap-2">
+        {slots.slice(0, 3).map((digit, index) => (
+          <div
+            className="flex h-12 w-10 items-center justify-center rounded-lg border bg-background text-lg font-semibold shadow-xs"
+            key={`otp-a-${index}`}
+          >
+            {digit.trim() || '•'}
+          </div>
+        ))}
+        <div className="px-1 text-muted-foreground">-</div>
+        {slots.slice(3).map((digit, index) => (
+          <div
+            className="flex h-12 w-10 items-center justify-center rounded-lg border bg-background text-lg font-semibold shadow-xs"
+            key={`otp-b-${index}`}
+          >
+            {digit.trim() || '•'}
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center gap-2">
+        <Button size="sm" variant="outline" onClick={() => setOtp('654321')}>
+          Paste sample
+        </Button>
+        <Button size="sm" variant="ghost" onClick={() => setOtp('')}>
+          Clear
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+function ItemPreview({
+  direction,
+  name
+}: {
+  direction?: string
+  name: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+
+  if (name === 'item-actions') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <div className="w-full max-w-2xl rounded-xl border bg-background p-3 shadow-xs">
+          <div className="flex items-center gap-4">
+            <div className="flex size-10 items-center justify-center rounded-full bg-muted">
+              <Package className="size-5 text-muted-foreground" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-medium">Build artifacts ready</div>
+              <div className="text-sm text-muted-foreground">
+                Generated desktop bundles for macOS and Windows.
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline">
+                Review
+              </Button>
+              <Button size="sm">Publish</Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (name === 'item-icon') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <div className="w-full max-w-2xl rounded-xl border bg-background p-3 shadow-xs">
+          <div className="flex items-center gap-4">
+            <div className="flex size-10 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600">
+              <CheckCircle2 className="size-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-medium">Your profile has been verified.</div>
+              <div className="text-sm text-muted-foreground">
+                You can now publish assets and invite collaborators.
+              </div>
+            </div>
+            <Button size="icon-sm" variant="ghost" aria-label="Open">
+              <ChevronRight className="size-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+      <div className="w-full max-w-2xl rounded-xl border bg-background p-3 shadow-xs">
+        <div className="flex items-center gap-4">
+          <div className="flex size-10 items-center justify-center rounded-full bg-muted">
+            <BadgeCheck className="size-5 text-muted-foreground" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-medium">Basic Item</div>
+            <div className="text-sm text-muted-foreground">
+              A simple item with title and description.
+            </div>
+          </div>
+          <Button size="sm">Action</Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function ShadcnComponentPreview({
   direction,
   name
@@ -2483,6 +2960,34 @@ function ShadcnComponentPreview({
 
   if (name.startsWith('dropdown-menu')) {
     return <DropdownMenuPreview direction={direction} />
+  }
+
+  if (name.startsWith('empty')) {
+    return <EmptyPreview name={name} direction={direction} />
+  }
+
+  if (name.startsWith('field')) {
+    return <FieldPreview name={name} direction={direction} />
+  }
+
+  if (name.startsWith('hover-card')) {
+    return <HoverCardPreview name={name} direction={direction} />
+  }
+
+  if (name.startsWith('input-otp')) {
+    return <InputOtpPreview name={name} direction={direction} />
+  }
+
+  if (name.startsWith('input-group')) {
+    return <InputGroupPreview name={name} direction={direction} />
+  }
+
+  if (name.startsWith('input')) {
+    return <InputPreview name={name} direction={direction} />
+  }
+
+  if (name.startsWith('item')) {
+    return <ItemPreview name={name} direction={direction} />
   }
 
   if (name.startsWith('alert-dialog')) {

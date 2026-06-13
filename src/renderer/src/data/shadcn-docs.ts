@@ -1701,6 +1701,541 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
       }
     ]
   },
+  empty: {
+    name: 'Empty',
+    slug: 'empty',
+    description: translated('Use the Empty component to display an empty state.', '使用 Empty 组件来展示空状态。'),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/radix/empty.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/radix/empty',
+    installCommand: 'npx shadcn@latest add empty',
+    sections: [
+      {
+        title: translated('Preview', '预览'),
+        blocks: [
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'empty-demo',
+            description: translated(
+              'A centered empty state with title, description, and actions.',
+              '居中展示标题、描述和操作按钮的空状态。'
+            )
+          }
+        ]
+      },
+      {
+        title: translated('Installation', '安装'),
+        blocks: [
+          { type: 'code', language: 'bash', title: translated('Command', '命令'), code: 'npx shadcn@latest add empty' }
+        ]
+      },
+      {
+        title: translated('Usage', '用法'),
+        blocks: [
+          {
+            type: 'code',
+            language: 'tsx',
+            code: 'import {\n  Empty,\n  EmptyContent,\n  EmptyDescription,\n  EmptyHeader,\n  EmptyMedia,\n  EmptyTitle,\n} from "@/components/ui/empty"'
+          },
+          {
+            type: 'code',
+            language: 'tsx',
+            code: '<Empty>\n  <EmptyHeader>\n    <EmptyMedia variant="icon">\n      <Icon />\n    </EmptyMedia>\n    <EmptyTitle>No data</EmptyTitle>\n    <EmptyDescription>No data found</EmptyDescription>\n  </EmptyHeader>\n  <EmptyContent>\n    <Button>Add data</Button>\n  </EmptyContent>\n</Empty>'
+          }
+        ]
+      },
+      {
+        title: translated('Composition', '组成'),
+        blocks: [
+          {
+            type: 'composition',
+            code: 'Empty\n├── EmptyHeader\n│   ├── EmptyMedia\n│   ├── EmptyTitle\n│   └── EmptyDescription\n└── EmptyContent'
+          }
+        ]
+      },
+      {
+        title: translated('Examples', '示例'),
+        blocks: [
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'empty-outline',
+            description: translated(
+              'Use the `border` utility class to create an outline empty state.',
+              '使用 `border` 工具类创建带描边的空状态。'
+            )
+          },
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'empty-search',
+            description: translated(
+              'An empty state that combines search input and helper action.',
+              '把搜索输入与辅助操作组合在一起的空状态。'
+            )
+          }
+        ]
+      },
+      {
+        title: 'RTL',
+        blocks: [
+          {
+            type: 'paragraph',
+            text: translated(
+              'To enable RTL support in shadcn/ui, see the RTL configuration guide.',
+              '如需启用 shadcn/ui 的 RTL 支持，请查看 RTL configuration guide。'
+            )
+          },
+          { type: 'preview', styleName: 'radix-nova', name: 'empty-rtl', direction: 'rtl' }
+        ]
+      }
+    ]
+  },
+  field: {
+    name: 'Field',
+    slug: 'field',
+    description: translated(
+      'Combine labels, controls, and help text to compose accessible form fields and grouped inputs.',
+      '组合标签、控件和辅助文本，以构建可访问的表单字段与分组输入。'
+    ),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/radix/field.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/radix/field',
+    installCommand: 'npx shadcn@latest add field',
+    sections: [
+      {
+        title: translated('Preview', '预览'),
+        blocks: [
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'field-demo',
+            description: translated(
+              'A grouped payment field set with labels, descriptions, and actions.',
+              '包含标签、描述和操作按钮的支付信息字段组。'
+            )
+          }
+        ]
+      },
+      {
+        title: translated('Installation', '安装'),
+        blocks: [
+          { type: 'code', language: 'bash', title: translated('Command', '命令'), code: 'npx shadcn@latest add field' }
+        ]
+      },
+      {
+        title: translated('Usage', '用法'),
+        blocks: [
+          {
+            type: 'code',
+            language: 'tsx',
+            code: 'import {\n  Field,\n  FieldContent,\n  FieldDescription,\n  FieldError,\n  FieldGroup,\n  FieldLabel,\n  FieldLegend,\n  FieldSeparator,\n  FieldSet,\n  FieldTitle,\n} from "@/components/ui/field"'
+          },
+          {
+            type: 'code',
+            language: 'tsx',
+            code: '<FieldSet>\n  <FieldLegend>Profile</FieldLegend>\n  <FieldDescription>This appears on invoices and emails.</FieldDescription>\n  <FieldGroup>\n    <Field>\n      <FieldLabel htmlFor="name">Full name</FieldLabel>\n      <Input id="name" autoComplete="off" placeholder="Evil Rabbit" />\n      <FieldDescription>This appears on invoices and emails.</FieldDescription>\n    </Field>\n  </FieldGroup>\n</FieldSet>'
+          }
+        ]
+      },
+      {
+        title: translated('Composition', '组成'),
+        blocks: [
+          {
+            type: 'composition',
+            code: 'FieldSet\n├── FieldLegend\n├── FieldDescription\n└── FieldGroup\n    └── Field\n        ├── FieldLabel\n        ├── Control\n        ├── FieldDescription\n        └── FieldError'
+          }
+        ]
+      },
+      {
+        title: translated('Examples', '示例'),
+        blocks: [
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'field-grouped',
+            description: translated(
+              'Use `FieldGroup` and `FieldSeparator` to compose multi-step forms.',
+              '使用 `FieldGroup` 和 `FieldSeparator` 组织多段式表单。'
+            )
+          }
+        ]
+      }
+    ]
+  },
+  'hover-card': {
+    name: 'Hover Card',
+    slug: 'hover-card',
+    description: translated(
+      'For sighted users to preview content available behind a link.',
+      '让可见光标用户在链接背后快速预览内容。'
+    ),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/radix/hover-card.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/radix/hover-card',
+    installCommand: 'npx shadcn@latest add hover-card',
+    manualDependencies: ['radix-ui'],
+    sections: [
+      {
+        title: translated('Preview', '预览'),
+        blocks: [
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'hover-card-demo',
+            description: translated(
+              'Preview profile details when hovering over a trigger.',
+              '把鼠标悬停在触发器上时预览资料详情。'
+            )
+          }
+        ]
+      },
+      {
+        title: translated('Installation', '安装'),
+        blocks: [
+          { type: 'code', language: 'bash', title: translated('Command', '命令'), code: 'npx shadcn@latest add hover-card' }
+        ]
+      },
+      {
+        title: translated('Usage', '用法'),
+        blocks: [
+          {
+            type: 'code',
+            language: 'tsx',
+            code: 'import {\n  HoverCard,\n  HoverCardContent,\n  HoverCardTrigger,\n} from "@/components/ui/hover-card"'
+          },
+          {
+            type: 'code',
+            language: 'tsx',
+            code: '<HoverCard>\n  <HoverCardTrigger>Hover</HoverCardTrigger>\n  <HoverCardContent>\n    The React Framework – created and maintained by @vercel.\n  </HoverCardContent>\n</HoverCard>'
+          }
+        ]
+      },
+      {
+        title: translated('Composition', '组成'),
+        blocks: [
+          {
+            type: 'composition',
+            code: 'HoverCard\n├── HoverCardTrigger\n└── HoverCardContent'
+          }
+        ]
+      },
+      {
+        title: translated('Examples', '示例'),
+        blocks: [
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'hover-card-delay',
+            description: translated(
+              'Use `openDelay` and `closeDelay` to tune the interaction timing.',
+              '使用 `openDelay` 和 `closeDelay` 调整交互时机。'
+            )
+          }
+        ]
+      }
+    ]
+  },
+  input: {
+    name: 'Input',
+    slug: 'input',
+    description: translated(
+      'A text input component for forms and user data entry with built-in styling and accessibility features.',
+      '用于表单和用户数据录入的文本输入组件，内置样式与可访问性支持。'
+    ),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/radix/input.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/radix/input',
+    installCommand: 'npx shadcn@latest add input',
+    sections: [
+      {
+        title: translated('Preview', '预览'),
+        blocks: [
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'input-demo',
+            description: translated(
+              'A labeled input with helper description and action.',
+              '带标签、辅助描述和操作按钮的输入框。'
+            )
+          }
+        ]
+      },
+      {
+        title: translated('Installation', '安装'),
+        blocks: [
+          { type: 'code', language: 'bash', title: translated('Command', '命令'), code: 'npx shadcn@latest add input' }
+        ]
+      },
+      {
+        title: translated('Usage', '用法'),
+        blocks: [
+          { type: 'code', language: 'tsx', code: 'import { Input } from "@/components/ui/input"' },
+          { type: 'code', language: 'tsx', code: '<Input />' }
+        ]
+      },
+      {
+        title: translated('Examples', '示例'),
+        blocks: [
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'input-field',
+            description: translated(
+              'Use `Field`, `FieldLabel`, and `FieldDescription` to compose a complete field.',
+              '使用 `Field`、`FieldLabel` 和 `FieldDescription` 组合完整字段。'
+            )
+          },
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'input-disabled',
+            description: translated(
+              'A disabled input keeps layout and semantics while blocking edits.',
+              '禁用输入框在保留布局与语义的同时阻止编辑。'
+            )
+          }
+        ]
+      }
+    ]
+  },
+  'input-group': {
+    name: 'Input Group',
+    slug: 'input-group',
+    description: translated('Add addons, buttons, and helper content to inputs.', '为输入框添加附加内容、按钮和辅助信息。'),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/radix/input-group.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/radix/input-group',
+    installCommand: 'npx shadcn@latest add input-group',
+    sections: [
+      {
+        title: translated('Preview', '预览'),
+        blocks: [
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'input-group-demo',
+            description: translated(
+              'A compact search input with inline addon.',
+              '带行内附加区域的紧凑搜索输入框。'
+            )
+          }
+        ]
+      },
+      {
+        title: translated('Installation', '安装'),
+        blocks: [
+          { type: 'code', language: 'bash', title: translated('Command', '命令'), code: 'npx shadcn@latest add input-group' }
+        ]
+      },
+      {
+        title: translated('Usage', '用法'),
+        blocks: [
+          {
+            type: 'code',
+            language: 'tsx',
+            code: 'import {\n  InputGroup,\n  InputGroupAddon,\n  InputGroupButton,\n  InputGroupInput,\n  InputGroupText,\n  InputGroupTextarea,\n} from "@/components/ui/input-group"'
+          },
+          {
+            type: 'code',
+            language: 'tsx',
+            code: '<InputGroup>\n  <InputGroupInput placeholder="Search..." />\n  <InputGroupAddon>\n    <SearchIcon />\n  </InputGroupAddon>\n</InputGroup>'
+          }
+        ]
+      },
+      {
+        title: translated('Composition', '组成'),
+        blocks: [
+          {
+            type: 'composition',
+            code: 'InputGroup\n├── InputGroupInput or InputGroupTextarea\n├── InputGroupAddon\n├── InputGroupButton\n└── InputGroupText'
+          }
+        ]
+      },
+      {
+        title: translated('Examples', '示例'),
+        blocks: [
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'input-group-button',
+            description: translated(
+              'Mix button addons with text inputs for inline actions.',
+              '把按钮型附加区域和文本输入组合在一起实现行内操作。'
+            )
+          },
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'input-group-textarea',
+            description: translated(
+              'Use block-end addon positioning for textarea metadata.',
+              '为 textarea 元信息使用 block-end 形式的附加区域。'
+            )
+          }
+        ]
+      }
+    ]
+  },
+  'input-otp': {
+    name: 'Input OTP',
+    slug: 'input-otp',
+    description: translated(
+      'Accessible one-time password component with copy-paste functionality.',
+      '支持复制粘贴的一次性密码输入组件，并具备可访问性。'
+    ),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/radix/input-otp.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/radix/input-otp',
+    installCommand: 'npx shadcn@latest add input-otp',
+    manualDependencies: ['input-otp'],
+    sections: [
+      {
+        title: translated('Preview', '预览'),
+        blocks: [
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'input-otp-demo',
+            description: translated(
+              'A six-digit verification input with grouped slots.',
+              '带分组槽位的六位验证码输入。'
+            )
+          }
+        ]
+      },
+      {
+        title: translated('About', '关于'),
+        blocks: [
+          {
+            type: 'paragraph',
+            text: translated(
+              'Input OTP is built on top of `input-otp` by `@guilherme_rodz`.',
+              'Input OTP 构建在 `input-otp` 之上，作者为 `@guilherme_rodz`。'
+            )
+          }
+        ]
+      },
+      {
+        title: translated('Installation', '安装'),
+        blocks: [
+          { type: 'code', language: 'bash', title: translated('Command', '命令'), code: 'npx shadcn@latest add input-otp' }
+        ]
+      },
+      {
+        title: translated('Usage', '用法'),
+        blocks: [
+          {
+            type: 'code',
+            language: 'tsx',
+            code: 'import {\n  InputOTP,\n  InputOTPGroup,\n  InputOTPSeparator,\n  InputOTPSlot,\n} from "@/components/ui/input-otp"'
+          },
+          {
+            type: 'code',
+            language: 'tsx',
+            code: '<InputOTP maxLength={6}>\n  <InputOTPGroup>\n    <InputOTPSlot index={0} />\n    <InputOTPSlot index={1} />\n    <InputOTPSlot index={2} />\n  </InputOTPGroup>\n  <InputOTPSeparator />\n  <InputOTPGroup>\n    <InputOTPSlot index={3} />\n    <InputOTPSlot index={4} />\n    <InputOTPSlot index={5} />\n  </InputOTPGroup>\n</InputOTP>'
+          }
+        ]
+      },
+      {
+        title: translated('Composition', '组成'),
+        blocks: [
+          {
+            type: 'composition',
+            code: 'InputOTP\n├── InputOTPGroup\n│   ├── InputOTPSlot\n│   ├── InputOTPSlot\n│   └── InputOTPSlot\n├── InputOTPSeparator\n└── InputOTPGroup\n    ├── InputOTPSlot\n    ├── InputOTPSlot\n    └── InputOTPSlot'
+          }
+        ]
+      },
+      {
+        title: translated('Examples', '示例'),
+        blocks: [
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'input-otp-separator',
+            description: translated(
+              'Add separators between groups to reflect real verification code patterns.',
+              '在分组之间加入分隔符，贴近真实验证码模式。'
+            )
+          }
+        ]
+      }
+    ]
+  },
+  item: {
+    name: 'Item',
+    slug: 'item',
+    description: translated(
+      'A versatile component for displaying content with media, title, description, and actions.',
+      '用于展示媒体、标题、描述和操作区域的通用条目组件。'
+    ),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/radix/item.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/radix/item',
+    installCommand: 'npx shadcn@latest add item',
+    sections: [
+      {
+        title: translated('Preview', '预览'),
+        blocks: [
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'item-demo',
+            description: translated(
+              'A flexible item row with media, content, and trailing action.',
+              '包含媒体、内容区和尾部操作的灵活条目行。'
+            )
+          }
+        ]
+      },
+      {
+        title: translated('Installation', '安装'),
+        blocks: [
+          { type: 'code', language: 'bash', title: translated('Command', '命令'), code: 'npx shadcn@latest add item' }
+        ]
+      },
+      {
+        title: translated('Usage', '用法'),
+        blocks: [
+          {
+            type: 'code',
+            language: 'tsx',
+            code: 'import {\n  Item,\n  ItemActions,\n  ItemContent,\n  ItemDescription,\n  ItemMedia,\n  ItemTitle,\n} from "@/components/ui/item"'
+          },
+          {
+            type: 'code',
+            language: 'tsx',
+            code: '<Item>\n  <ItemMedia variant="icon">\n    <Icon />\n  </ItemMedia>\n  <ItemContent>\n    <ItemTitle>Title</ItemTitle>\n    <ItemDescription>Description</ItemDescription>\n  </ItemContent>\n  <ItemActions>\n    <Button>Action</Button>\n  </ItemActions>\n</Item>'
+          }
+        ]
+      },
+      {
+        title: translated('Examples', '示例'),
+        blocks: [
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'item-icon',
+            description: translated(
+              'Use icon media and compact actions for status lists.',
+              '在状态列表中使用图标媒体和紧凑操作。'
+            )
+          },
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'item-actions',
+            description: translated(
+              'Group multiple action buttons on the trailing edge.',
+              '在尾部区域组合多个操作按钮。'
+            )
+          }
+        ]
+      }
+    ]
+  },
   table: {
     name: 'Table',
     slug: 'table',

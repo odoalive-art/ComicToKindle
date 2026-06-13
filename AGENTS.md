@@ -95,7 +95,7 @@ sheet, sidebar, skeleton, sonner, table, tabs, tooltip
 src/renderer/src/data/shadcn-docs.ts
 ```
 
-该镜像当前跟踪 shadcn Radix docs 路径，并有 Accordion、Button、Dialog、Sidebar、Table 的本地文档内容；Button、Accordion 和 Sidebar 预览已尽量贴近官方 Radix 页面。这些文档支持中文阅读和英文原文切换，数据结构会保留英文官方文本。
+该镜像当前跟踪 shadcn Radix docs 路径，已完成 A 到 I 范围内组件的本地文档镜像补全，并覆盖 Accordion、Button、Dialog、Sidebar、Table 等早期重点组件以及 Empty、Field、Hover Card、Input、Input Group、Input OTP、Item 等新增条目。本地镜像文档支持中文阅读和英文原文切换，数据结构会保留英文官方文本。
 
 梳理 shadcn 设计组件时，完整规则见 `docs/agent-collaboration.md` 的 `shadcn 设计组件梳理规则`。核心原则是：官方文档路径、source ref 和 license 要可追溯；`索引中`、`已镜像`、`已安装` 三种状态必须分清；预览尽量贴近官方，但不要为了单个示例引入重依赖；中文翻译只用于阅读，复制内容保持英文源值。
 

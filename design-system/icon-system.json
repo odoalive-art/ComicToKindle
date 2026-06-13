@@ -1,0 +1,60 @@
+{
+  "library": {
+    "name": "lucide-react",
+    "package": "lucide-react",
+    "registryConfig": {
+      "componentsJsonKey": "iconLibrary",
+      "value": "lucide"
+    },
+    "reasons": [
+      "Consistent stroke-based system for product UI.",
+      "Wide coverage for navigation, status, and actions.",
+      "Works cleanly with shadcn/ui component defaults."
+    ]
+  },
+  "defaults": {
+    "strokeWidth": 2,
+    "baseSize": "16px",
+    "baseClass": "size-4",
+    "alignment": "Icons should align to text baselines through flex containers with gap utilities."
+  },
+  "sizeScale": [
+    {
+      "name": "xs",
+      "pixelSize": 12,
+      "tailwindClass": "size-3",
+      "usage": "Dense icon buttons, tight badges, and micro-controls."
+    },
+    {
+      "name": "sm",
+      "pixelSize": 16,
+      "tailwindClass": "size-4",
+      "usage": "Default UI icon size for buttons, nav items, rows, and cards."
+    },
+    {
+      "name": "md",
+      "pixelSize": 20,
+      "tailwindClass": "size-5",
+      "usage": "Brand marks, larger headers, and empty-state support icons."
+    },
+    {
+      "name": "lg",
+      "pixelSize": 24,
+      "tailwindClass": "size-6",
+      "usage": "Feature callouts and expressive section anchors."
+    }
+  ],
+  "rules": [
+    "Use Lucide icons before drawing custom SVGs for standard product actions.",
+    "Keep most interactive UI icons at 16px.",
+    "Pair icons with 8px gap in buttons and nav rows.",
+    "Use muted foreground by default for secondary icons and foreground color for primary actions.",
+    "Avoid mixing filled icon packs with Lucide in the same surface unless the brand system explicitly allows it."
+  ],
+  "commonMappings": {
+    "navigation": ["Home", "Library", "Inbox", "Settings", "Search"],
+    "content": ["FileText", "FolderOpen", "Archive", "BookOpen"],
+    "status": ["CheckCircle2", "Info", "CircleAlert"],
+    "actions": ["Plus", "Copy", "ExternalLink", "ChevronDown"]
+  }
+}
