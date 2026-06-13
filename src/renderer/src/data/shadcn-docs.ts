@@ -692,6 +692,197 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
       }
     ]
   },
+  badge: {
+    name: 'Badge',
+    slug: 'badge',
+    description: translated(
+      'Displays a badge or a component that looks like a badge.',
+      '显示一个徽章，或一个视觉上像徽章的组件。'
+    ),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/badge.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/badge',
+    installCommand: 'npx shadcn@latest add badge',
+    sections: [
+      {
+        title: translated('Preview', '预览'),
+        blocks: [
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'badge-demo'
+          }
+        ]
+      },
+      {
+        title: translated('Installation', '安装'),
+        blocks: [
+          {
+            type: 'code',
+            language: 'bash',
+            title: translated('Command', '命令'),
+            code: 'npx shadcn@latest add badge'
+          },
+          {
+            type: 'steps',
+            items: [
+              translated(
+                'Copy and paste the component source into your project.',
+                '将组件源码复制并粘贴到你的项目中。'
+              ),
+              translated(
+                'Update the import paths to match your project setup.',
+                '按你的项目配置更新 import 路径。'
+              )
+            ]
+          }
+        ]
+      },
+      {
+        title: translated('Usage', '用法'),
+        blocks: [
+          {
+            type: 'code',
+            language: 'tsx',
+            code: 'import { Badge } from "@/components/ui/badge"'
+          },
+          {
+            type: 'code',
+            language: 'tsx',
+            code: '<Badge variant="outline">Badge</Badge>'
+          }
+        ]
+      },
+      {
+        title: translated('Examples', '示例'),
+        blocks: [
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'badge-secondary',
+            description: translated('Secondary variant badge.', '次要变体徽章。')
+          },
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'badge-outline',
+            description: translated('Outline variant badge.', '轮廓/边框变体徽章。')
+          },
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'badge-destructive',
+            description: translated('Destructive variant badge.', '危险/破坏性变体徽章。')
+          }
+        ]
+      },
+      {
+        title: translated('API Reference', 'API 参考'),
+        blocks: [
+          {
+            type: 'table',
+            columns: [
+              translated('Prop', '属性'),
+              translated('Type', '类型'),
+              translated('Default', '默认值')
+            ],
+            rows: [
+              ['variant', '"default" | "secondary" | "outline" | "destructive"', '"default"']
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  breadcrumb: {
+    name: 'Breadcrumb',
+    slug: 'breadcrumb',
+    description: translated(
+      'Displays the path to the current resource using a hierarchy of links.',
+      '使用链接层级显示指向当前资源的路径。'
+    ),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/breadcrumb.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/breadcrumb',
+    installCommand: 'npx shadcn@latest add breadcrumb',
+    sections: [
+      {
+        title: translated('Preview', '预览'),
+        blocks: [
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'breadcrumb-demo'
+          }
+        ]
+      },
+      {
+        title: translated('Installation', '安装'),
+        blocks: [
+          {
+            type: 'code',
+            language: 'bash',
+            title: translated('Command', '命令'),
+            code: 'npx shadcn@latest add breadcrumb'
+          },
+          {
+            type: 'steps',
+            items: [
+              translated(
+                'Copy and paste the component source into your project.',
+                '将组件源码复制并粘贴到你的项目中。'
+              ),
+              translated(
+                'Update the import paths to match your project setup.',
+                '按你的项目配置更新 import 路径。'
+              )
+            ]
+          }
+        ]
+      },
+      {
+        title: translated('Usage', '用法'),
+        blocks: [
+          {
+            type: 'code',
+            language: 'tsx',
+            code: 'import {\n  Breadcrumb,\n  BreadcrumbItem,\n  BreadcrumbLink,\n  BreadcrumbList,\n  BreadcrumbPage,\n  BreadcrumbSeparator,\n} from "@/components/ui/breadcrumb"'
+          },
+          {
+            type: 'code',
+            language: 'tsx',
+            code: '<Breadcrumb>\n  <BreadcrumbList>\n    <BreadcrumbItem>\n      <BreadcrumbLink href="/">Home</BreadcrumbLink>\n    </BreadcrumbItem>\n    <BreadcrumbSeparator />\n    <BreadcrumbItem>\n      <BreadcrumbLink href="/components">Components</BreadcrumbLink>\n    </BreadcrumbItem>\n    <BreadcrumbSeparator />\n    <BreadcrumbItem>\n      <BreadcrumbPage>Breadcrumb</BreadcrumbPage>\n    </BreadcrumbItem>\n  </BreadcrumbList>\n</Breadcrumb>'
+          }
+        ]
+      },
+      {
+        title: translated('Composition', '组成'),
+        blocks: [
+          {
+            type: 'composition',
+            code: 'Breadcrumb\n└── BreadcrumbList\n    ├── BreadcrumbItem\n    │   └── BreadcrumbLink\n    ├── BreadcrumbSeparator\n    ├── BreadcrumbItem\n    │   └── BreadcrumbLink\n    ├── BreadcrumbSeparator\n    └── BreadcrumbItem\n        └── BreadcrumbPage'
+          }
+        ]
+      },
+      {
+        title: translated('Examples', '示例'),
+        blocks: [
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'breadcrumb-custom-separator',
+            description: translated('Use a custom component or icon as a separator.', '使用自定义组件或图标作为分隔符。')
+          },
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'breadcrumb-ellipsis',
+            description: translated('Use the ellipsis component to show collapsed breadcrumb items.', '使用省略号组件来折叠部分层级。')
+          }
+        ]
+      }
+    ]
+  },
   button: {
     name: 'Button',
     slug: 'button',
@@ -904,6 +1095,64 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
               ],
               ['asChild', 'boolean', 'false']
             ]
+          }
+        ]
+      }
+    ]
+  },
+  'button-group': {
+    name: 'Button Group',
+    slug: 'button-group',
+    description: translated(
+      'Group a series of buttons together on a single line.',
+      '将一系列按钮组合在同一行展示。'
+    ),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/button-group.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/button',
+    installCommand: 'npx shadcn@latest add button-group',
+    sections: [
+      {
+        title: translated('Preview', '预览'),
+        blocks: [
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'button-group-demo'
+          }
+        ]
+      },
+      {
+        title: translated('Installation', '安装'),
+        blocks: [
+          {
+            type: 'code',
+            language: 'bash',
+            title: translated('Command', '命令'),
+            code: 'npx shadcn@latest add button-group'
+          },
+          {
+            type: 'steps',
+            items: [
+              translated(
+                'Ensure Button component is installed: npx shadcn@latest add button',
+                '确保已安装 Button 组件：npx shadcn@latest add button'
+              ),
+              translated(
+                'Combine buttons inside a container, adjust rounded corners, and remove overlapping borders.',
+                '在容器内组合按钮，调整圆角，并消除重叠的边框。'
+              )
+            ]
+          }
+        ]
+      },
+      {
+        title: translated('Usage', '用法'),
+        blocks: [
+          {
+            type: 'code',
+            language: 'tsx',
+            code: '<div className="inline-flex rounded-md shadow-xs">\n  <Button className="rounded-r-none">Left</Button>\n  <Button className="rounded-none border-l-0">Middle</Button>\n  <Button className="rounded-l-none border-l-0">Right</Button>\n</div>'
           }
         ]
       }

@@ -42,6 +42,8 @@ import {
   SwatchBook,
   Terminal,
   AlertCircle,
+  ChevronRight,
+  Slash,
   Type
 } from 'lucide-react'
 
@@ -1734,6 +1736,157 @@ function AvatarPreview({
   )
 }
 
+function BadgePreview({
+  direction,
+  name
+}: {
+  direction?: string
+  name: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+
+  if (name === 'badge-secondary') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <div className="inline-flex items-center rounded-full border border-transparent bg-secondary px-2.5 py-0.5 text-xs font-semibold text-secondary-foreground transition-colors hover:bg-secondary/80 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2">
+          Secondary
+        </div>
+      </div>
+    )
+  }
+
+  if (name === 'badge-destructive') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <div className="inline-flex items-center rounded-full border border-transparent bg-destructive px-2.5 py-0.5 text-xs font-semibold text-destructive-foreground transition-colors hover:bg-destructive/80 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2">
+          Destructive
+        </div>
+      </div>
+    )
+  }
+
+  if (name === 'badge-outline') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold text-foreground transition-colors focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2">
+          Outline
+        </div>
+      </div>
+    )
+  }
+
+  // badge-demo / default
+  return (
+    <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+      <div className="inline-flex items-center rounded-full border border-transparent bg-primary px-2.5 py-0.5 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/80 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2">
+        Badge
+      </div>
+    </div>
+  )
+}
+
+function BreadcrumbPreview({
+  direction,
+  name
+}: {
+  direction?: string
+  name: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+
+  if (name === 'breadcrumb-custom-separator') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <nav aria-label="breadcrumb">
+          <ol className="flex flex-wrap items-center gap-1.5 break-words text-sm text-muted-foreground sm:gap-2.5">
+            <li className="inline-flex items-center gap-1.5">
+              <a className="transition-colors hover:text-foreground" href="#">Home</a>
+            </li>
+            <li role="presentation" aria-hidden="true" className="[&>svg]:size-3.5">
+              <Slash className="size-3" />
+            </li>
+            <li className="inline-flex items-center gap-1.5">
+              <a className="transition-colors hover:text-foreground" href="#">Components</a>
+            </li>
+            <li role="presentation" aria-hidden="true" className="[&>svg]:size-3.5">
+              <Slash className="size-3" />
+            </li>
+            <li className="inline-flex items-center gap-1.5">
+              <span role="link" aria-disabled="true" aria-current="page" className="font-normal text-foreground">
+                Breadcrumb
+              </span>
+            </li>
+          </ol>
+        </nav>
+      </div>
+    )
+  }
+
+  if (name === 'breadcrumb-ellipsis') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <nav aria-label="breadcrumb">
+          <ol className="flex flex-wrap items-center gap-1.5 break-words text-sm text-muted-foreground sm:gap-2.5">
+            <li className="inline-flex items-center gap-1.5">
+              <a className="transition-colors hover:text-foreground" href="#">Home</a>
+            </li>
+            <li role="presentation" aria-hidden="true" className="[&>svg]:size-3.5">
+              <ChevronRight />
+            </li>
+            <li className="inline-flex items-center gap-1.5">
+              <span className="flex h-5 w-5 items-center justify-center">
+                <MoreHorizontal className="h-4 w-4" />
+                <span className="sr-only">Toggle menu</span>
+              </span>
+            </li>
+            <li role="presentation" aria-hidden="true" className="[&>svg]:size-3.5">
+              <ChevronRight />
+            </li>
+            <li className="inline-flex items-center gap-1.5">
+              <a className="transition-colors hover:text-foreground" href="#">Components</a>
+            </li>
+            <li role="presentation" aria-hidden="true" className="[&>svg]:size-3.5">
+              <ChevronRight />
+            </li>
+            <li className="inline-flex items-center gap-1.5">
+              <span role="link" aria-disabled="true" aria-current="page" className="font-normal text-foreground">
+                Breadcrumb
+              </span>
+            </li>
+          </ol>
+        </nav>
+      </div>
+    )
+  }
+
+  // breadcrumb-demo
+  return (
+    <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+      <nav aria-label="breadcrumb">
+        <ol className="flex flex-wrap items-center gap-1.5 break-words text-sm text-muted-foreground sm:gap-2.5">
+          <li className="inline-flex items-center gap-1.5">
+            <a className="transition-colors hover:text-foreground" href="#">Home</a>
+          </li>
+          <li role="presentation" aria-hidden="true" className="[&>svg]:size-3.5">
+            <ChevronRight />
+          </li>
+          <li className="inline-flex items-center gap-1.5">
+            <a className="transition-colors hover:text-foreground" href="#">Components</a>
+          </li>
+          <li role="presentation" aria-hidden="true" className="[&>svg]:size-3.5">
+            <ChevronRight />
+          </li>
+          <li className="inline-flex items-center gap-1.5">
+            <span role="link" aria-disabled="true" aria-current="page" className="font-normal text-foreground">
+              Breadcrumb
+            </span>
+          </li>
+        </ol>
+      </nav>
+    </div>
+  )
+}
+
 function ShadcnComponentPreview({
   direction,
   name
@@ -1755,6 +1908,18 @@ function ShadcnComponentPreview({
 
   if (name.startsWith('avatar')) {
     return <AvatarPreview direction={direction} />
+  }
+
+  if (name.startsWith('badge')) {
+    return <BadgePreview name={name} direction={direction} />
+  }
+
+  if (name.startsWith('breadcrumb')) {
+    return <BreadcrumbPreview name={name} direction={direction} />
+  }
+
+  if (name.startsWith('button-group')) {
+    return <ButtonPreview name={name} direction={direction} />
   }
 
   if (name.startsWith('button') || name === 'spinner-button') {
