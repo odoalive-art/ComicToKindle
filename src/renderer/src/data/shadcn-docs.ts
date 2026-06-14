@@ -130,7 +130,14 @@ export const shadcnComponents: ShadcnComponent[] = [
 
 export const installedShadcnComponentSlugs = new Set([
   'accordion',
+  'alert',
+  'alert-dialog',
+  'aspect-ratio',
+  'avatar',
+  'badge',
+  'breadcrumb',
   'button',
+  'button-group',
   'card',
   'dialog',
   'input',
@@ -150,10 +157,39 @@ export const installedShadcnComponentSlugs = new Set([
   'checkbox',
   'collapsible',
   'command',
+  'combobox',
   'context-menu',
   'drawer',
   'dropdown-menu',
-  'popover'
+  'empty',
+  'field',
+  'input-group',
+  'input-otp',
+  'item',
+  'kbd',
+  'label',
+  'menubar',
+  'native-select',
+  'navigation-menu',
+  'pagination',
+  'popover',
+  'progress',
+  'radio-group',
+  'resizable',
+  'select',
+  'separator',
+  'sheet',
+  'skeleton',
+  'slider',
+  'sonner',
+  'spinner',
+  'switch',
+  'tabs',
+  'textarea',
+  'toggle',
+  'toggle-group',
+  'tooltip',
+  'hover-card'
 ])
 
 export const shadcnDocsSource = {
@@ -418,6 +454,24 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
               'Use the `variant="destructive"` prop to display a destructive alert.',
               '使用 `variant="destructive"` 属性显示危险/破坏性的警告提示。'
             )
+          },
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'alert-action',
+            description: translated(
+              'Add action buttons to the alert for user interaction.',
+              '在警告中添加操作按钮以供用户交互。'
+            )
+          },
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'alert-custom-colors',
+            description: translated(
+              'Override the default color scheme with custom border and text colors.',
+              '使用自定义边框和文本颜色覆盖默认配色方案。'
+            )
           }
         ]
       },
@@ -515,6 +569,60 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
         ]
       },
       {
+        title: translated('Examples', '示例'),
+        blocks: [
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'alert-dialog-small',
+            description: translated(
+              'Use `size="sm"` on `AlertDialogContent` for a compact dialog.',
+              '在 `AlertDialogContent` 上使用 `size="sm"` 获得紧凑对话框。'
+            )
+          },
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'alert-dialog-media',
+            description: translated(
+              'Use `AlertDialogMedia` to add an icon or image to the dialog header.',
+              '使用 `AlertDialogMedia` 在对话框头部添加图标或图像。'
+            )
+          },
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'alert-dialog-small-media',
+            description: translated(
+              'Combine `size="sm"` with `AlertDialogMedia` for a compact media dialog.',
+              '结合 `size="sm"` 和 `AlertDialogMedia` 获得紧凑的媒体对话框。'
+            )
+          },
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'alert-dialog-destructive',
+            description: translated(
+              'Use `variant="destructive"` on `AlertDialogAction` for destructive confirmations.',
+              '在 `AlertDialogAction` 上使用 `variant="destructive"` 实现危险操作确认。'
+            )
+          }
+        ]
+      },
+      {
+        title: 'RTL',
+        blocks: [
+          {
+            type: 'paragraph',
+            text: translated(
+              'To enable RTL support in shadcn/ui, see the RTL configuration guide.',
+              '如需启用 shadcn/ui 的 RTL 支持，请查看 RTL configuration guide。'
+            )
+          },
+          { type: 'preview', styleName: 'radix-nova', name: 'alert-dialog-rtl', direction: 'rtl' }
+        ]
+      },
+      {
         title: translated('API Reference', 'API 参考'),
         blocks: [
           {
@@ -590,6 +698,42 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
             language: 'tsx',
             code: '<div className="w-[450px]">\n  <AspectRatio ratio={16 / 9}>\n    <img src="..." alt="Image" className="rounded-md object-cover w-full h-full" />\n  </AspectRatio>\n</div>'
           }
+        ]
+      },
+      {
+        title: translated('Examples', '示例'),
+        blocks: [
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'aspect-ratio-square',
+            description: translated(
+              'Use `ratio={1/1}` for a square aspect ratio.',
+              '使用 `ratio={1/1}` 获得正方形比例。'
+            )
+          },
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'aspect-ratio-portrait',
+            description: translated(
+              'Use `ratio={3/4}` for a portrait aspect ratio.',
+              '使用 `ratio={3/4}` 获得纵向/肖像比例。'
+            )
+          }
+        ]
+      },
+      {
+        title: 'RTL',
+        blocks: [
+          {
+            type: 'paragraph',
+            text: translated(
+              'To enable RTL support in shadcn/ui, see the RTL configuration guide.',
+              '如需启用 shadcn/ui 的 RTL 支持，请查看 RTL configuration guide。'
+            )
+          },
+          { type: 'preview', styleName: 'radix-nova', name: 'aspect-ratio-rtl', direction: 'rtl' }
         ]
       },
       {
@@ -691,6 +835,87 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
         ]
       },
       {
+        title: translated('Examples', '示例'),
+        blocks: [
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'avatar-badge',
+            description: translated(
+              'Use `AvatarBadge` to add a status indicator to the avatar.',
+              '使用 `AvatarBadge` 为头像添加状态指示器。'
+            )
+          },
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'avatar-badge-icon',
+            description: translated(
+              'Use an icon inside `AvatarBadge` for richer status cues.',
+              '在 `AvatarBadge` 内使用图标以展示更丰富的状态提示。'
+            )
+          },
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'avatar-group',
+            description: translated(
+              'Use `AvatarGroup` to stack multiple avatars with overlap.',
+              '使用 `AvatarGroup` 将多个头像重叠堆叠展示。'
+            )
+          },
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'avatar-group-count',
+            description: translated(
+              'Use `AvatarGroupCount` to show the number of remaining avatars.',
+              '使用 `AvatarGroupCount` 显示剩余头像数量。'
+            )
+          },
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'avatar-group-icon',
+            description: translated(
+              'Use an icon with `AvatarGroup` for a compact team indicator.',
+              '使用图标配合 `AvatarGroup` 实现紧凑的团队指示器。'
+            )
+          },
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'avatar-sizes',
+            description: translated(
+              'Use the `size` prop to change the avatar size: `sm`, `default`, or `lg`.',
+              '使用 `size` prop 改变头像尺寸：`sm`、`default` 或 `lg`。'
+            )
+          },
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'avatar-dropdown',
+            description: translated(
+              'Wrap an `Avatar` with `DropdownMenu` to create a user menu trigger.',
+              '用 `DropdownMenu` 包裹 `Avatar` 创建用户菜单触发器。'
+            )
+          }
+        ]
+      },
+      {
+        title: 'RTL',
+        blocks: [
+          {
+            type: 'paragraph',
+            text: translated(
+              'To enable RTL support in shadcn/ui, see the RTL configuration guide.',
+              '如需启用 shadcn/ui 的 RTL 支持，请查看 RTL configuration guide。'
+            )
+          },
+          { type: 'preview', styleName: 'radix-nova', name: 'avatar-rtl', direction: 'rtl' }
+        ]
+      },
+      {
         title: translated('API Reference', 'API 参考'),
         blocks: [
           {
@@ -783,7 +1008,62 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
             styleName: 'radix-nova',
             name: 'badge-destructive',
             description: translated('Destructive variant badge.', '危险/破坏性变体徽章。')
+          },
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'badge-ghost',
+            description: translated('Ghost variant badge with no background or border.', '无背景和边框的幽灵变体徽章。')
+          },
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'badge-icon',
+            description: translated(
+              'Use the `data-icon="inline-start"` or `data-icon="inline-end"` attribute for correct spacing.',
+              '使用 `data-icon="inline-start"` 或 `data-icon="inline-end"` 属性获得正确间距。'
+            )
+          },
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'badge-spinner',
+            description: translated(
+              'Render a `<Spinner />` component inside the badge for loading states.',
+              '在 badge 内渲染 `<Spinner />` 组件展示加载状态。'
+            )
+          },
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'badge-link',
+            description: translated(
+              'Use the `asChild` prop to render a link that looks like a badge.',
+              '使用 `asChild` prop 渲染一个看起来像徽章的链接。'
+            )
+          },
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'badge-custom-colors',
+            description: translated(
+              'Override default colors with custom Tailwind classes.',
+              '使用自定义 Tailwind 类覆盖默认颜色。'
+            )
           }
+        ]
+      },
+      {
+        title: 'RTL',
+        blocks: [
+          {
+            type: 'paragraph',
+            text: translated(
+              'To enable RTL support in shadcn/ui, see the RTL configuration guide.',
+              '如需启用 shadcn/ui 的 RTL 支持，请查看 RTL configuration guide。'
+            )
+          },
+          { type: 'preview', styleName: 'radix-nova', name: 'badge-rtl', direction: 'rtl' }
         ]
       },
       {
@@ -797,7 +1077,8 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
               translated('Default', '默认值')
             ],
             rows: [
-              ['variant', '"default" | "secondary" | "outline" | "destructive"', '"default"']
+              ['variant', '"default" | "secondary" | "outline" | "destructive" | "ghost" | "link"', '"default"'],
+              ['asChild', 'boolean', 'false']
             ]
           }
         ]
@@ -888,7 +1169,38 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
             styleName: 'radix-nova',
             name: 'breadcrumb-ellipsis',
             description: translated('Use the ellipsis component to show collapsed breadcrumb items.', '使用省略号组件来折叠部分层级。')
+          },
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'breadcrumb-dropdown',
+            description: translated(
+              'Compose `BreadcrumbItem` with `DropdownMenu` for a hierarchical breadcrumb.',
+              '将 `BreadcrumbItem` 与 `DropdownMenu` 组合实现层级面包屑。'
+            )
+          },
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'breadcrumb-link-component',
+            description: translated(
+              'Use the `asChild` prop on `BreadcrumbLink` for custom link components.',
+              '在 `BreadcrumbLink` 上使用 `asChild` prop 实现自定义链接组件。'
+            )
           }
+        ]
+      },
+      {
+        title: 'RTL',
+        blocks: [
+          {
+            type: 'paragraph',
+            text: translated(
+              'To enable RTL support in shadcn/ui, see the RTL configuration guide.',
+              '如需启用 shadcn/ui 的 RTL 支持，请查看 RTL configuration guide。'
+            )
+          },
+          { type: 'preview', styleName: 'radix-nova', name: 'breadcrumb-rtl', direction: 'rtl' }
         ]
       }
     ]
@@ -1149,8 +1461,8 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
                 '确保已安装 Button 组件：npx shadcn@latest add button'
               ),
               translated(
-                'Combine buttons inside a container, adjust rounded corners, and remove overlapping borders.',
-                '在容器内组合按钮，调整圆角，并消除重叠的边框。'
+                'Copy and paste the component source into your project.',
+                '将组件源码复制并粘贴到你的项目中。'
               )
             ]
           }
@@ -1162,8 +1474,85 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
           {
             type: 'code',
             language: 'tsx',
-            code: '<div className="inline-flex rounded-md shadow-xs">\n  <Button className="rounded-r-none">Left</Button>\n  <Button className="rounded-none border-l-0">Middle</Button>\n  <Button className="rounded-l-none border-l-0">Right</Button>\n</div>'
+            code: 'import { ButtonGroup } from "@/components/ui/button-group"'
+          },
+          {
+            type: 'code',
+            language: 'tsx',
+            code: '<ButtonGroup>\n  <Button variant="outline">Left</Button>\n  <Button variant="outline">Middle</Button>\n  <Button variant="outline">Right</Button>\n</ButtonGroup>'
           }
+        ]
+      },
+      {
+        title: translated('Examples', '示例'),
+        blocks: [
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'button-group-orientation',
+            description: translated(
+              'Use `orientation="vertical"` for vertical button groups.',
+              '使用 `orientation="vertical"` 实现纵向按钮组。'
+            )
+          },
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'button-group-size',
+            description: translated(
+              'Different size variants for the button group.',
+              '按钮组的不同尺寸变体。'
+            )
+          },
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'button-group-separator',
+            description: translated(
+              'Use `ButtonGroupSeparator` to divide button groups.',
+              '使用 `ButtonGroupSeparator` 分隔按钮组。'
+            )
+          },
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'button-group-split',
+            description: translated(
+              'A split button group with separator and dropdown.',
+              '带分隔符和下拉菜单的分裂按钮组。'
+            )
+          },
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'button-group-input',
+            description: translated(
+              'Combine `ButtonGroup` with an `Input` component.',
+              '将 `ButtonGroup` 与 `Input` 组件组合。'
+            )
+          },
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'button-group-dropdown-menu',
+            description: translated(
+              'A split button with `DropdownMenu`.',
+              '带 `DropdownMenu` 的分裂按钮。'
+            )
+          }
+        ]
+      },
+      {
+        title: 'RTL',
+        blocks: [
+          {
+            type: 'paragraph',
+            text: translated(
+              'To enable RTL support in shadcn/ui, see the RTL configuration guide.',
+              '如需启用 shadcn/ui 的 RTL 支持，请查看 RTL configuration guide。'
+            )
+          },
+          { type: 'preview', styleName: 'radix-nova', name: 'button-group-rtl', direction: 'rtl' }
         ]
       }
     ]
@@ -1194,6 +1583,16 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
           { type: 'code', language: 'tsx', code: 'import { Calendar } from "@/components/ui/calendar"' },
           { type: 'code', language: 'tsx', code: 'const [date, setDate] = useState<Date | undefined>(new Date())\n\n<Calendar\n  mode="single"\n  selected={date}\n  onSelect={setDate}\n  className="rounded-md border"\n/>' }
         ]
+      },
+      {
+        title: translated('Examples', '示例'),
+        blocks: [
+          { type: 'preview', styleName: 'radix-nova', name: 'calendar-range', description: translated('Use `mode="range"` to select a date range.', '使用 `mode="range"` 选择日期范围。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'calendar-dropdown', description: translated('Use `captionLayout="dropdown"` for month/year selectors.', '使用 `captionLayout="dropdown"` 获得月/年下拉选择器。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'calendar-presets', description: translated('Add preset buttons for quick date selection.', '添加预设按钮以便快速选择日期。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'calendar-booked-dates', description: translated('Highlight booked or unavailable dates.', '高亮已预订或不可用的日期。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'calendar-custom-cells', description: translated('Customize individual day cell content.', '自定义单个日期单元格的内容。') }
+        ]
       }
     ]
   },
@@ -1221,6 +1620,21 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
         blocks: [
           { type: 'code', language: 'tsx', code: 'import {\n  Card,\n  CardContent,\n  CardDescription,\n  CardFooter,\n  CardHeader,\n  CardTitle,\n} from "@/components/ui/card"' },
           { type: 'code', language: 'tsx', code: '<Card>\n  <CardHeader>\n    <CardTitle>Card Title</CardTitle>\n    <CardDescription>Card Description</CardDescription>\n  </CardHeader>\n  <CardContent>\n    <p>Card Content</p>\n  </CardContent>\n  <CardFooter>\n    <p>Card Footer</p>\n  </CardFooter>\n</Card>' }
+        ]
+      },
+      {
+        title: translated('Examples', '示例'),
+        blocks: [
+          { type: 'preview', styleName: 'radix-nova', name: 'card-size', description: translated('Use the `size` prop to change card dimensions.', '使用 `size` prop 改变卡片尺寸。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'card-spacing', description: translated('Adjust internal spacing with padding utilities.', '使用内边距工具类调整内部间距。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'card-image', description: translated('Add an image to the card for visual context.', '为卡片添加图像以提供视觉上下文。') }
+        ]
+      },
+      {
+        title: 'RTL',
+        blocks: [
+          { type: 'paragraph', text: translated('To enable RTL support in shadcn/ui, see the RTL configuration guide.', '如需启用 shadcn/ui 的 RTL 支持，请查看 RTL configuration guide。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'card-rtl', direction: 'rtl' }
         ]
       }
     ]
@@ -1250,6 +1664,21 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
         blocks: [
           { type: 'code', language: 'tsx', code: 'import {\n  Carousel,\n  CarouselContent,\n  CarouselItem,\n  CarouselNext,\n  CarouselPrevious,\n} from "@/components/ui/carousel"' },
           { type: 'code', language: 'tsx', code: '<Carousel>\n  <CarouselContent>\n    <CarouselItem>...</CarouselItem>\n    <CarouselItem>...</CarouselItem>\n  </CarouselContent>\n  <CarouselPrevious />\n  <CarouselNext />\n</Carousel>' }
+        ]
+      },
+      {
+        title: translated('Examples', '示例'),
+        blocks: [
+          { type: 'preview', styleName: 'radix-nova', name: 'carousel-sizes', description: translated('Use the `size` prop to change carousel dimensions.', '使用 `size` prop 改变轮播尺寸。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'carousel-spacing', description: translated('Adjust spacing between carousel items.', '调整轮播项之间的间距。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'carousel-orientation', description: translated('Use `orientation="vertical"` for a vertical carousel.', '使用 `orientation="vertical"` 实现纵向轮播。') }
+        ]
+      },
+      {
+        title: 'RTL',
+        blocks: [
+          { type: 'paragraph', text: translated('To enable RTL support in shadcn/ui, see the RTL configuration guide.', '如需启用 shadcn/ui 的 RTL 支持，请查看 RTL configuration guide。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'carousel-rtl', direction: 'rtl' }
         ]
       }
     ]
@@ -1308,6 +1737,22 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
           { type: 'code', language: 'tsx', code: 'import { Checkbox } from "@/components/ui/checkbox"' },
           { type: 'code', language: 'tsx', code: '<div className="flex items-center space-x-2">\n  <Checkbox id="terms" />\n  <label htmlFor="terms">Accept terms and conditions</label>\n</div>' }
         ]
+      },
+      {
+        title: translated('Examples', '示例'),
+        blocks: [
+          { type: 'preview', styleName: 'radix-nova', name: 'checkbox-description', description: translated('Add a description below the checkbox label.', '在复选框标签下方添加描述文本。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'checkbox-disabled', description: translated('A disabled checkbox prevents user interaction.', '禁用的复选框阻止用户交互。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'checkbox-group', description: translated('Group multiple checkboxes together.', '将多个复选框组合在一起。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'checkbox-table', description: translated('Use checkboxes inside a table for row selection.', '在表格中使用复选框进行行选择。') }
+        ]
+      },
+      {
+        title: 'RTL',
+        blocks: [
+          { type: 'paragraph', text: translated('To enable RTL support in shadcn/ui, see the RTL configuration guide.', '如需启用 shadcn/ui 的 RTL 支持，请查看 RTL configuration guide。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'checkbox-rtl', direction: 'rtl' }
+        ]
       }
     ]
   },
@@ -1337,6 +1782,20 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
           { type: 'code', language: 'tsx', code: 'import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"' },
           { type: 'code', language: 'tsx', code: '<Collapsible>\n  <CollapsibleTrigger>Can I use this in my project?</CollapsibleTrigger>\n  <CollapsibleContent>\n    Yes. Free for personal and commercial use. No attribution required.\n  </CollapsibleContent>\n</Collapsible>' }
         ]
+      },
+      {
+        title: translated('Examples', '示例'),
+        blocks: [
+          { type: 'preview', styleName: 'radix-nova', name: 'collapsible-settings-panel', description: translated('A settings panel with collapsible sections.', '带可折叠区域的设置面板。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'collapsible-file-tree', description: translated('A file tree using nested collapsible components.', '使用嵌套可折叠组件的文件树。') }
+        ]
+      },
+      {
+        title: 'RTL',
+        blocks: [
+          { type: 'paragraph', text: translated('To enable RTL support in shadcn/ui, see the RTL configuration guide.', '如需启用 shadcn/ui 的 RTL 支持，请查看 RTL configuration guide。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'collapsible-rtl', direction: 'rtl' }
+        ]
       }
     ]
   },
@@ -1347,7 +1806,7 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
     mirrored: true,
     sourcePath: 'apps/v4/content/docs/components/combobox.mdx',
     officialUrl: 'https://ui.shadcn.com/docs/components/combobox',
-    installCommand: 'npx shadcn@latest add popover command',
+    installCommand: 'npx shadcn@latest add combobox',
     sections: [
       {
         title: translated('Preview', '预览'),
@@ -1356,13 +1815,23 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
       {
         title: translated('Installation', '安装'),
         blocks: [
-          { type: 'code', language: 'bash', title: translated('Command', '命令'), code: 'npx shadcn@latest add popover command' }
+          { type: 'code', language: 'bash', title: translated('Command', '命令'), code: 'npx shadcn@latest add combobox' }
         ]
       },
       {
         title: translated('Usage', '用法'),
         blocks: [
-          { type: 'paragraph', text: translated('A Combobox is built by combining the `<Popover />` and `<Command />` components.', 'Combobox 是通过组合 `<Popover />` 和 `<Command />` 组件构建的。') }
+          { type: 'code', language: 'tsx', code: 'import { Combobox, ComboboxInput, ComboboxContent, ComboboxList, ComboboxItem } from "@/components/ui/combobox"' }
+        ]
+      },
+      {
+        title: translated('Examples', '示例'),
+        blocks: [
+          { type: 'preview', styleName: 'radix-nova', name: 'combobox-multiple', description: translated('Allow selecting multiple values.', '允许选择多个值。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'combobox-clear-button', description: translated('Add a clear button to reset the selection.', '添加清除按钮以重置选择。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'combobox-groups', description: translated('Organize options into labeled groups.', '将选项组织到带标签的分组中。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'combobox-disabled', description: translated('Disable the combobox to prevent interaction.', '禁用组合框以阻止交互。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'combobox-popup', description: translated('Show the list as a popup overlay.', '以弹出覆盖层形式显示列表。') }
         ]
       }
     ]
@@ -1393,6 +1862,14 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
           { type: 'code', language: 'tsx', code: 'import {\n  Command,\n  CommandEmpty,\n  CommandGroup,\n  CommandInput,\n  CommandItem,\n  CommandList,\n  CommandSeparator,\n} from "@/components/ui/command"' },
           { type: 'code', language: 'tsx', code: '<Command>\n  <CommandInput placeholder="Type a command or search..." />\n  <CommandList>\n    <CommandEmpty>No results found.</CommandEmpty>\n    <CommandGroup heading="Suggestions">\n      <CommandItem>Calendar</CommandItem>\n      <CommandItem>Search Emoji</CommandItem>\n    </CommandGroup>\n  </CommandList>\n</Command>' }
         ]
+      },
+      {
+        title: translated('Examples', '示例'),
+        blocks: [
+          { type: 'preview', styleName: 'radix-nova', name: 'command-shortcuts', description: translated('Display keyboard shortcuts alongside items.', '在项目旁显示键盘快捷键。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'command-groups', description: translated('Organize items into separated groups.', '将项目组织到分隔的分组中。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'command-scrollable', description: translated('Enable scrolling for long command lists.', '为长命令列表启用滚动。') }
+        ]
       }
     ]
   },
@@ -1420,6 +1897,25 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
         title: translated('Usage', '用法'),
         blocks: [
           { type: 'code', language: 'tsx', code: 'import {\n  ContextMenu,\n  ContextMenuContent,\n  ContextMenuItem,\n  ContextMenuTrigger,\n} from "@/components/ui/context-menu"' }
+        ]
+      },
+      {
+        title: translated('Examples', '示例'),
+        blocks: [
+          { type: 'preview', styleName: 'radix-nova', name: 'context-menu-submenu', description: translated('Nested submenus for hierarchical actions.', '嵌套子菜单，用于层级操作。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'context-menu-shortcuts', description: translated('Display keyboard shortcuts in context menu items.', '在右键菜单项中显示键盘快捷键。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'context-menu-groups', description: translated('Separate items into labeled groups.', '将项目分隔到带标签的分组中。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'context-menu-icons', description: translated('Add icons to menu items for visual cues.', '为菜单项添加图标作为视觉提示。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'context-menu-checkboxes', description: translated('Toggleable checkbox items in the menu.', '菜单中可切换的复选框项目。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'context-menu-radio', description: translated('Radio group items for single selection.', '单选组项目，用于单项选择。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'context-menu-destructive', description: translated('Destructive actions styled with danger colors.', '使用危险颜色样式的破坏性操作。') }
+        ]
+      },
+      {
+        title: 'RTL',
+        blocks: [
+          { type: 'paragraph', text: translated('To enable RTL support in shadcn/ui, see the RTL configuration guide.', '如需启用 shadcn/ui 的 RTL 支持，请查看 RTL configuration guide。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'context-menu-rtl', direction: 'rtl' }
         ]
       }
     ]
@@ -1621,6 +2117,22 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
         blocks: [
           { type: 'paragraph', text: translated('Date Picker is built combining `<Popover />` and `<Calendar />` components.', 'Date Picker 是组合 `<Popover />` 和 `<Calendar />` 组件构建的。') }
         ]
+      },
+      {
+        title: translated('Examples', '示例'),
+        blocks: [
+          { type: 'preview', styleName: 'radix-nova', name: 'date-picker-range', description: translated('Select a date range using two calendars.', '使用两个日历选择日期范围。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'date-picker-date-of-birth', description: translated('A date picker optimized for selecting birth dates.', '优化用于选择出生日期的日期选择器。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'date-picker-input', description: translated('Open the picker from an input field.', '从输入框打开日期选择器。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'date-picker-time', description: translated('Combine date and time selection.', '结合日期和时间选择。') }
+        ]
+      },
+      {
+        title: 'RTL',
+        blocks: [
+          { type: 'paragraph', text: translated('To enable RTL support in shadcn/ui, see the RTL configuration guide.', '如需启用 shadcn/ui 的 RTL 支持，请查看 RTL configuration guide。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'date-picker-rtl', direction: 'rtl' }
+        ]
       }
     ]
   },
@@ -1670,6 +2182,21 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
         blocks: [
           { type: 'code', language: 'tsx', code: 'import {\n  Drawer,\n  DrawerClose,\n  DrawerContent,\n  DrawerDescription,\n  DrawerFooter,\n  DrawerHeader,\n  DrawerTitle,\n  DrawerTrigger,\n} from "@/components/ui/drawer"' }
         ]
+      },
+      {
+        title: translated('Examples', '示例'),
+        blocks: [
+          { type: 'preview', styleName: 'radix-nova', name: 'drawer-scrollable', description: translated('A drawer with scrollable content.', '带可滚动内容的抽屉。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'drawer-directions', description: translated('Open the drawer from top, bottom, left, or right.', '从顶部、底部、左侧或右侧打开抽屉。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'drawer-responsive-dialog', description: translated('A responsive drawer that becomes a dialog on desktop.', '在桌面端变为对话框的响应式抽屉。') }
+        ]
+      },
+      {
+        title: 'RTL',
+        blocks: [
+          { type: 'paragraph', text: translated('To enable RTL support in shadcn/ui, see the RTL configuration guide.', '如需启用 shadcn/ui 的 RTL 支持，请查看 RTL configuration guide。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'drawer-rtl', direction: 'rtl' }
+        ]
       }
     ]
   },
@@ -1697,6 +2224,26 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
         title: translated('Usage', '用法'),
         blocks: [
           { type: 'code', language: 'tsx', code: 'import {\n  DropdownMenu,\n  DropdownMenuContent,\n  DropdownMenuItem,\n  DropdownMenuLabel,\n  DropdownMenuSeparator,\n  DropdownMenuTrigger,\n} from "@/components/ui/dropdown-menu"' }
+        ]
+      },
+      {
+        title: translated('Examples', '示例'),
+        blocks: [
+          { type: 'preview', styleName: 'radix-nova', name: 'dropdown-menu-submenu', description: translated('Nested submenus for hierarchical actions.', '嵌套子菜单，用于层级操作。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'dropdown-menu-shortcuts', description: translated('Display keyboard shortcuts alongside menu items.', '在菜单项旁显示键盘快捷键。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'dropdown-menu-icons', description: translated('Add icons to menu items for visual scanning.', '为菜单项添加图标以便视觉扫描。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'dropdown-menu-checkboxes', description: translated('Toggleable checkbox items in the dropdown.', '下拉菜单中可切换的复选框项目。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'dropdown-menu-radio-group', description: translated('Radio group items for single selection.', '单选组项目，用于单项选择。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'dropdown-menu-destructive', description: translated('Destructive actions styled with danger colors.', '使用危险颜色样式的破坏性操作。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'dropdown-menu-avatar', description: translated('Use an avatar as the dropdown trigger.', '使用头像作为下拉菜单触发器。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'dropdown-menu-complex', description: translated('A comprehensive dropdown with icons, shortcuts, and submenus.', '包含图标、快捷键和子菜单的综合下拉菜单。') }
+        ]
+      },
+      {
+        title: 'RTL',
+        blocks: [
+          { type: 'paragraph', text: translated('To enable RTL support in shadcn/ui, see the RTL configuration guide.', '如需启用 shadcn/ui 的 RTL 支持，请查看 RTL configuration guide。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'dropdown-menu-rtl', direction: 'rtl' }
         ]
       }
     ]
@@ -1769,10 +2316,37 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
           {
             type: 'preview',
             styleName: 'radix-nova',
-            name: 'empty-search',
+            name: 'empty-background',
             description: translated(
-              'An empty state that combines search input and helper action.',
-              '把搜索输入与辅助操作组合在一起的空状态。'
+              'Use `bg-*` and `bg-gradient-*` utilities to add a background.',
+              '使用 `bg-*` 和 `bg-gradient-*` 工具类添加背景。'
+            )
+          },
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'empty-avatar',
+            description: translated(
+              'Use `EmptyMedia` to display an avatar in the empty state.',
+              '使用 `EmptyMedia` 在空状态中显示头像。'
+            )
+          },
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'empty-avatar-group',
+            description: translated(
+              'Use `EmptyMedia` to display an avatar group in the empty state.',
+              '使用 `EmptyMedia` 在空状态中显示头像组。'
+            )
+          },
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'empty-input-group',
+            description: translated(
+              'Add an `InputGroup` component to the `EmptyContent`.',
+              '在 `EmptyContent` 中添加 `InputGroup` 组件。'
             )
           }
         ]
@@ -1859,7 +2433,21 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
               'Use `FieldGroup` and `FieldSeparator` to compose multi-step forms.',
               '使用 `FieldGroup` 和 `FieldSeparator` 组织多段式表单。'
             )
-          }
+          },
+          { type: 'preview', styleName: 'radix-nova', name: 'field-input', description: translated('A standard input field with label and description.', '带标签和描述的标准输入字段。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'field-textarea', description: translated('A textarea field with label and description.', '带标签和描述的文本区域字段。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'field-select', description: translated('A select field with label and description.', '带标签和描述的选择字段。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'field-checkbox', description: translated('A checkbox field with label and description.', '带标签和描述的复选框字段。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'field-switch', description: translated('A switch field with label and description.', '带标签和描述的开关字段。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'field-choice-card', description: translated('A choice card field for option selection.', '用于选项选择的卡片字段。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'field-fieldset', description: translated('A fieldset with multiple grouped fields.', '包含多个分组字段的字段集。') }
+        ]
+      },
+      {
+        title: 'RTL',
+        blocks: [
+          { type: 'paragraph', text: translated('To enable RTL support in shadcn/ui, see the RTL configuration guide.', '如需启用 shadcn/ui 的 RTL 支持，请查看 RTL configuration guide。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'field-rtl', direction: 'rtl' }
         ]
       }
     ]
@@ -1885,8 +2473,8 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
             styleName: 'radix-nova',
             name: 'hover-card-demo',
             description: translated(
-              'Preview profile details when hovering over a trigger.',
-              '把鼠标悬停在触发器上时预览资料详情。'
+              'A basic hover card preview triggered from a simple button.',
+              '由简单按钮触发的基础 Hover Card 预览。'
             )
           }
         ]
@@ -1922,6 +2510,40 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
         ]
       },
       {
+        title: translated('Trigger Delays', '触发延迟'),
+        blocks: [
+          {
+            type: 'paragraph',
+            text: translated(
+              'Use `openDelay` and `closeDelay` on the `HoverCard` to control when the card opens and closes.',
+              '在 `HoverCard` 上使用 `openDelay` 和 `closeDelay` 来控制卡片的打开和关闭时机。'
+            )
+          },
+          {
+            type: 'code',
+            language: 'tsx',
+            code: '<HoverCard openDelay={100} closeDelay={200}>\n  <HoverCardTrigger>Hover</HoverCardTrigger>\n  <HoverCardContent>Content</HoverCardContent>\n</HoverCard>'
+          }
+        ]
+      },
+      {
+        title: translated('Positioning', '定位'),
+        blocks: [
+          {
+            type: 'paragraph',
+            text: translated(
+              'Use the `side` and `align` props on `HoverCardContent` to control placement.',
+              '使用 `HoverCardContent` 上的 `side` 和 `align` 属性来控制位置。'
+            )
+          },
+          {
+            type: 'code',
+            language: 'tsx',
+            code: '<HoverCard>\n  <HoverCardTrigger>Hover</HoverCardTrigger>\n  <HoverCardContent side="top" align="start">\n    Content\n  </HoverCardContent>\n</HoverCard>'
+          }
+        ]
+      },
+      {
         title: translated('Examples', '示例'),
         blocks: [
           {
@@ -1929,10 +2551,26 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
             styleName: 'radix-nova',
             name: 'hover-card-delay',
             description: translated(
-              'Use `openDelay` and `closeDelay` to tune the interaction timing.',
-              '使用 `openDelay` 和 `closeDelay` 调整交互时机。'
+              'Use `openDelay` and `closeDelay` to control the hover delay.',
+              '使用 `openDelay` 和 `closeDelay` 属性来控制悬停卡片的打开和关闭延迟。'
+            )
+          },
+          {
+            type: 'preview',
+            styleName: 'radix-nova',
+            name: 'hover-card-sides',
+            description: translated(
+              'Preview the `left`, `top`, `bottom`, and `right` side placements.',
+              '预览 `left`、`top`、`bottom` 和 `right` 四种停靠位置。'
             )
           }
+        ]
+      },
+      {
+        title: 'RTL',
+        blocks: [
+          { type: 'paragraph', text: translated('To enable RTL support in shadcn/ui, see the RTL configuration guide.', '如需启用 shadcn/ui 的 RTL 支持，请查看 RTL configuration guide。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'hover-card-rtl', direction: 'rtl' }
         ]
       }
     ]
@@ -1979,24 +2617,20 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
       {
         title: translated('Examples', '示例'),
         blocks: [
-          {
-            type: 'preview',
-            styleName: 'radix-nova',
-            name: 'input-field',
-            description: translated(
-              'Use `Field`, `FieldLabel`, and `FieldDescription` to compose a complete field.',
-              '使用 `Field`、`FieldLabel` 和 `FieldDescription` 组合完整字段。'
-            )
-          },
-          {
-            type: 'preview',
-            styleName: 'radix-nova',
-            name: 'input-disabled',
-            description: translated(
-              'A disabled input keeps layout and semantics while blocking edits.',
-              '禁用输入框在保留布局与语义的同时阻止编辑。'
-            )
-          }
+          { type: 'preview', styleName: 'radix-nova', name: 'input-field', description: translated('Use `Field`, `FieldLabel`, and `FieldDescription` to compose a complete field.', '使用 `Field`、`FieldLabel` 和 `FieldDescription` 组合完整字段。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'input-disabled', description: translated('A disabled input keeps layout and semantics while blocking edits.', '禁用输入框在保留布局与语义的同时阻止编辑。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'input-invalid', description: translated('Show an invalid state with error styling.', '使用错误样式显示无效状态。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'input-file', description: translated('A file input styled consistently with the design system.', '与设计系统风格统一的文件输入。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'input-inline', description: translated('Inline inputs for seamless text editing.', '用于无缝文本编辑的行内输入。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'input-required', description: translated('Mark inputs as required with visual indicators.', '用视觉指示器标记必填输入。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'input-form', description: translated('A complete form with multiple input fields.', '包含多个输入字段的完整表单。') }
+        ]
+      },
+      {
+        title: 'RTL',
+        blocks: [
+          { type: 'paragraph', text: translated('To enable RTL support in shadcn/ui, see the RTL configuration guide.', '如需启用 shadcn/ui 的 RTL 支持，请查看 RTL configuration guide。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'input-rtl', direction: 'rtl' }
         ]
       }
     ]
@@ -2057,24 +2691,18 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
       {
         title: translated('Examples', '示例'),
         blocks: [
-          {
-            type: 'preview',
-            styleName: 'radix-nova',
-            name: 'input-group-button',
-            description: translated(
-              'Mix button addons with text inputs for inline actions.',
-              '把按钮型附加区域和文本输入组合在一起实现行内操作。'
-            )
-          },
-          {
-            type: 'preview',
-            styleName: 'radix-nova',
-            name: 'input-group-textarea',
-            description: translated(
-              'Use block-end addon positioning for textarea metadata.',
-              '为 textarea 元信息使用 block-end 形式的附加区域。'
-            )
-          }
+          { type: 'preview', styleName: 'radix-nova', name: 'input-group-button', description: translated('Mix button addons with text inputs for inline actions.', '把按钮型附加区域和文本输入组合在一起实现行内操作。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'input-group-textarea', description: translated('Use block-end addon positioning for textarea metadata.', '为 textarea 元信息使用 block-end 形式的附加区域。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'input-group-icon', description: translated('Add an icon to the input group for visual cues.', '为输入组添加图标作为视觉提示。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'input-group-spinner', description: translated('Add a loading spinner to the input group.', '为输入组添加加载旋转器。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'input-group-kbd', description: translated('Display keyboard shortcuts inside the input group.', '在输入组中显示键盘快捷键。') }
+        ]
+      },
+      {
+        title: 'RTL',
+        blocks: [
+          { type: 'paragraph', text: translated('To enable RTL support in shadcn/ui, see the RTL configuration guide.', '如需启用 shadcn/ui 的 RTL 支持，请查看 RTL configuration guide。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'input-group-rtl', direction: 'rtl' }
         ]
       }
     ]
@@ -2151,15 +2779,19 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
       {
         title: translated('Examples', '示例'),
         blocks: [
-          {
-            type: 'preview',
-            styleName: 'radix-nova',
-            name: 'input-otp-separator',
-            description: translated(
-              'Add separators between groups to reflect real verification code patterns.',
-              '在分组之间加入分隔符，贴近真实验证码模式。'
-            )
-          }
+          { type: 'preview', styleName: 'radix-nova', name: 'input-otp-separator', description: translated('Add separators between groups to reflect real verification code patterns.', '在分组之间加入分隔符，贴近真实验证码模式。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'input-otp-disabled', description: translated('A disabled OTP input prevents user interaction.', '禁用的 OTP 输入阻止用户交互。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'input-otp-controlled', description: translated('Control the OTP value programmatically.', '以编程方式控制 OTP 值。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'input-otp-invalid', description: translated('Show an invalid state for the OTP input.', '显示 OTP 输入的无效状态。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'input-otp-four-digits', description: translated('A four-digit OTP input for shorter codes.', '用于短验证码的四位 OTP 输入。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'input-otp-form', description: translated('An OTP input inside a complete form.', '完整表单中的 OTP 输入。') }
+        ]
+      },
+      {
+        title: 'RTL',
+        blocks: [
+          { type: 'paragraph', text: translated('To enable RTL support in shadcn/ui, see the RTL configuration guide.', '如需启用 shadcn/ui 的 RTL 支持，请查看 RTL configuration guide。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'input-otp-rtl', direction: 'rtl' }
         ]
       }
     ]
@@ -2214,24 +2846,184 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
       {
         title: translated('Examples', '示例'),
         blocks: [
-          {
-            type: 'preview',
-            styleName: 'radix-nova',
-            name: 'item-icon',
-            description: translated(
-              'Use icon media and compact actions for status lists.',
-              '在状态列表中使用图标媒体和紧凑操作。'
-            )
-          },
-          {
-            type: 'preview',
-            styleName: 'radix-nova',
-            name: 'item-actions',
-            description: translated(
-              'Group multiple action buttons on the trailing edge.',
-              '在尾部区域组合多个操作按钮。'
-            )
-          }
+          { type: 'preview', styleName: 'radix-nova', name: 'item-icon', description: translated('Use icon media and compact actions for status lists.', '在状态列表中使用图标媒体和紧凑操作。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'item-actions', description: translated('Group multiple action buttons on the trailing edge.', '在尾部区域组合多个操作按钮。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'item-avatar', description: translated('Use avatar media for user-related items.', '为与用户相关的条目使用头像媒体。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'item-image', description: translated('Use image media for visual item previews.', '使用图像媒体进行可视化条目预览。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'item-group', description: translated('Group multiple items together in a container.', '将多个条目分组放在容器中。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'item-dropdown', description: translated('Add a dropdown menu to item actions.', '在条目操作中添加下拉菜单。') }
+        ]
+      },
+      {
+        title: 'RTL',
+        blocks: [
+          { type: 'paragraph', text: translated('To enable RTL support in shadcn/ui, see the RTL configuration guide.', '如需启用 shadcn/ui 的 RTL 支持，请查看 RTL configuration guide。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'item-rtl', direction: 'rtl' }
+        ]
+      }
+    ]
+  },
+  kbd: {
+    name: 'Kbd',
+    slug: 'kbd',
+    description: translated('A keyboard key component for displaying shortcuts.', '用于显示快捷键的键盘按键组件。'),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/kbd.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/kbd',
+    installCommand: 'npx shadcn@latest add kbd',
+    sections: [
+      { title: translated('Preview', '预览'), blocks: [{ type: 'preview', styleName: 'radix-nova', name: 'kbd-demo' }] },
+      { title: translated('Installation', '安装'), blocks: [{ type: 'code', language: 'bash', title: translated('Command', '命令'), code: 'npx shadcn@latest add kbd' }] },
+      { title: translated('Usage', '用法'), blocks: [{ type: 'code', language: 'tsx', code: 'import { Kbd } from "@/components/ui/kbd"' }, { type: 'code', language: 'tsx', code: '<Kbd>⌘</Kbd> + <Kbd>K</Kbd>' }] },
+      {
+        title: translated('Examples', '示例'),
+        blocks: [
+          { type: 'preview', styleName: 'radix-nova', name: 'kbd-group', description: translated('Combine multiple Kbd components for complex shortcuts.', '组合多个 Kbd 组件显示复杂快捷键。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'kbd-button', description: translated('Use Kbd inside a Button component.', '在 Button 组件中使用 Kbd。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'kbd-input-group', description: translated('Use Kbd inside an InputGroup for search hints.', '在 InputGroup 中使用 Kbd 作为搜索提示。') }
+        ]
+      }
+    ]
+  },
+  label: {
+    name: 'Label',
+    slug: 'label',
+    description: translated('Renders an accessible label associated with a form control.', '渲染与表单控件关联的可访问标签。'),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/label.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/label',
+    installCommand: 'npx shadcn@latest add label',
+    sections: [
+      { title: translated('Preview', '预览'), blocks: [{ type: 'preview', styleName: 'radix-nova', name: 'label-demo' }] },
+      { title: translated('Installation', '安装'), blocks: [{ type: 'code', language: 'bash', title: translated('Command', '命令'), code: 'npx shadcn@latest add label' }] },
+      { title: translated('Usage', '用法'), blocks: [{ type: 'code', language: 'tsx', code: 'import { Label } from "@/components/ui/label"' }, { type: 'code', language: 'tsx', code: '<Label htmlFor="email">Your email address</Label>' }] }
+    ]
+  },
+  menubar: {
+    name: 'Menubar',
+    slug: 'menubar',
+    description: translated('A menubar component for document-centric applications.', '用于文档中心型应用的菜单栏组件。'),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/radix/menubar.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/menubar',
+    installCommand: 'npx shadcn@latest add menubar',
+    sections: [
+      { title: translated('Preview', '预览'), blocks: [{ type: 'preview', styleName: 'radix-nova', name: 'menubar-demo' }] },
+      { title: translated('Installation', '安装'), blocks: [{ type: 'code', language: 'bash', title: translated('Command', '命令'), code: 'npx shadcn@latest add menubar' }] },
+      { title: translated('Usage', '用法'), blocks: [{ type: 'code', language: 'tsx', code: 'import { Menubar, MenubarContent, MenubarItem, MenubarMenu, MenubarTrigger } from "@/components/ui/menubar"' }] },
+      {
+        title: translated('Examples', '示例'),
+        blocks: [
+          { type: 'preview', styleName: 'radix-nova', name: 'menubar-checkbox', description: translated('Use menu checkbox items for toggleable options.', '使用菜单复选框项目实现可切换选项。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'menubar-radio', description: translated('Use menu radio items for single selection.', '使用菜单单选项目实现单项选择。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'menubar-submenu', description: translated('Use nested submenus for hierarchical navigation.', '使用嵌套子菜单实现层级导航。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'menubar-icons', description: translated('Add icons to menu items for visual scanning.', '为菜单项添加图标以便视觉扫描。') }
+        ]
+      }
+    ]
+  },
+  'native-select': {
+    name: 'Native Select',
+    slug: 'native-select',
+    description: translated('A styled native HTML select element.', '带样式的原生 HTML select 元素。'),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/radix/native-select.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/native-select',
+    installCommand: 'npx shadcn@latest add native-select',
+    sections: [
+      { title: translated('Preview', '预览'), blocks: [{ type: 'preview', styleName: 'radix-nova', name: 'native-select-demo' }] },
+      { title: translated('Installation', '安装'), blocks: [{ type: 'code', language: 'bash', title: translated('Command', '命令'), code: 'npx shadcn@latest add native-select' }] },
+      { title: translated('Usage', '用法'), blocks: [{ type: 'code', language: 'tsx', code: 'import { NativeSelect } from "@/components/ui/native-select"' }] },
+      {
+        title: translated('Examples', '示例'),
+        blocks: [
+          { type: 'preview', styleName: 'radix-nova', name: 'native-select-groups', description: translated('Use optgroup to group related options.', '使用 optgroup 对相关选项进行分组。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'native-select-disabled', description: translated('A disabled select prevents user interaction.', '禁用的选择框阻止用户交互。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'native-select-invalid', description: translated('Show an invalid state with error styling.', '使用错误样式显示无效状态。') }
+        ]
+      }
+    ]
+  },
+  'navigation-menu': {
+    name: 'Navigation Menu',
+    slug: 'navigation-menu',
+    description: translated('A navigation menu for site-wide navigation.', '站点级导航的导航菜单组件。'),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/radix/navigation-menu.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/navigation-menu',
+    installCommand: 'npx shadcn@latest add navigation-menu',
+    sections: [
+      { title: translated('Preview', '预览'), blocks: [{ type: 'preview', styleName: 'radix-nova', name: 'navigation-menu-demo' }] },
+      { title: translated('Installation', '安装'), blocks: [{ type: 'code', language: 'bash', title: translated('Command', '命令'), code: 'npx shadcn@latest add navigation-menu' }] },
+      { title: translated('Usage', '用法'), blocks: [{ type: 'code', language: 'tsx', code: 'import { NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMenuLink, NavigationMenuList, NavigationMenuTrigger } from "@/components/ui/navigation-menu"' }] }
+    ]
+  },
+  pagination: {
+    name: 'Pagination',
+    slug: 'pagination',
+    description: translated('A pagination component for navigating between pages.', '用于页面间导航的分页组件。'),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/pagination.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/pagination',
+    installCommand: 'npx shadcn@latest add pagination',
+    sections: [
+      { title: translated('Preview', '预览'), blocks: [{ type: 'preview', styleName: 'radix-nova', name: 'pagination-demo' }] },
+      { title: translated('Installation', '安装'), blocks: [{ type: 'code', language: 'bash', title: translated('Command', '命令'), code: 'npx shadcn@latest add pagination' }] },
+      { title: translated('Usage', '用法'), blocks: [{ type: 'code', language: 'tsx', code: 'import { Pagination, PaginationContent, PaginationItem, PaginationPrevious, PaginationLink, PaginationNext, PaginationEllipsis } from "@/components/ui/pagination"' }] },
+      {
+        title: translated('Examples', '示例'),
+        blocks: [
+          { type: 'preview', styleName: 'radix-nova', name: 'pagination-simple', description: translated('A simple pagination with page numbers.', '带页码的简单分页。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'pagination-icons-only', description: translated('Icons-only pagination for compact layouts.', '紧凑布局的纯图标分页。') }
+        ]
+      }
+    ]
+  },
+  popover: {
+    name: 'Popover',
+    slug: 'popover',
+    description: translated('A popover component for displaying rich content in a portal.', '用于在门户中显示丰富内容的弹出框组件。'),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/radix/popover.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/popover',
+    installCommand: 'npx shadcn@latest add popover',
+    sections: [
+      { title: translated('Preview', '预览'), blocks: [{ type: 'preview', styleName: 'radix-nova', name: 'popover-demo' }] },
+      { title: translated('Installation', '安装'), blocks: [{ type: 'code', language: 'bash', title: translated('Command', '命令'), code: 'npx shadcn@latest add popover' }] },
+      { title: translated('Usage', '用法'), blocks: [{ type: 'code', language: 'tsx', code: 'import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"' }] },
+      {
+        title: translated('Examples', '示例'),
+        blocks: [
+          { type: 'preview', styleName: 'radix-nova', name: 'popover-align', description: translated('Control popover alignment with the align prop.', '使用 align 属性控制弹出框对齐方式。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'popover-with-form', description: translated('Use a popover to contain a form.', '使用弹出框包含表单。') }
+        ]
+      },
+      {
+        title: 'RTL',
+        blocks: [
+          { type: 'paragraph', text: translated('To enable RTL support in shadcn/ui, see the RTL configuration guide.', '如需启用 shadcn/ui 的 RTL 支持，请查看 RTL configuration guide。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'popover-rtl', direction: 'rtl' }
+        ]
+      }
+    ]
+  },
+  progress: {
+    name: 'Progress',
+    slug: 'progress',
+    description: translated('A progress bar component for displaying completion status.', '显示完成状态的进度条组件。'),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/radix/progress.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/progress',
+    installCommand: 'npx shadcn@latest add progress',
+    sections: [
+      { title: translated('Preview', '预览'), blocks: [{ type: 'preview', styleName: 'radix-nova', name: 'progress-demo' }] },
+      { title: translated('Installation', '安装'), blocks: [{ type: 'code', language: 'bash', title: translated('Command', '命令'), code: 'npx shadcn@latest add progress' }] },
+      { title: translated('Usage', '用法'), blocks: [{ type: 'code', language: 'tsx', code: 'import { Progress } from "@/components/ui/progress"' }] },
+      {
+        title: translated('Examples', '示例'),
+        blocks: [
+          { type: 'preview', styleName: 'radix-nova', name: 'progress-label', description: translated('Use a Field component to add a label to the progress bar.', '使用 Field 组件为进度条添加标签。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'progress-controlled', description: translated('A progress bar controlled by external state.', '由外部状态控制的进度条。') }
         ]
       }
     ]
@@ -2353,6 +3145,238 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
             )
           },
           { type: 'preview', styleName: 'radix-nova', name: 'table-rtl', direction: 'rtl' }
+        ]
+      }
+    ]
+  },
+  'radio-group': {
+    name: 'Radio Group',
+    slug: 'radio-group',
+    description: translated('A set of checkable buttons known as radio buttons.', '一组可选的单选按钮。'),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/radix/radio-group.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/radio-group',
+    installCommand: 'npx shadcn@latest add radio-group',
+    sections: [
+      { title: translated('Preview', '预览'), blocks: [{ type: 'preview', styleName: 'radix-nova', name: 'radio-group-demo' }] },
+      { title: translated('Installation', '安装'), blocks: [{ type: 'code', language: 'bash', title: translated('Command', '命令'), code: 'npx shadcn@latest add radio-group' }] },
+      { title: translated('Usage', '用法'), blocks: [{ type: 'code', language: 'tsx', code: 'import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"' }] },
+      {
+        title: translated('Examples', '示例'),
+        blocks: [
+          { type: 'preview', styleName: 'radix-nova', name: 'radio-group-description', description: translated('Add a description to radio items.', '为单选项添加描述。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'radio-group-choice-card', description: translated('Use cards for radio selection.', '使用卡片形式进行单选。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'radio-group-disabled', description: translated('Disabled radio items prevent selection.', '禁用的单选项目阻止选择。') }
+        ]
+      }
+    ]
+  },
+  resizable: {
+    name: 'Resizable',
+    slug: 'resizable',
+    description: translated('A resizable panel component for split layouts.', '用于分栏布局的可调整大小面板组件。'),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/radix/resizable.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/resizable',
+    installCommand: 'npx shadcn@latest add resizable',
+    sections: [
+      { title: translated('Preview', '预览'), blocks: [{ type: 'preview', styleName: 'radix-nova', name: 'resizable-demo' }] },
+      { title: translated('Installation', '安装'), blocks: [{ type: 'code', language: 'bash', title: translated('Command', '命令'), code: 'npx shadcn@latest add resizable' }] },
+      { title: translated('Usage', '用法'), blocks: [{ type: 'code', language: 'tsx', code: 'import { Resizable, ResizablePanel, ResizableHandle } from "@/components/ui/resizable"' }] },
+      {
+        title: translated('Examples', '示例'),
+        blocks: [
+          { type: 'preview', styleName: 'radix-nova', name: 'resizable-vertical', description: translated('Vertical orientation for top/bottom panels.', '顶部/底部面板的纵向方向。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'resizable-handle', description: translated('Customize the resize handle appearance.', '自定义调整手柄的外观。') }
+        ]
+      }
+    ]
+  },
+  'scroll-area': {
+    name: 'Scroll Area',
+    slug: 'scroll-area',
+    description: translated('A scrollable container with custom scrollbar styling.', '带自定义滚动条样式的可滚动容器。'),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/radix/scroll-area.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/scroll-area',
+    installCommand: 'npx shadcn@latest add scroll-area',
+    sections: [
+      { title: translated('Preview', '预览'), blocks: [{ type: 'preview', styleName: 'radix-nova', name: 'scroll-area-demo' }] },
+      { title: translated('Installation', '安装'), blocks: [{ type: 'code', language: 'bash', title: translated('Command', '命令'), code: 'npx shadcn@latest add scroll-area' }] },
+      { title: translated('Usage', '用法'), blocks: [{ type: 'code', language: 'tsx', code: 'import { ScrollArea } from "@/components/ui/scroll-area"' }] }
+    ]
+  },
+  select: {
+    name: 'Select',
+    slug: 'select',
+    description: translated('A select component for choosing from a list of options.', '从选项列表中选择的选择组件。'),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/radix/select.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/select',
+    installCommand: 'npx shadcn@latest add select',
+    sections: [
+      { title: translated('Preview', '预览'), blocks: [{ type: 'preview', styleName: 'radix-nova', name: 'select-demo' }] },
+      { title: translated('Installation', '安装'), blocks: [{ type: 'code', language: 'bash', title: translated('Command', '命令'), code: 'npx shadcn@latest add select' }] },
+      { title: translated('Usage', '用法'), blocks: [{ type: 'code', language: 'tsx', code: 'import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"' }] },
+      {
+        title: translated('Examples', '示例'),
+        blocks: [
+          { type: 'preview', styleName: 'radix-nova', name: 'select-groups', description: translated('Use SelectGroup and SelectLabel to organize items.', '使用 SelectGroup 和 SelectLabel 组织项目。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'select-scrollable', description: translated('A select with many items that scrolls.', '包含许多可滚动项目的选择框。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'select-disabled', description: translated('A disabled select prevents interaction.', '禁用的选择框阻止交互。') }
+        ]
+      },
+      {
+        title: 'RTL',
+        blocks: [
+          { type: 'paragraph', text: translated('To enable RTL support in shadcn/ui, see the RTL configuration guide.', '如需启用 shadcn/ui 的 RTL 支持，请查看 RTL configuration guide。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'select-rtl', direction: 'rtl' }
+        ]
+      }
+    ]
+  },
+  separator: {
+    name: 'Separator',
+    slug: 'separator',
+    description: translated('A visual separator between sections of content.', '内容区域之间的视觉分隔线。'),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/radix/separator.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/separator',
+    installCommand: 'npx shadcn@latest add separator',
+    sections: [
+      { title: translated('Preview', '预览'), blocks: [{ type: 'preview', styleName: 'radix-nova', name: 'separator-demo' }] },
+      { title: translated('Installation', '安装'), blocks: [{ type: 'code', language: 'bash', title: translated('Command', '命令'), code: 'npx shadcn@latest add separator' }] },
+      { title: translated('Usage', '用法'), blocks: [{ type: 'code', language: 'tsx', code: 'import { Separator } from "@/components/ui/separator"' }, { type: 'code', language: 'tsx', code: '<Separator />' }] }
+    ]
+  },
+  sheet: {
+    name: 'Sheet',
+    slug: 'sheet',
+    description: translated('A panel that slides in from the edge of the screen.', '从屏幕边缘滑入的面板。'),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/radix/sheet.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/sheet',
+    installCommand: 'npx shadcn@latest add sheet',
+    sections: [
+      { title: translated('Preview', '预览'), blocks: [{ type: 'preview', styleName: 'radix-nova', name: 'sheet-demo' }] },
+      { title: translated('Installation', '安装'), blocks: [{ type: 'code', language: 'bash', title: translated('Command', '命令'), code: 'npx shadcn@latest add sheet' }] },
+      { title: translated('Usage', '用法'), blocks: [{ type: 'code', language: 'tsx', code: 'import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"' }] },
+      {
+        title: translated('Examples', '示例'),
+        blocks: [
+          { type: 'preview', styleName: 'radix-nova', name: 'sheet-side', description: translated('Open the sheet from different sides.', '从不同方向打开 Sheet。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'sheet-no-close-button', description: translated('Hide the default close button.', '隐藏默认的关闭按钮。') }
+        ]
+      }
+    ]
+  },
+  skeleton: {
+    name: 'Skeleton',
+    slug: 'skeleton',
+    description: translated('A placeholder loading state component.', '占位加载状态组件。'),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/skeleton.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/skeleton',
+    installCommand: 'npx shadcn@latest add skeleton',
+    sections: [
+      { title: translated('Preview', '预览'), blocks: [{ type: 'preview', styleName: 'radix-nova', name: 'skeleton-demo' }] },
+      { title: translated('Installation', '安装'), blocks: [{ type: 'code', language: 'bash', title: translated('Command', '命令'), code: 'npx shadcn@latest add skeleton' }] },
+      { title: translated('Usage', '用法'), blocks: [{ type: 'code', language: 'tsx', code: 'import { Skeleton } from "@/components/ui/skeleton"' }] },
+      {
+        title: translated('Examples', '示例'),
+        blocks: [
+          { type: 'preview', styleName: 'radix-nova', name: 'skeleton-avatar', description: translated('Skeleton for avatar placeholders.', '用于头像占位的骨架屏。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'skeleton-card', description: translated('Skeleton for card placeholders.', '用于卡片占位的骨架屏。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'skeleton-text', description: translated('Skeleton for text placeholder lines.', '用于文本占位行的骨架屏。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'skeleton-form', description: translated('Skeleton for form placeholders.', '用于表单占位的骨架屏。') }
+        ]
+      }
+    ]
+  },
+  slider: {
+    name: 'Slider',
+    slug: 'slider',
+    description: translated('A slider component for selecting a value from a range.', '从范围内选择值的滑块组件。'),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/radix/slider.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/slider',
+    installCommand: 'npx shadcn@latest add slider',
+    sections: [
+      { title: translated('Preview', '预览'), blocks: [{ type: 'preview', styleName: 'radix-nova', name: 'slider-demo' }] },
+      { title: translated('Installation', '安装'), blocks: [{ type: 'code', language: 'bash', title: translated('Command', '命令'), code: 'npx shadcn@latest add slider' }] },
+      { title: translated('Usage', '用法'), blocks: [{ type: 'code', language: 'tsx', code: 'import { Slider } from "@/components/ui/slider"' }] },
+      {
+        title: translated('Examples', '示例'),
+        blocks: [
+          { type: 'preview', styleName: 'radix-nova', name: 'slider-range', description: translated('A range slider for selecting a min/max.', '用于选择最小/最大值的范围滑块。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'slider-vertical', description: translated('A vertical orientation slider.', '纵向滑块。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'slider-disabled', description: translated('A disabled slider prevents interaction.', '禁用的滑块阻止交互。') }
+        ]
+      }
+    ]
+  },
+  sonner: {
+    name: 'Sonner',
+    slug: 'sonner',
+    description: translated('A toast notification component built on sonner.', '基于 sonner 构建的 toast 通知组件。'),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/sonner.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/sonner',
+    installCommand: 'npx shadcn@latest add sonner',
+    sections: [
+      { title: translated('Preview', '预览'), blocks: [{ type: 'preview', styleName: 'radix-nova', name: 'sonner-demo' }] },
+      { title: translated('Installation', '安装'), blocks: [{ type: 'code', language: 'bash', title: translated('Command', '命令'), code: 'npx shadcn@latest add sonner' }] },
+      { title: translated('Usage', '用法'), blocks: [{ type: 'code', language: 'tsx', code: 'import { toast } from "sonner"' }] },
+      {
+        title: translated('Examples', '示例'),
+        blocks: [
+          { type: 'preview', styleName: 'radix-nova', name: 'sonner-types', description: translated('Different toast variants.', '不同的 toast 变体。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'sonner-position', description: translated('Control toast position on screen.', '控制 toast 在屏幕上的位置。') }
+        ]
+      }
+    ]
+  },
+  spinner: {
+    name: 'Spinner',
+    slug: 'spinner',
+    description: translated('A loading spinner component for async operations.', '用于异步操作的加载旋转器组件。'),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/spinner.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/spinner',
+    installCommand: 'npx shadcn@latest add spinner',
+    sections: [
+      { title: translated('Preview', '预览'), blocks: [{ type: 'preview', styleName: 'radix-nova', name: 'spinner-demo' }] },
+      { title: translated('Installation', '安装'), blocks: [{ type: 'code', language: 'bash', title: translated('Command', '命令'), code: 'npx shadcn@latest add spinner' }] },
+      { title: translated('Usage', '用法'), blocks: [{ type: 'code', language: 'tsx', code: 'import { Spinner } from "@/components/ui/spinner"' }] },
+      {
+        title: translated('Examples', '示例'),
+        blocks: [
+          { type: 'preview', styleName: 'radix-nova', name: 'spinner-size', description: translated('Different spinner sizes.', '不同尺寸的旋转器。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'spinner-button', description: translated('Spinner inside a button for loading state.', '按钮中的旋转器用于加载状态。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'spinner-badge', description: translated('Spinner inside a badge.', '徽章中的旋转器。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'spinner-input-group', description: translated('Spinner in an input group.', '输入组中的旋转器。') }
+        ]
+      }
+    ]
+  },
+  switch: {
+    name: 'Switch',
+    slug: 'switch',
+    description: translated('A toggle switch component for binary options.', '用于二元选项的切换开关组件。'),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/radix/switch.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/switch',
+    installCommand: 'npx shadcn@latest add switch',
+    sections: [
+      { title: translated('Preview', '预览'), blocks: [{ type: 'preview', styleName: 'radix-nova', name: 'switch-demo' }] },
+      { title: translated('Installation', '安装'), blocks: [{ type: 'code', language: 'bash', title: translated('Command', '命令'), code: 'npx shadcn@latest add switch' }] },
+      { title: translated('Usage', '用法'), blocks: [{ type: 'code', language: 'tsx', code: 'import { Switch } from "@/components/ui/switch"' }] },
+      {
+        title: translated('Examples', '示例'),
+        blocks: [
+          { type: 'preview', styleName: 'radix-nova', name: 'switch-description', description: translated('Add a description to the switch.', '为开关添加描述。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'switch-disabled', description: translated('A disabled switch prevents toggling.', '禁用的开关阻止切换。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'switch-size', description: translated('Different switch size variants.', '不同尺寸的开关变体。') }
         ]
       }
     ]
@@ -2551,6 +3575,118 @@ export const mirroredShadcnDocs: Record<string, ShadcnComponentDoc> = {
               '`useSidebar` hook 返回 `{ state, open, setOpen, openMobile, setOpenMobile, isMobile, toggleSidebar }`。键盘快捷键：`⌘+B` (Mac) / `Ctrl+B` (Windows)。'
             )
           }
+        ]
+      }
+    ]
+  },
+  tabs: {
+    name: 'Tabs',
+    slug: 'tabs',
+    description: translated('A set of layered sections of content, displayed one at a time.', '一组分层的内容区域，每次显示一个。'),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/radix/tabs.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/tabs',
+    installCommand: 'npx shadcn@latest add tabs',
+    sections: [
+      { title: translated('Preview', '预览'), blocks: [{ type: 'preview', styleName: 'radix-nova', name: 'tabs-demo' }] },
+      { title: translated('Installation', '安装'), blocks: [{ type: 'code', language: 'bash', title: translated('Command', '命令'), code: 'npx shadcn@latest add tabs' }] },
+      { title: translated('Usage', '用法'), blocks: [{ type: 'code', language: 'tsx', code: 'import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"' }] },
+      {
+        title: translated('Examples', '示例'),
+        blocks: [
+          { type: 'preview', styleName: 'radix-nova', name: 'tabs-line', description: translated('Use variant="line" for a line style.', '使用 variant="line" 获得线条样式。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'tabs-vertical', description: translated('Use orientation="vertical" for vertical tabs.', '使用 orientation="vertical" 获得纵向标签。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'tabs-disabled', description: translated('Disable individual tab triggers.', '禁用单个标签触发器。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'tabs-icons', description: translated('Add icons to tab triggers.', '为标签触发器添加图标。') }
+        ]
+      }
+    ]
+  },
+  textarea: {
+    name: 'Textarea',
+    slug: 'textarea',
+    description: translated('A multi-line text input component.', '多行文本输入组件。'),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/textarea.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/textarea',
+    installCommand: 'npx shadcn@latest add textarea',
+    sections: [
+      { title: translated('Preview', '预览'), blocks: [{ type: 'preview', styleName: 'radix-nova', name: 'textarea-demo' }] },
+      { title: translated('Installation', '安装'), blocks: [{ type: 'code', language: 'bash', title: translated('Command', '命令'), code: 'npx shadcn@latest add textarea' }] },
+      { title: translated('Usage', '用法'), blocks: [{ type: 'code', language: 'tsx', code: 'import { Textarea } from "@/components/ui/textarea"' }, { type: 'code', language: 'tsx', code: '<Textarea />' }] }
+    ]
+  },
+  toggle: {
+    name: 'Toggle',
+    slug: 'toggle',
+    description: translated('A two-state button that can be either on or off.', '一种开关式按钮，可以处于开或关两种状态。'),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/radix/toggle.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/toggle',
+    installCommand: 'npx shadcn@latest add toggle',
+    sections: [
+      { title: translated('Preview', '预览'), blocks: [{ type: 'preview', styleName: 'radix-nova', name: 'toggle-demo' }] },
+      { title: translated('Installation', '安装'), blocks: [{ type: 'code', language: 'bash', title: translated('Command', '命令'), code: 'npx shadcn@latest add toggle' }] },
+      { title: translated('Usage', '用法'), blocks: [{ type: 'code', language: 'tsx', code: 'import { Toggle } from "@/components/ui/toggle"' }] },
+      {
+        title: translated('Examples', '示例'),
+        blocks: [
+          { type: 'preview', styleName: 'radix-nova', name: 'toggle-outline', description: translated('Outline variant of the toggle.', '开关按钮的描边变体。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'toggle-with-text', description: translated('Toggle with an icon and text.', '带图标和文本的开关按钮。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'toggle-size', description: translated('Different size variants.', '不同尺寸的变体。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'toggle-disabled', description: translated('Disabled toggle prevents interaction.', '禁用的开关按钮阻止交互。') }
+        ]
+      }
+    ]
+  },
+  'toggle-group': {
+    name: 'Toggle Group',
+    slug: 'toggle-group',
+    description: translated('A group of toggle buttons where one or multiple can be pressed.', '一组开关按钮，可以按下其中一个或多个。'),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/radix/toggle-group.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/toggle-group',
+    installCommand: 'npx shadcn@latest add toggle-group',
+    sections: [
+      { title: translated('Preview', '预览'), blocks: [{ type: 'preview', styleName: 'radix-nova', name: 'toggle-group-demo' }] },
+      { title: translated('Installation', '安装'), blocks: [{ type: 'code', language: 'bash', title: translated('Command', '命令'), code: 'npx shadcn@latest add toggle-group' }] },
+      { title: translated('Usage', '用法'), blocks: [{ type: 'code', language: 'tsx', code: 'import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"' }] },
+      {
+        title: translated('Examples', '示例'),
+        blocks: [
+          { type: 'preview', styleName: 'radix-nova', name: 'toggle-group-outline', description: translated('Outline variant of the toggle group.', '开关按钮组的描边变体。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'toggle-group-size', description: translated('Different size variants.', '不同尺寸的变体。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'toggle-group-vertical', description: translated('Vertical orientation.', '纵向布局。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'toggle-group-disabled', description: translated('Disabled toggle group prevents interaction.', '禁用的开关按钮组阻止交互。') }
+        ]
+      },
+      {
+        title: 'RTL',
+        blocks: [
+          { type: 'paragraph', text: translated('To enable RTL support in shadcn/ui, see the RTL configuration guide.', '如需启用 shadcn/ui 的 RTL 支持，请查看 RTL configuration guide。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'toggle-group-rtl', direction: 'rtl' }
+        ]
+      }
+    ]
+  },
+  tooltip: {
+    name: 'Tooltip',
+    slug: 'tooltip',
+    description: translated('A popup that displays information related to an element on hover or focus.', '悬停或聚焦时显示与元素相关信息的弹出框。'),
+    mirrored: true,
+    sourcePath: 'apps/v4/content/docs/components/radix/tooltip.mdx',
+    officialUrl: 'https://ui.shadcn.com/docs/components/tooltip',
+    installCommand: 'npx shadcn@latest add tooltip',
+    sections: [
+      { title: translated('Preview', '预览'), blocks: [{ type: 'preview', styleName: 'radix-nova', name: 'tooltip-demo' }] },
+      { title: translated('Installation', '安装'), blocks: [{ type: 'code', language: 'bash', title: translated('Command', '命令'), code: 'npx shadcn@latest add tooltip' }] },
+      { title: translated('Usage', '用法'), blocks: [{ type: 'code', language: 'tsx', code: 'import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"' }] },
+      {
+        title: translated('Examples', '示例'),
+        blocks: [
+          { type: 'preview', styleName: 'radix-nova', name: 'tooltip-side', description: translated('Control tooltip positioning with the side prop.', '使用 side 属性控制 tooltip 定位。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'tooltip-with-keyboard-shortcut', description: translated('Show a keyboard shortcut in the tooltip.', '在 tooltip 中显示键盘快捷键。') },
+          { type: 'preview', styleName: 'radix-nova', name: 'tooltip-disabled-button', description: translated('Tooltip on a disabled button.', '禁用按钮上的 tooltip。') }
         ]
       }
     ]

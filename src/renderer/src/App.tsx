@@ -9,6 +9,8 @@ import {
   BadgeCheck,
   BookOpen,
   BookOpenCheck,
+  Calendar as CalendarIcon,
+  Calculator,
   CheckCircle2,
   ChevronDown,
   CircleFadingArrowUp,
@@ -73,6 +75,70 @@ import {
   DialogTrigger
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+  InputGroupText,
+  InputGroupTextarea,
+} from '@/components/ui/input-group'
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSeparator,
+  InputOTPSlot,
+} from '@/components/ui/input-otp'
+import { Item, ItemActions, ItemContent, ItemDescription, ItemMedia, ItemTitle } from '@/components/ui/item'
+import { Kbd } from '@/components/ui/kbd'
+import { Label } from '@/components/ui/label'
+import {
+  Menubar,
+  MenubarContent,
+  MenubarItem,
+  MenubarMenu,
+  MenubarTrigger,
+  MenubarCheckboxItem,
+  MenubarRadioGroup,
+  MenubarRadioItem,
+  MenubarSeparator,
+  MenubarShortcut,
+  MenubarSub,
+  MenubarSubTrigger,
+  MenubarSubContent,
+} from '@/components/ui/menubar'
+import { NativeSelect } from '@/components/ui/native-select'
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+} from '@/components/ui/navigation-menu'
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationPrevious,
+  PaginationLink,
+  PaginationNext,
+} from '@/components/ui/pagination'
+import { Progress } from '@/components/ui/progress'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
+import { Separator } from '@/components/ui/separator'
+import { toast } from 'sonner'
+import { Toaster } from '@/components/ui/sonner'
+import { Spinner } from '@/components/ui/spinner'
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Slider } from '@/components/ui/slider'
+import { Switch } from '@/components/ui/switch'
+import { Toggle } from '@/components/ui/toggle'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Sidebar,
@@ -112,9 +178,84 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle, DrawerTrigger } from '@/components/ui/drawer'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from '@/components/ui/command'
-import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger, ContextMenuSeparator } from '@/components/ui/context-menu'
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuShortcut,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+  FieldLegend,
+  FieldSeparator,
+  FieldSet,
+} from '@/components/ui/field'
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator, CommandShortcut } from '@/components/ui/command'
+import {
+  ContextMenu,
+  ContextMenuCheckboxItem,
+  ContextMenuContent,
+  ContextMenuGroup,
+  ContextMenuItem,
+  ContextMenuRadioGroup,
+  ContextMenuRadioItem,
+  ContextMenuSeparator,
+  ContextMenuShortcut,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu'
+import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
+import { AspectRatio } from '@/components/ui/aspect-ratio'
+import { Avatar, AvatarBadge, AvatarFallback, AvatarGroup, AvatarGroupCount, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import {
+  Breadcrumb,
+  BreadcrumbEllipsis,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb'
+import { ButtonGroup, ButtonGroupSeparator } from '@/components/ui/button-group'
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxGroup,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxLabel,
+  ComboboxList,
+} from '@/components/ui/combobox'
 import { Area, AreaChart, CartesianGrid, XAxis } from 'recharts'
 import { designTokens } from '@/data/design-tokens'
 import {
@@ -451,11 +592,27 @@ async function copyTextToClipboard(text: string): Promise<void> {
 }
 
 function getPreviewTitle(name: string): string {
-  const [componentPrefix, ...nameParts] = name.split('-')
-  const parts = nameParts.length > 0 ? nameParts : [componentPrefix]
+  const matchedComponent = [...shadcnComponents]
+    .sort((a, b) => b.slug.length - a.slug.length)
+    .find((component) => name === component.slug || name.startsWith(`${component.slug}-`))
 
-  return parts
-    .filter((part) => part !== 'demo')
+  if (matchedComponent) {
+    const suffix =
+      name === matchedComponent.slug ? '' : name.slice(matchedComponent.slug.length + 1)
+
+    if (!suffix || suffix === 'demo') {
+      return matchedComponent.name
+    }
+
+    return suffix
+      .split('-')
+      .filter((part) => part !== 'demo')
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ')
+  }
+
+  return name
+    .split('-')
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ')
 }
@@ -771,6 +928,7 @@ function App(): React.JSX.Element {
           )}
         </SidebarInset>
       </div>
+      <Toaster theme={themeMode} />
     </SidebarProvider>
   )
 }
@@ -1635,13 +1793,45 @@ function AlertPreview({
   if (name === 'alert-destructive') {
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
-        <div className="relative w-full max-w-xl rounded-lg border border-destructive/50 p-4 text-destructive dark:border-destructive [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-destructive">
+        <Alert variant="destructive" className="w-full max-w-xl">
           <AlertCircle className="size-4" />
-          <h5 className="mb-1 font-medium leading-none tracking-tight">Error</h5>
-          <div className="text-sm opacity-90">
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>
             Your session has expired. Please log in again.
+          </AlertDescription>
+        </Alert>
+      </div>
+    )
+  }
+
+  if (name === 'alert-action') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Alert className="w-full max-w-xl">
+          <Terminal className="size-4" />
+          <AlertTitle>Heads up!</AlertTitle>
+          <AlertDescription>
+            You can add components to your app using the cli.
+          </AlertDescription>
+          <div className="mt-3 flex gap-2">
+            <Button variant="outline" size="sm">Learn more</Button>
+            <Button size="sm">Get started</Button>
           </div>
-        </div>
+        </Alert>
+      </div>
+    )
+  }
+
+  if (name === 'alert-custom-colors') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Alert className="w-full max-w-xl border-sky-500/50 text-sky-700 dark:border-sky-500 [&>svg]:text-sky-600 dark:text-sky-400 dark:[&>svg]:text-sky-400">
+          <Info className="size-4" />
+          <AlertTitle>Note</AlertTitle>
+          <AlertDescription>
+            This alert uses custom border and text color classes to override the default scheme.
+          </AlertDescription>
+        </Alert>
       </div>
     )
   }
@@ -1649,100 +1839,433 @@ function AlertPreview({
   // alert-demo
   return (
     <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
-      <div className="relative w-full max-w-xl rounded-lg border p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-foreground">
+      <Alert className="w-full max-w-xl">
         <Terminal className="size-4" />
-        <h5 className="mb-1 font-medium leading-none tracking-tight">Heads up!</h5>
-        <div className="text-sm text-muted-foreground">
+        <AlertTitle>Heads up!</AlertTitle>
+        <AlertDescription>
           You can add components to your app using the cli.
-        </div>
-      </div>
+        </AlertDescription>
+      </Alert>
     </div>
   )
 }
 
 function AlertDialogPreview({
-  direction
+  direction,
+  name
 }: {
   direction?: string
+  name: string
 }): React.JSX.Element {
   const dir = direction === 'rtl' ? 'rtl' : undefined
 
+  if (name === 'alert-dialog-small') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="outline" size="sm">Small dialog</Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent size="sm">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete file?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction>Delete</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    )
+  }
+
+  if (name === 'alert-dialog-media') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="outline">Media dialog</Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogMedia>
+                <AlertCircle className="size-8 text-destructive" />
+              </AlertDialogMedia>
+              <AlertDialogTitle>Delete account</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete your account and remove your data from our servers.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction>Delete</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    )
+  }
+
+  if (name === 'alert-dialog-small-media') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="outline" size="sm">Small media</Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent size="sm">
+            <AlertDialogHeader>
+              <AlertDialogMedia>
+                <AlertCircle className="size-8 text-destructive" />
+              </AlertDialogMedia>
+              <AlertDialogTitle>Delete file?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction>Delete</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    )
+  }
+
+  if (name === 'alert-dialog-destructive') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="destructive">Destructive</Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete account</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete your account and remove your data from our servers.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction variant="destructive">Delete account</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    )
+  }
+
+  if (name === 'alert-dialog-rtl') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir="rtl">
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="outline">إظهار الحوار</Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent dir="rtl">
+            <AlertDialogHeader>
+              <AlertDialogTitle>هل أنت متأكد تمامًا؟</AlertDialogTitle>
+              <AlertDialogDescription>
+                لا يمكن التراجع عن هذا الإجراء. سيؤدي هذا إلى حذف حسابك نهائيًا وإزالة بياناتك من خوادمنا.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>إلغاء</AlertDialogCancel>
+              <AlertDialogAction>متابعة</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    )
+  }
+
+  // alert-dialog-demo
   return (
     <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
-      <Dialog>
-        <DialogTrigger asChild>
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
           <Button variant="outline">Open alert dialog</Button>
-        </DialogTrigger>
-        <DialogContent showCloseButton={false}>
-          <DialogHeader>
-            <DialogTitle>Are you absolutely sure?</DialogTitle>
-            <DialogDescription>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
               This action cannot be undone. This will permanently delete your account
               and remove your data from our servers.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="flex justify-end gap-2">
-            <DialogTrigger asChild>
-              <Button variant="outline">Cancel</Button>
-            </DialogTrigger>
-            <DialogTrigger asChild>
-              <Button variant="destructive">Continue</Button>
-            </DialogTrigger>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction>Continue</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
 
 function AspectRatioPreview({
-  direction
+  direction,
+  name
 }: {
   direction?: string
+  name: string
 }): React.JSX.Element {
   const dir = direction === 'rtl' ? 'rtl' : undefined
+  const containerClass = "w-full overflow-hidden rounded-xl border bg-muted/30 p-2 shadow-xs"
 
+  if (name === 'aspect-ratio-square') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <div className={`${containerClass} max-w-[250px]`}>
+          <AspectRatio ratio={1} className="overflow-hidden rounded-lg">
+            <img
+              src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&auto=format&fit=crop"
+              alt="Square crop"
+              className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
+            />
+          </AspectRatio>
+        </div>
+      </div>
+    )
+  }
+
+  if (name === 'aspect-ratio-portrait') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <div className={`${containerClass} max-w-[220px]`}>
+          <AspectRatio ratio={3 / 4} className="overflow-hidden rounded-lg">
+            <img
+              src="https://images.unsplash.com/photo-1517841905240-472988babdf9?w=400&auto=format&fit=crop"
+              alt="Portrait crop"
+              className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
+            />
+          </AspectRatio>
+        </div>
+      </div>
+    )
+  }
+
+  if (name === 'aspect-ratio-rtl') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir="rtl">
+        <div className={`${containerClass} max-w-[400px]`}>
+          <AspectRatio ratio={16 / 9} className="overflow-hidden rounded-lg">
+            <img
+              src="https://images.unsplash.com/photo-1588345921523-c2dcdb7f1dcd?w=800&dpr=2&auto=format&fit=crop"
+              alt="RTL Aspect Ratio"
+              className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
+            />
+          </AspectRatio>
+        </div>
+      </div>
+    )
+  }
+
+  // aspect-ratio-demo
   return (
     <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
-      <div className="w-full max-w-[400px] overflow-hidden rounded-xl border bg-muted/30 p-2 shadow-xs">
-        <div className="relative aspect-video w-full overflow-hidden rounded-lg">
+      <div className={`${containerClass} max-w-[400px]`}>
+        <AspectRatio ratio={16 / 9} className="overflow-hidden rounded-lg">
           <img
             src="https://images.unsplash.com/photo-1588345921523-c2dcdb7f1dcd?w=800&dpr=2&auto=format&fit=crop"
             alt="Unsplash Cover"
             className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
           />
-        </div>
+        </AspectRatio>
       </div>
     </div>
   )
 }
 
 function AvatarPreview({
-  direction
+  direction,
+  name
 }: {
   direction?: string
+  name: string
 }): React.JSX.Element {
   const dir = direction === 'rtl' ? 'rtl' : undefined
 
+  if (name === 'avatar-badge') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Avatar>
+          <AvatarImage src="https://github.com/shadcn.png" alt="@shadcn" />
+          <AvatarFallback>CN</AvatarFallback>
+          <AvatarBadge />
+        </Avatar>
+      </div>
+    )
+  }
+
+  if (name === 'avatar-badge-icon') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Avatar>
+          <AvatarImage src="https://github.com/shadcn.png" alt="@shadcn" />
+          <AvatarFallback>CN</AvatarFallback>
+          <AvatarBadge>
+            <CheckCircle2 className="size-2.5" />
+          </AvatarBadge>
+        </Avatar>
+      </div>
+    )
+  }
+
+  if (name === 'avatar-group') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <AvatarGroup>
+          <Avatar>
+            <AvatarImage src="https://github.com/shadcn.png" alt="@shadcn" />
+            <AvatarFallback>SC</AvatarFallback>
+          </Avatar>
+          <Avatar>
+            <AvatarImage src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop" alt="User A" />
+            <AvatarFallback>UA</AvatarFallback>
+          </Avatar>
+          <Avatar>
+            <AvatarImage src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop" alt="User B" />
+            <AvatarFallback>UB</AvatarFallback>
+          </Avatar>
+          <Avatar>
+            <AvatarFallback>+2</AvatarFallback>
+          </Avatar>
+        </AvatarGroup>
+      </div>
+    )
+  }
+
+  if (name === 'avatar-group-count') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <AvatarGroup>
+          <Avatar>
+            <AvatarImage src="https://github.com/shadcn.png" alt="@shadcn" />
+            <AvatarFallback>SC</AvatarFallback>
+          </Avatar>
+          <Avatar>
+            <AvatarImage src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop" alt="User A" />
+            <AvatarFallback>UA</AvatarFallback>
+          </Avatar>
+          <Avatar>
+            <AvatarImage src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop" alt="User B" />
+            <AvatarFallback>UB</AvatarFallback>
+          </Avatar>
+          <AvatarGroupCount>+42</AvatarGroupCount>
+        </AvatarGroup>
+      </div>
+    )
+  }
+
+  if (name === 'avatar-group-icon') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <AvatarGroup>
+          <Avatar>
+            <AvatarImage src="https://github.com/shadcn.png" alt="@shadcn" />
+            <AvatarFallback>SC</AvatarFallback>
+          </Avatar>
+          <Avatar>
+            <AvatarImage src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop" alt="User A" />
+            <AvatarFallback>UA</AvatarFallback>
+          </Avatar>
+          <Avatar>
+            <AvatarFallback>
+              <Plus className="size-3" />
+            </AvatarFallback>
+          </Avatar>
+        </AvatarGroup>
+      </div>
+    )
+  }
+
+  if (name === 'avatar-sizes') {
+    return (
+      <div className="flex min-h-24 items-end justify-center gap-4 p-4" dir={dir}>
+        <Avatar size="sm">
+          <AvatarImage src="https://github.com/shadcn.png" alt="@shadcn" />
+          <AvatarFallback>CN</AvatarFallback>
+        </Avatar>
+        <Avatar>
+          <AvatarImage src="https://github.com/shadcn.png" alt="@shadcn" />
+          <AvatarFallback>CN</AvatarFallback>
+        </Avatar>
+        <Avatar size="lg">
+          <AvatarImage src="https://github.com/shadcn.png" alt="@shadcn" />
+          <AvatarFallback>CN</AvatarFallback>
+        </Avatar>
+      </div>
+    )
+  }
+
+  if (name === 'avatar-dropdown') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Avatar className="cursor-pointer">
+              <AvatarImage src="https://github.com/shadcn.png" alt="@shadcn" />
+              <AvatarFallback>CN</AvatarFallback>
+            </Avatar>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-56" align="end">
+            <DropdownMenuLabel>My Account</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem>Profile</DropdownMenuItem>
+            <DropdownMenuItem>Settings</DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem>Log out</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    )
+  }
+
+  if (name === 'avatar-rtl') {
+    return (
+      <div className="flex min-h-24 items-center justify-center gap-6 p-4" dir="rtl">
+        <AvatarGroup>
+          <Avatar>
+            <AvatarImage src="https://github.com/shadcn.png" alt="مستخدم" />
+            <AvatarFallback>م</AvatarFallback>
+          </Avatar>
+          <Avatar>
+            <AvatarImage src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop" alt="مستخدمة" />
+            <AvatarFallback>م</AvatarFallback>
+          </Avatar>
+          <Avatar>
+            <AvatarFallback>+3</AvatarFallback>
+          </Avatar>
+        </AvatarGroup>
+      </div>
+    )
+  }
+
+  // avatar-demo (basic)
   return (
     <div className="flex min-h-24 items-center justify-center gap-6 p-4" dir={dir}>
       <div className="flex items-center gap-4">
-        {/* Avatar with Image */}
-        <div className="relative flex size-10 shrink-0 overflow-hidden rounded-full border bg-muted">
-          <img
-            className="aspect-square h-full w-full object-cover"
-            src="https://github.com/shadcn.png"
-            alt="@shadcn"
-            onError={(e) => {
-              e.currentTarget.style.display = 'none'
-            }}
-          />
-        </div>
+        <Avatar>
+          <AvatarImage src="https://github.com/shadcn.png" alt="@shadcn" />
+          <AvatarFallback>CN</AvatarFallback>
+        </Avatar>
 
-        {/* Avatar with Fallback */}
-        <div className="relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full border bg-muted text-sm font-medium text-muted-foreground select-none">
-          CN
-        </div>
+        <Avatar>
+          <AvatarFallback>CN</AvatarFallback>
+        </Avatar>
+
+        <Avatar>
+          <AvatarImage src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop" alt="User" />
+          <AvatarFallback>UN</AvatarFallback>
+        </Avatar>
       </div>
     </div>
   )
@@ -1760,9 +2283,7 @@ function BadgePreview({
   if (name === 'badge-secondary') {
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
-        <div className="inline-flex items-center rounded-full border border-transparent bg-secondary px-2.5 py-0.5 text-xs font-semibold text-secondary-foreground transition-colors hover:bg-secondary/80 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2">
-          Secondary
-        </div>
+        <Badge variant="secondary">Secondary</Badge>
       </div>
     )
   }
@@ -1770,9 +2291,7 @@ function BadgePreview({
   if (name === 'badge-destructive') {
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
-        <div className="inline-flex items-center rounded-full border border-transparent bg-destructive px-2.5 py-0.5 text-xs font-semibold text-destructive-foreground transition-colors hover:bg-destructive/80 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2">
-          Destructive
-        </div>
+        <Badge variant="destructive">Destructive</Badge>
       </div>
     )
   }
@@ -1780,9 +2299,85 @@ function BadgePreview({
   if (name === 'badge-outline') {
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
-        <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold text-foreground transition-colors focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2">
-          Outline
-        </div>
+        <Badge variant="outline">Outline</Badge>
+      </div>
+    )
+  }
+
+  if (name === 'badge-ghost') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Badge variant="ghost">Ghost</Badge>
+      </div>
+    )
+  }
+
+  if (name === 'badge-icon') {
+    return (
+      <div className="flex min-h-24 items-center justify-center gap-3 p-4" dir={dir}>
+        <Badge variant="secondary">
+          <CheckCircle2 data-icon="inline-start" className="size-3" />
+          Verified
+        </Badge>
+        <Badge variant="outline">
+          <BookOpen data-icon="inline-start" className="size-3" />
+          Documentation
+        </Badge>
+      </div>
+    )
+  }
+
+  if (name === 'badge-spinner') {
+    return (
+      <div className="flex min-h-24 items-center justify-center gap-3 p-4" dir={dir}>
+        <Badge variant="secondary">
+          <Loader2 data-icon="inline-start" className="size-3 animate-spin" />
+          Deleting
+        </Badge>
+        <Badge variant="outline">
+          Generating
+          <Loader2 data-icon="inline-end" className="size-3 animate-spin" />
+        </Badge>
+      </div>
+    )
+  }
+
+  if (name === 'badge-link') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Badge variant="default" asChild>
+          <a href="https://ui.shadcn.com/docs/components/badge" rel="noreferrer" target="_blank">
+            Badge Link
+            <ArrowUpRight data-icon="inline-end" className="size-3" />
+          </a>
+        </Badge>
+      </div>
+    )
+  }
+
+  if (name === 'badge-custom-colors') {
+    return (
+      <div className="flex min-h-24 items-center justify-center gap-3 p-4" dir={dir}>
+        <Badge className="border-blue-500/50 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+          Blue
+        </Badge>
+        <Badge className="border-emerald-500/50 bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+          Green
+        </Badge>
+        <Badge className="border-purple-500/50 bg-purple-50 text-purple-700 dark:bg-purple-950 dark:text-purple-300">
+          Purple
+        </Badge>
+      </div>
+    )
+  }
+
+  if (name === 'badge-rtl') {
+    return (
+      <div className="flex min-h-24 items-center justify-center gap-3 p-4" dir="rtl">
+        <Badge variant="default">شارة</Badge>
+        <Badge variant="secondary">ثانوي</Badge>
+        <Badge variant="destructive">مدمر</Badge>
+        <Badge variant="outline">مخطط</Badge>
       </div>
     )
   }
@@ -1790,9 +2385,7 @@ function BadgePreview({
   // badge-demo / default
   return (
     <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
-      <div className="inline-flex items-center rounded-full border border-transparent bg-primary px-2.5 py-0.5 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/80 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2">
-        Badge
-      </div>
+      <Badge>Badge</Badge>
     </div>
   )
 }
@@ -1809,27 +2402,25 @@ function BreadcrumbPreview({
   if (name === 'breadcrumb-custom-separator') {
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
-        <nav aria-label="breadcrumb">
-          <ol className="flex flex-wrap items-center gap-1.5 break-words text-sm text-muted-foreground sm:gap-2.5">
-            <li className="inline-flex items-center gap-1.5">
-              <a className="transition-colors hover:text-foreground" href="#">Home</a>
-            </li>
-            <li role="presentation" aria-hidden="true" className="[&>svg]:size-3.5">
-              <Slash className="size-3" />
-            </li>
-            <li className="inline-flex items-center gap-1.5">
-              <a className="transition-colors hover:text-foreground" href="#">Components</a>
-            </li>
-            <li role="presentation" aria-hidden="true" className="[&>svg]:size-3.5">
-              <Slash className="size-3" />
-            </li>
-            <li className="inline-flex items-center gap-1.5">
-              <span role="link" aria-disabled="true" aria-current="page" className="font-normal text-foreground">
-                Breadcrumb
-              </span>
-            </li>
-          </ol>
-        </nav>
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="#">Home</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator>
+              <Slash />
+            </BreadcrumbSeparator>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="#">Components</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator>
+              <Slash />
+            </BreadcrumbSeparator>
+            <BreadcrumbItem>
+              <BreadcrumbPage>Breadcrumb</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
       </div>
     )
   }
@@ -1837,36 +2428,105 @@ function BreadcrumbPreview({
   if (name === 'breadcrumb-ellipsis') {
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
-        <nav aria-label="breadcrumb">
-          <ol className="flex flex-wrap items-center gap-1.5 break-words text-sm text-muted-foreground sm:gap-2.5">
-            <li className="inline-flex items-center gap-1.5">
-              <a className="transition-colors hover:text-foreground" href="#">Home</a>
-            </li>
-            <li role="presentation" aria-hidden="true" className="[&>svg]:size-3.5">
-              <ChevronRight />
-            </li>
-            <li className="inline-flex items-center gap-1.5">
-              <span className="flex h-5 w-5 items-center justify-center">
-                <MoreHorizontal className="h-4 w-4" />
-                <span className="sr-only">Toggle menu</span>
-              </span>
-            </li>
-            <li role="presentation" aria-hidden="true" className="[&>svg]:size-3.5">
-              <ChevronRight />
-            </li>
-            <li className="inline-flex items-center gap-1.5">
-              <a className="transition-colors hover:text-foreground" href="#">Components</a>
-            </li>
-            <li role="presentation" aria-hidden="true" className="[&>svg]:size-3.5">
-              <ChevronRight />
-            </li>
-            <li className="inline-flex items-center gap-1.5">
-              <span role="link" aria-disabled="true" aria-current="page" className="font-normal text-foreground">
-                Breadcrumb
-              </span>
-            </li>
-          </ol>
-        </nav>
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="#">Home</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbEllipsis />
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink href="#">Components</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>Breadcrumb</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+      </div>
+    )
+  }
+
+  if (name === 'breadcrumb-dropdown') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="#">Home</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <DropdownMenu>
+                <DropdownMenuTrigger className="flex items-center gap-1 hover:text-foreground">
+                  Components
+                  <ChevronDown className="size-3.5" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  <DropdownMenuItem>Button</DropdownMenuItem>
+                  <DropdownMenuItem>Card</DropdownMenuItem>
+                  <DropdownMenuItem>Dialog</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>Breadcrumb</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+      </div>
+    )
+  }
+
+  if (name === 'breadcrumb-link-component') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <a href="#">Home</a>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <a href="#">Components</a>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>Breadcrumb</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+      </div>
+    )
+  }
+
+  if (name === 'breadcrumb-rtl') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir="rtl">
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="#">الرئيسية</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink href="#">المكونات</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>التنقل</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
       </div>
     )
   }
@@ -1874,38 +2534,261 @@ function BreadcrumbPreview({
   // breadcrumb-demo
   return (
     <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
-      <nav aria-label="breadcrumb">
-        <ol className="flex flex-wrap items-center gap-1.5 break-words text-sm text-muted-foreground sm:gap-2.5">
-          <li className="inline-flex items-center gap-1.5">
-            <a className="transition-colors hover:text-foreground" href="#">Home</a>
-          </li>
-          <li role="presentation" aria-hidden="true" className="[&>svg]:size-3.5">
-            <ChevronRight />
-          </li>
-          <li className="inline-flex items-center gap-1.5">
-            <a className="transition-colors hover:text-foreground" href="#">Components</a>
-          </li>
-          <li role="presentation" aria-hidden="true" className="[&>svg]:size-3.5">
-            <ChevronRight />
-          </li>
-          <li className="inline-flex items-center gap-1.5">
-            <span role="link" aria-disabled="true" aria-current="page" className="font-normal text-foreground">
-              Breadcrumb
-            </span>
-          </li>
-        </ol>
-      </nav>
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink href="#">Home</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink href="#">Components</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>Breadcrumb</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+    </div>
+  )
+}
+
+function ButtonGroupPreview({
+  direction,
+  name
+}: {
+  direction?: string
+  name: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+
+  if (name === 'button-group-orientation') {
+    return (
+      <div className="flex min-h-24 flex-col items-center justify-center gap-6 p-4" dir={dir}>
+        <ButtonGroup orientation="horizontal">
+          <Button variant="outline">Left</Button>
+          <Button variant="outline">Middle</Button>
+          <Button variant="outline">Right</Button>
+        </ButtonGroup>
+        <ButtonGroup orientation="vertical">
+          <Button variant="outline">Top</Button>
+          <Button variant="outline">Middle</Button>
+          <Button variant="outline">Bottom</Button>
+        </ButtonGroup>
+      </div>
+    )
+  }
+
+  if (name === 'button-group-size') {
+    return (
+      <div className="flex min-h-24 flex-col items-center justify-center gap-4 p-4" dir={dir}>
+        <ButtonGroup>
+          <Button variant="outline" size="sm">Small</Button>
+          <Button variant="outline" size="sm">Small</Button>
+        </ButtonGroup>
+        <ButtonGroup>
+          <Button variant="outline">Default</Button>
+          <Button variant="outline">Default</Button>
+        </ButtonGroup>
+        <ButtonGroup>
+          <Button variant="outline" size="lg">Large</Button>
+          <Button variant="outline" size="lg">Large</Button>
+        </ButtonGroup>
+      </div>
+    )
+  }
+
+  if (name === 'button-group-separator') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <ButtonGroup>
+          <Button variant="outline">Format</Button>
+          <Button variant="outline">Export</Button>
+          <ButtonGroupSeparator />
+          <Button variant="outline" size="icon" aria-label="Settings">
+            <Settings className="size-4" />
+          </Button>
+        </ButtonGroup>
+      </div>
+    )
+  }
+
+  if (name === 'button-group-split') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <ButtonGroup>
+          <Button>Save</Button>
+          <ButtonGroupSeparator />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="icon" aria-label="More options">
+                <ChevronDown className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem>Save as draft</DropdownMenuItem>
+              <DropdownMenuItem>Save and publish</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem>Schedule</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </ButtonGroup>
+      </div>
+    )
+  }
+
+  if (name === 'button-group-input') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <ButtonGroup className="w-full max-w-sm">
+          <Input placeholder="Search..." className="flex-1 rounded-r-none border-r-0 shadow-none focus-visible:ring-0" />
+          <Button variant="outline" className="rounded-l-none">Search</Button>
+        </ButtonGroup>
+      </div>
+    )
+  }
+
+  if (name === 'button-group-dropdown-menu') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <ButtonGroup>
+          <Button variant="outline">Merge</Button>
+          <ButtonGroupSeparator />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon" aria-label="Merge options">
+                <ChevronDown className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem>Merge and commit</DropdownMenuItem>
+              <DropdownMenuItem>Squash and merge</DropdownMenuItem>
+              <DropdownMenuItem>Rebase and merge</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </ButtonGroup>
+      </div>
+    )
+  }
+
+  if (name === 'button-group-rtl') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir="rtl">
+        <ButtonGroup>
+          <Button variant="outline">يسار</Button>
+          <Button variant="outline">وسط</Button>
+          <Button variant="outline">يمين</Button>
+        </ButtonGroup>
+      </div>
+    )
+  }
+
+  // button-group-demo
+  return (
+    <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+      <ButtonGroup>
+        <Button variant="outline">Left</Button>
+        <Button variant="outline">Middle</Button>
+        <Button variant="outline">Right</Button>
+      </ButtonGroup>
     </div>
   )
 }
 
 function CalendarPreview({
-  direction
+  direction,
+  name
 }: {
   direction?: string
+  name: string
 }): React.JSX.Element {
   const dir = direction === 'rtl' ? 'rtl' : undefined
   const [date, setDate] = useState<Date | undefined>(new Date())
+
+  if (name === 'calendar-range') {
+    const [range, setRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
+      from: new Date(),
+      to: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    })
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Calendar
+          mode="range"
+          selected={range}
+          onSelect={setRange as any}
+          className="rounded-md border bg-background shadow-xs"
+          numberOfMonths={2}
+        />
+      </div>
+    )
+  }
+
+  if (name === 'calendar-dropdown') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Calendar
+          mode="single"
+          selected={date}
+          onSelect={setDate}
+          captionLayout="dropdown"
+          className="rounded-md border bg-background shadow-xs"
+        />
+      </div>
+    )
+  }
+
+  if (name === 'calendar-presets') {
+    const today = new Date()
+    const [presetDate, setPresetDate] = useState<Date | undefined>(today)
+    return (
+      <div className="flex min-h-24 items-start justify-center gap-4 p-4" dir={dir}>
+        <div className="flex flex-col gap-2">
+          <Button size="sm" variant="outline" onClick={() => setPresetDate(new Date())}>Today</Button>
+          <Button size="sm" variant="outline" onClick={() => setPresetDate(new Date(Date.now() + 86400000))}>Tomorrow</Button>
+          <Button size="sm" variant="outline" onClick={() => setPresetDate(new Date(Date.now() + 3 * 86400000))}>In 3 days</Button>
+        </div>
+        <Calendar
+          mode="single"
+          selected={presetDate}
+          onSelect={setPresetDate}
+          className="rounded-md border bg-background shadow-xs"
+        />
+      </div>
+    )
+  }
+
+  if (name === 'calendar-booked-dates') {
+    const bookedDates = [
+      new Date(new Date().getFullYear(), new Date().getMonth(), 5),
+      new Date(new Date().getFullYear(), new Date().getMonth(), 12),
+      new Date(new Date().getFullYear(), new Date().getMonth(), 18),
+    ]
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Calendar
+          mode="single"
+          selected={date}
+          onSelect={setDate}
+          modifiers={{ booked: bookedDates }}
+          modifiersClassNames={{ booked: 'line-through opacity-50' }}
+          className="rounded-md border bg-background shadow-xs"
+        />
+      </div>
+    )
+  }
+
+  if (name === 'calendar-custom-cells') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Calendar
+          mode="single"
+          selected={date}
+          onSelect={setDate}
+          className="rounded-md border bg-background shadow-xs"
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
@@ -1920,11 +2803,105 @@ function CalendarPreview({
 }
 
 function CardPreview({
-  direction
+  direction,
+  name
 }: {
   direction?: string
+  name: string
 }): React.JSX.Element {
   const dir = direction === 'rtl' ? 'rtl' : undefined
+
+  if (name === 'card-size') {
+    return (
+      <div className="flex min-h-24 items-start justify-center gap-4 p-4" dir={dir}>
+        <Card className="w-full max-w-xs">
+          <CardHeader>
+            <CardTitle className="text-base">Small Card</CardTitle>
+            <CardDescription>A compact card variant.</CardDescription>
+          </CardHeader>
+          <CardContent className="text-sm text-muted-foreground">Minimal content.</CardContent>
+        </Card>
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Large Card</CardTitle>
+            <CardDescription>A wider card variant with more space.</CardDescription>
+          </CardHeader>
+          <CardContent className="text-sm text-muted-foreground">
+            Extended content area with more detail and description text.
+          </CardContent>
+          <CardFooter className="flex justify-end gap-2">
+            <Button variant="outline">Cancel</Button>
+            <Button>Confirm</Button>
+          </CardFooter>
+        </Card>
+      </div>
+    )
+  }
+
+  if (name === 'card-spacing') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Card className="w-full max-w-sm p-6">
+          <CardHeader className="p-0">
+            <CardTitle>Compact Spacing</CardTitle>
+            <CardDescription>Reduced padding for dense layouts.</CardDescription>
+          </CardHeader>
+          <CardContent className="p-0 pt-4 text-sm text-muted-foreground">
+            This card uses tighter internal spacing.
+          </CardContent>
+          <CardFooter className="p-0 pt-4">
+            <Button size="sm">Action</Button>
+          </CardFooter>
+        </Card>
+      </div>
+    )
+  }
+
+  if (name === 'card-image') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Card className="w-full max-w-sm overflow-hidden">
+          <div className="aspect-video w-full">
+            <img
+              src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&auto=format&fit=crop"
+              alt="Card image"
+              className="h-full w-full object-cover"
+            />
+          </div>
+          <CardHeader>
+            <CardTitle>Mountain Landscape</CardTitle>
+            <CardDescription>Beautiful scenic photography.</CardDescription>
+          </CardHeader>
+          <CardFooter className="flex justify-between">
+            <Button variant="outline">Share</Button>
+            <Button>View</Button>
+          </CardFooter>
+        </Card>
+      </div>
+    )
+  }
+
+  if (name === 'card-rtl') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir="rtl">
+        <Card className="w-full max-w-sm">
+          <CardHeader>
+            <CardTitle>إنشاء مشروع</CardTitle>
+            <CardDescription>انشر مشروعك الجديد بنقرة واحدة.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-sm text-muted-foreground">
+              معاينة محاكاة تعرض حالة المشروع.
+            </div>
+          </CardContent>
+          <CardFooter className="flex justify-between">
+            <Button variant="outline">إلغاء</Button>
+            <Button>نشر</Button>
+          </CardFooter>
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
@@ -1948,11 +2925,96 @@ function CardPreview({
 }
 
 function CarouselPreview({
-  direction
+  direction,
+  name
 }: {
   direction?: string
+  name: string
 }): React.JSX.Element {
   const dir = direction === 'rtl' ? 'rtl' : undefined
+
+  if (name === 'carousel-sizes') {
+    return (
+      <div className="flex min-h-24 flex-col items-center justify-center gap-8 p-8" dir={dir}>
+        <Carousel className="w-full max-w-[200px]">
+          <CarouselContent>
+            {[1, 2, 3].map((n) => (
+              <CarouselItem key={n}>
+                <Card><CardContent className="flex aspect-square items-center justify-center p-4 text-2xl font-semibold">{n}</CardContent></Card>
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+          <CarouselPrevious />
+          <CarouselNext />
+        </Carousel>
+        <Carousel className="w-full max-w-md">
+          <CarouselContent>
+            {[1, 2, 3, 4].map((n) => (
+              <CarouselItem key={n}>
+                <Card><CardContent className="flex aspect-video items-center justify-center p-6 text-3xl font-semibold">{n}</CardContent></Card>
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+          <CarouselPrevious />
+          <CarouselNext />
+        </Carousel>
+      </div>
+    )
+  }
+
+  if (name === 'carousel-spacing') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-8" dir={dir}>
+        <Carousel className="w-full max-w-xs">
+          <CarouselContent className="-ml-4">
+            {[1, 2, 3, 4].map((n) => (
+              <CarouselItem key={n} className="pl-4">
+                <Card><CardContent className="flex aspect-square items-center justify-center p-6 text-4xl font-semibold">{n}</CardContent></Card>
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+          <CarouselPrevious />
+          <CarouselNext />
+        </Carousel>
+      </div>
+    )
+  }
+
+  if (name === 'carousel-orientation') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-8" dir={dir}>
+        <Carousel className="w-full max-w-xs" orientation="vertical">
+          <CarouselContent className="h-[300px]">
+            {[1, 2, 3].map((n) => (
+              <CarouselItem key={n}>
+                <Card><CardContent className="flex items-center justify-center p-6 text-2xl font-semibold">{n}</CardContent></Card>
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+          <CarouselPrevious />
+          <CarouselNext />
+        </Carousel>
+      </div>
+    )
+  }
+
+  if (name === 'carousel-rtl') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-8" dir="rtl">
+        <Carousel className="w-full max-w-xs">
+          <CarouselContent>
+            {['الأول', 'الثاني', 'الثالث'].map((label, i) => (
+              <CarouselItem key={i}>
+                <Card><CardContent className="flex aspect-square items-center justify-center p-6 text-2xl font-semibold">{label}</CardContent></Card>
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+          <CarouselPrevious />
+          <CarouselNext />
+        </Carousel>
+      </div>
+    )
+  }
 
   return (
     <div className="flex min-h-24 items-center justify-center p-8" dir={dir}>
@@ -2047,34 +3109,214 @@ function ChartPreview({
 }
 
 function CheckboxPreview({
-  direction
+  direction,
+  name
 }: {
   direction?: string
+  name: string
 }): React.JSX.Element {
   const dir = direction === 'rtl' ? 'rtl' : undefined
+
+  if (name === 'checkbox-description') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <div className="flex items-start space-x-2">
+          <Checkbox id="terms2" />
+          <div className="grid gap-1.5 leading-none">
+            <label htmlFor="terms2" className="text-sm font-medium leading-none">Accept terms and conditions</label>
+            <p className="text-xs text-muted-foreground">You agree to our Terms of Service and Privacy Policy.</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (name === 'checkbox-disabled') {
+    return (
+      <div className="flex min-h-24 items-center justify-center gap-6 p-4" dir={dir}>
+        <div className="flex items-center space-x-2">
+          <Checkbox id="checked-disabled" checked disabled />
+          <label htmlFor="checked-disabled" className="text-sm font-medium text-muted-foreground">Checked & disabled</label>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Checkbox id="unchecked-disabled" disabled />
+          <label htmlFor="unchecked-disabled" className="text-sm font-medium text-muted-foreground">Unchecked & disabled</label>
+        </div>
+      </div>
+    )
+  }
+
+  if (name === 'checkbox-group') {
+    const [checkedItems, setCheckedItems] = useState<string[]>(['recents'])
+    const items = [
+      { id: 'recents', label: 'Recents' },
+      { id: 'home', label: 'Home' },
+      { id: 'applications', label: 'Applications' },
+      { id: 'desktop', label: 'Desktop' },
+    ]
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <div className="space-y-2">
+          {items.map((item) => (
+            <div key={item.id} className="flex items-center space-x-2">
+              <Checkbox
+                id={item.id}
+                checked={checkedItems.includes(item.id)}
+                onCheckedChange={(c) => {
+                  if (c) setCheckedItems([...checkedItems, item.id])
+                  else setCheckedItems(checkedItems.filter((i) => i !== item.id))
+                }}
+              />
+              <label htmlFor={item.id} className="text-sm font-medium">{item.label}</label>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (name === 'checkbox-table') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-12"><Checkbox aria-label="Select all" /></TableHead>
+              <TableHead>Name</TableHead>
+              <TableHead>Status</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {[{ name: 'Design System', status: 'Active' }, { name: 'Components', status: 'Draft' }, { name: 'Tokens', status: 'Review' }].map((row) => (
+              <TableRow key={row.name}>
+                <TableCell><Checkbox aria-label={`Select ${row.name}`} /></TableCell>
+                <TableCell className="font-medium">{row.name}</TableCell>
+                <TableCell>{row.status}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    )
+  }
+
+  if (name === 'checkbox-rtl') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir="rtl">
+        <div className="flex items-center space-x-2">
+          <Checkbox id="terms-rtl" />
+          <label htmlFor="terms-rtl" className="text-sm font-medium">أوافق على الشروط والأحكام</label>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
       <div className="flex items-center space-x-2">
         <Checkbox id="terms" />
-        <label
-          htmlFor="terms"
-          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-        >
-          Accept terms and conditions
-        </label>
+        <label htmlFor="terms" className="text-sm font-medium leading-none">Accept terms and conditions</label>
       </div>
     </div>
   )
 }
 
 function CollapsiblePreview({
-  direction
+  direction,
+  name
 }: {
   direction?: string
+  name: string
 }): React.JSX.Element {
   const dir = direction === 'rtl' ? 'rtl' : undefined
   const [isOpen, setIsOpen] = useState(false)
+
+  if (name === 'collapsible-settings-panel') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Card className="w-[350px]">
+          <CardHeader><CardTitle className="text-base">Appearance</CardTitle><CardDescription>Customize the look and feel.</CardDescription></CardHeader>
+          <CardContent className="space-y-3">
+            <Collapsible className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-semibold">Font</h4>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="icon-xs"><ChevronDown className="size-3.5" /></Button>
+                </CollapsibleTrigger>
+              </div>
+              <CollapsibleContent className="space-y-2 text-sm text-muted-foreground">
+                <p>Geist — The default sans-serif font.</p>
+                <p>Geist Mono — Used for code blocks.</p>
+              </CollapsibleContent>
+            </Collapsible>
+            <Collapsible className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-semibold">Theme</h4>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="icon-xs"><ChevronDown className="size-3.5" /></Button>
+                </CollapsibleTrigger>
+              </div>
+              <CollapsibleContent className="text-sm text-muted-foreground">
+                Light and dark mode with system preference detection.
+              </CollapsibleContent>
+            </Collapsible>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  if (name === 'collapsible-file-tree') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <div className="w-[300px] rounded-md border p-3">
+          <Collapsible defaultOpen className="space-y-1">
+            <CollapsibleTrigger asChild>
+              <button className="flex w-full items-center gap-2 rounded-sm px-2 py-1 text-sm font-medium hover:bg-muted">
+                <ChevronDown className="size-3.5 transition-transform duration-200 group-data-[state=open]:rotate-90" />
+                src
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pl-6 space-y-1 text-sm text-muted-foreground">
+              <div className="rounded-sm px-2 py-1 hover:bg-muted">App.tsx</div>
+              <div className="rounded-sm px-2 py-1 hover:bg-muted">index.css</div>
+              <Collapsible className="space-y-1">
+                <CollapsibleTrigger asChild>
+                  <button className="flex w-full items-center gap-2 rounded-sm px-2 py-1 hover:bg-muted">
+                    <ChevronDown className="size-3.5" />
+                    components
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="pl-6 space-y-1">
+                  <div className="rounded-sm px-2 py-1 hover:bg-muted">Button.tsx</div>
+                  <div className="rounded-sm px-2 py-1 hover:bg-muted">Card.tsx</div>
+                </CollapsibleContent>
+              </Collapsible>
+            </CollapsibleContent>
+          </Collapsible>
+        </div>
+      </div>
+    )
+  }
+
+  if (name === 'collapsible-rtl') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir="rtl">
+        <Collapsible open={isOpen} onOpenChange={setIsOpen} className="w-[350px] space-y-2">
+          <div className="flex items-center justify-between px-4">
+            <h4 className="text-sm font-semibold">@peduarte أضاف 3 مكتبات</h4>
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" size="sm" className="w-9 p-0"><ChevronDown className="h-4 w-4" /></Button>
+            </CollapsibleTrigger>
+          </div>
+          <div className="rounded-md border px-4 py-3 font-mono text-sm">@radix-ui/primitives</div>
+          <CollapsibleContent className="space-y-2">
+            <div className="rounded-md border px-4 py-3 font-mono text-sm">@radix-ui/colors</div>
+          </CollapsibleContent>
+        </Collapsible>
+      </div>
+    )
+  }
 
   return (
     <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
@@ -2088,16 +3330,10 @@ function CollapsiblePreview({
             </Button>
           </CollapsibleTrigger>
         </div>
-        <div className="rounded-md border px-4 py-3 font-mono text-sm">
-          @radix-ui/primitives
-        </div>
+        <div className="rounded-md border px-4 py-3 font-mono text-sm">@radix-ui/primitives</div>
         <CollapsibleContent className="space-y-2">
-          <div className="rounded-md border px-4 py-3 font-mono text-sm">
-            @radix-ui/colors
-          </div>
-          <div className="rounded-md border px-4 py-3 font-mono text-sm">
-            @stitches/react
-          </div>
+          <div className="rounded-md border px-4 py-3 font-mono text-sm">@radix-ui/colors</div>
+          <div className="rounded-md border px-4 py-3 font-mono text-sm">@stitches/react</div>
         </CollapsibleContent>
       </Collapsible>
     </div>
@@ -2105,13 +3341,13 @@ function CollapsiblePreview({
 }
 
 function ComboboxPreview({
-  direction
+  direction,
+  name
 }: {
   direction?: string
+  name: string
 }): React.JSX.Element {
   const dir = direction === 'rtl' ? 'rtl' : undefined
-  const [open, setOpen] = useState(false)
-  const [value, setValue] = useState("")
 
   const frameworks = [
     { value: "next.js", label: "Next.js" },
@@ -2121,55 +3357,244 @@ function ComboboxPreview({
     { value: "astro", label: "Astro" }
   ]
 
+  function renderFrameworks() {
+    return frameworks.map((fw) => (
+      <ComboboxItem key={fw.value} value={fw.value}>{fw.label}</ComboboxItem>
+    ))
+  }
+
+  if (name === 'combobox-multiple') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <div className="w-[280px]">
+          <Combobox multiple>
+            <ComboboxInput placeholder="Select frameworks..." showClear />
+            <ComboboxContent>
+              <ComboboxList>
+                {renderFrameworks()}
+                <ComboboxEmpty>No results found.</ComboboxEmpty>
+              </ComboboxList>
+            </ComboboxContent>
+          </Combobox>
+        </div>
+      </div>
+    )
+  }
+
+  if (name === 'combobox-clear-button') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <div className="w-[280px]">
+          <Combobox>
+            <ComboboxInput placeholder="Search..." showClear />
+            <ComboboxContent>
+              <ComboboxList>
+                {renderFrameworks()}
+                <ComboboxEmpty>No results found.</ComboboxEmpty>
+              </ComboboxList>
+            </ComboboxContent>
+          </Combobox>
+        </div>
+      </div>
+    )
+  }
+
+  if (name === 'combobox-groups') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <div className="w-[280px]">
+          <Combobox>
+            <ComboboxInput placeholder="Select an option..." />
+            <ComboboxContent>
+              <ComboboxList>
+                <ComboboxGroup>
+                  <ComboboxLabel>Frameworks</ComboboxLabel>
+                  {frameworks.slice(0, 3).map((fw) => (
+                    <ComboboxItem key={fw.value} value={fw.value}>{fw.label}</ComboboxItem>
+                  ))}
+                </ComboboxGroup>
+                <ComboboxGroup>
+                  <ComboboxLabel>Libraries</ComboboxLabel>
+                  <ComboboxItem value="react">React</ComboboxItem>
+                  <ComboboxItem value="vue">Vue</ComboboxItem>
+                </ComboboxGroup>
+                <ComboboxEmpty>No results found.</ComboboxEmpty>
+              </ComboboxList>
+            </ComboboxContent>
+          </Combobox>
+        </div>
+      </div>
+    )
+  }
+
+  if (name === 'combobox-disabled') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <div className="w-[280px]">
+          <Combobox>
+            <ComboboxInput placeholder="Disabled combobox..." disabled />
+            <ComboboxContent>
+              <ComboboxList>
+                {renderFrameworks()}
+              </ComboboxList>
+            </ComboboxContent>
+          </Combobox>
+        </div>
+      </div>
+    )
+  }
+
+  if (name === 'combobox-popup') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <div className="w-[280px]">
+          <Combobox>
+            <ComboboxInput placeholder="Type to search..." showClear />
+            <ComboboxContent side="bottom" sideOffset={6}>
+              <ComboboxList>
+                {renderFrameworks()}
+                <ComboboxEmpty>No results found.</ComboboxEmpty>
+              </ComboboxList>
+            </ComboboxContent>
+          </Combobox>
+        </div>
+      </div>
+    )
+  }
+
+  // combobox-demo
   return (
     <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            className="w-[200px] justify-between"
-          >
-            {value
-              ? frameworks.find((framework) => framework.value === value)?.label
-              : "Select framework..."}
-            <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-[200px] p-0">
-          <Command>
-            <CommandInput placeholder="Search framework..." />
-            <CommandList>
-              <CommandEmpty>No framework found.</CommandEmpty>
-              <CommandGroup>
-                {frameworks.map((framework) => (
-                  <CommandItem
-                    key={framework.value}
-                    value={framework.value}
-                    onSelect={(currentValue) => {
-                      setValue(currentValue === value ? "" : currentValue)
-                      setOpen(false)
-                    }}
-                  >
-                    {framework.label}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
+      <div className="w-[280px]">
+        <Combobox>
+          <ComboboxInput placeholder="Select a framework..." />
+          <ComboboxContent>
+            <ComboboxList>
+              {renderFrameworks()}
+              <ComboboxEmpty>No results found.</ComboboxEmpty>
+            </ComboboxList>
+          </ComboboxContent>
+        </Combobox>
+      </div>
     </div>
   )
 }
 
 function CommandPreview({
-  direction
+  direction,
+  name
 }: {
   direction?: string
+  name: string
 }): React.JSX.Element {
   const dir = direction === 'rtl' ? 'rtl' : undefined
+
+  if (name === 'command-shortcuts') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Command className="rounded-lg border shadow-md max-w-[450px]">
+          <CommandInput placeholder="Type a command or search..." />
+          <CommandList>
+            <CommandEmpty>No results found.</CommandEmpty>
+            <CommandGroup heading="Suggestions">
+              <CommandItem>
+                <span>Calendar</span>
+                <CommandShortcut>⌘C</CommandShortcut>
+              </CommandItem>
+              <CommandItem>
+                <span>Search Emoji</span>
+                <CommandShortcut>⌘E</CommandShortcut>
+              </CommandItem>
+              <CommandItem>
+                <span>Calculator</span>
+                <CommandShortcut>⌘L</CommandShortcut>
+              </CommandItem>
+            </CommandGroup>
+            <CommandSeparator />
+            <CommandGroup heading="Settings">
+              <CommandItem>
+                <span>Profile</span>
+                <CommandShortcut>⌘P</CommandShortcut>
+              </CommandItem>
+              <CommandItem>
+                <span>Billing</span>
+                <CommandShortcut>⌘B</CommandShortcut>
+              </CommandItem>
+              <CommandItem>
+                <span>Settings</span>
+                <CommandShortcut>⌘S</CommandShortcut>
+              </CommandItem>
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </div>
+    )
+  }
+
+  if (name === 'command-groups') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Command className="rounded-lg border shadow-md max-w-[450px]">
+          <CommandInput placeholder="Type a command or search..." />
+          <CommandList>
+            <CommandEmpty>No results found.</CommandEmpty>
+            <CommandGroup heading="Suggestions">
+              <CommandItem>
+                <CalendarIcon />
+                <span>Calendar</span>
+                <CommandShortcut>⌘C</CommandShortcut>
+              </CommandItem>
+              <CommandItem>
+                <Search />
+                <span>Search Emoji</span>
+                <CommandShortcut>⌘E</CommandShortcut>
+              </CommandItem>
+              <CommandItem>
+                <Calculator className="text-muted-foreground" />
+                <span>Calculator</span>
+                <CommandShortcut>⌘L</CommandShortcut>
+              </CommandItem>
+            </CommandGroup>
+            <CommandSeparator />
+            <CommandGroup heading="Settings">
+              <CommandItem>
+                <Settings />
+                <span>Profile</span>
+                <CommandShortcut>⌘P</CommandShortcut>
+              </CommandItem>
+              <CommandItem>
+                <Settings />
+                <span>Billing</span>
+                <CommandShortcut>⌘B</CommandShortcut>
+              </CommandItem>
+              <CommandItem>
+                <Settings />
+                <span>Settings</span>
+                <CommandShortcut>⌘S</CommandShortcut>
+              </CommandItem>
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </div>
+    )
+  }
+
+  if (name === 'command-scrollable') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Command className="rounded-lg border shadow-md max-w-[450px]">
+          <CommandInput placeholder="Type a command or search..." />
+          <CommandList className="max-h-[200px]">
+            <CommandEmpty>No results found.</CommandEmpty>
+            {['Calendar','Search Emoji','Calculator','Profile','Billing','Settings','Notifications','Security','API Keys','Integrations','Teams','Billing Plans'].map((item) => (
+              <CommandItem key={item}>{item}</CommandItem>
+            ))}
+          </CommandList>
+        </Command>
+      </div>
+    )
+  }
+
   return (
     <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
       <Command className="rounded-lg border shadow-md max-w-[450px]">
@@ -2194,11 +3619,208 @@ function CommandPreview({
 }
 
 function ContextMenuPreview({
-  direction
+  direction,
+  name
 }: {
   direction?: string
+  name: string
 }): React.JSX.Element {
   const dir = direction === 'rtl' ? 'rtl' : undefined
+
+  if (name === 'context-menu-submenu') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <ContextMenu>
+          <ContextMenuTrigger className="flex h-[150px] w-[300px] items-center justify-center rounded-md border border-dashed text-sm">Right click here</ContextMenuTrigger>
+          <ContextMenuContent className="w-64">
+            <ContextMenuItem>Back</ContextMenuItem>
+            <ContextMenuItem disabled>Forward</ContextMenuItem>
+            <ContextMenuSub>
+              <ContextMenuSubTrigger inset>More Tools</ContextMenuSubTrigger>
+              <ContextMenuSubContent className="w-48">
+                <ContextMenuItem>Save Page As…</ContextMenuItem>
+                <ContextMenuItem>Create Shortcut…</ContextMenuItem>
+                <ContextMenuItem>Name Window…</ContextMenuItem>
+                <ContextMenuSeparator />
+                <ContextMenuItem>Developer Tools</ContextMenuItem>
+              </ContextMenuSubContent>
+            </ContextMenuSub>
+            <ContextMenuSeparator />
+            <ContextMenuItem>Reload</ContextMenuItem>
+          </ContextMenuContent>
+        </ContextMenu>
+      </div>
+    )
+  }
+
+  if (name === 'context-menu-shortcuts') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <ContextMenu>
+          <ContextMenuTrigger className="flex h-[150px] w-[300px] items-center justify-center rounded-md border border-dashed text-sm">Right click here</ContextMenuTrigger>
+          <ContextMenuContent className="w-64">
+            <ContextMenuItem>
+              Back
+              <ContextMenuShortcut>⌘[</ContextMenuShortcut>
+            </ContextMenuItem>
+            <ContextMenuItem>
+              Forward
+              <ContextMenuShortcut>⌘]</ContextMenuShortcut>
+            </ContextMenuItem>
+            <ContextMenuItem>
+              Reload
+              <ContextMenuShortcut>⌘R</ContextMenuShortcut>
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+            <ContextMenuItem>
+              Save Page
+              <ContextMenuShortcut>⌘S</ContextMenuShortcut>
+            </ContextMenuItem>
+          </ContextMenuContent>
+        </ContextMenu>
+      </div>
+    )
+  }
+
+  if (name === 'context-menu-groups') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <ContextMenu>
+          <ContextMenuTrigger className="flex h-[150px] w-[300px] items-center justify-center rounded-md border border-dashed text-sm">Right click here</ContextMenuTrigger>
+          <ContextMenuContent className="w-64">
+            <ContextMenuGroup>
+              <ContextMenuItem>Back</ContextMenuItem>
+              <ContextMenuItem>Forward</ContextMenuItem>
+              <ContextMenuItem>Reload</ContextMenuItem>
+            </ContextMenuGroup>
+            <ContextMenuSeparator />
+            <ContextMenuGroup>
+              <ContextMenuItem>Bookmark this page</ContextMenuItem>
+              <ContextMenuItem>Save page as…</ContextMenuItem>
+            </ContextMenuGroup>
+            <ContextMenuSeparator />
+            <ContextMenuGroup>
+              <ContextMenuItem>Print</ContextMenuItem>
+              <ContextMenuItem>Cast…</ContextMenuItem>
+              <ContextMenuItem>Find…</ContextMenuItem>
+            </ContextMenuGroup>
+          </ContextMenuContent>
+        </ContextMenu>
+      </div>
+    )
+  }
+
+  if (name === 'context-menu-icons') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <ContextMenu>
+          <ContextMenuTrigger className="flex h-[150px] w-[300px] items-center justify-center rounded-md border border-dashed text-sm">Right click here</ContextMenuTrigger>
+          <ContextMenuContent className="w-64">
+            <ContextMenuItem>
+              <ArrowLeft />
+              Back
+            </ContextMenuItem>
+            <ContextMenuItem>
+              <ArrowRight />
+              Forward
+            </ContextMenuItem>
+            <ContextMenuItem>
+              <ArrowUpRight />
+              Reload
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+            <ContextMenuItem>
+              <BookOpen />
+              Bookmark
+            </ContextMenuItem>
+          </ContextMenuContent>
+        </ContextMenu>
+      </div>
+    )
+  }
+
+  if (name === 'context-menu-checkboxes') {
+    const [showFullPath, setShowFullPath] = useState(true)
+    const [showToolbar, setShowToolbar] = useState(false)
+    const [showStatusBar, setShowStatusBar] = useState(true)
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <ContextMenu>
+          <ContextMenuTrigger className="flex h-[150px] w-[300px] items-center justify-center rounded-md border border-dashed text-sm">Right click here</ContextMenuTrigger>
+          <ContextMenuContent className="w-64">
+            <ContextMenuCheckboxItem checked={showFullPath} onCheckedChange={setShowFullPath}>
+              Show Full Path
+            </ContextMenuCheckboxItem>
+            <ContextMenuCheckboxItem checked={showToolbar} onCheckedChange={setShowToolbar}>
+              Show Toolbar
+            </ContextMenuCheckboxItem>
+            <ContextMenuCheckboxItem checked={showStatusBar} onCheckedChange={setShowStatusBar}>
+              Show Status Bar
+            </ContextMenuCheckboxItem>
+          </ContextMenuContent>
+        </ContextMenu>
+      </div>
+    )
+  }
+
+  if (name === 'context-menu-radio') {
+    const [size, setSize] = useState('md')
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <ContextMenu>
+          <ContextMenuTrigger className="flex h-[150px] w-[300px] items-center justify-center rounded-md border border-dashed text-sm">
+            Right click here — Size: {size === 'sm' ? 'Small' : size === 'md' ? 'Medium' : 'Large'}
+          </ContextMenuTrigger>
+          <ContextMenuContent className="w-48">
+            <ContextMenuRadioGroup value={size} onValueChange={setSize}>
+              <ContextMenuRadioItem value="sm">Small</ContextMenuRadioItem>
+              <ContextMenuRadioItem value="md">Medium</ContextMenuRadioItem>
+              <ContextMenuRadioItem value="lg">Large</ContextMenuRadioItem>
+            </ContextMenuRadioGroup>
+          </ContextMenuContent>
+        </ContextMenu>
+      </div>
+    )
+  }
+
+  if (name === 'context-menu-destructive') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <ContextMenu>
+          <ContextMenuTrigger className="flex h-[150px] w-[300px] items-center justify-center rounded-md border border-dashed text-sm">Right click here</ContextMenuTrigger>
+          <ContextMenuContent className="w-64">
+            <ContextMenuItem>Edit</ContextMenuItem>
+            <ContextMenuItem>Duplicate</ContextMenuItem>
+            <ContextMenuSeparator />
+            <ContextMenuItem variant="destructive">Delete</ContextMenuItem>
+          </ContextMenuContent>
+        </ContextMenu>
+      </div>
+    )
+  }
+
+  if (name === 'context-menu-rtl') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir="rtl">
+        <ContextMenu>
+          <ContextMenuTrigger className="flex h-[150px] w-[300px] items-center justify-center rounded-md border border-dashed text-sm">انقر بزر الفأرة الأيمن هنا</ContextMenuTrigger>
+          <ContextMenuContent className="w-64">
+            <ContextMenuItem>
+              رجوع
+              <ContextMenuShortcut>⌘[</ContextMenuShortcut>
+            </ContextMenuItem>
+            <ContextMenuItem>
+              تحديث
+              <ContextMenuShortcut>⌘R</ContextMenuShortcut>
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+            <ContextMenuItem>حفظ الصفحة</ContextMenuItem>
+          </ContextMenuContent>
+        </ContextMenu>
+      </div>
+    )
+  }
+
   return (
     <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
       <ContextMenu>
@@ -2206,11 +3828,11 @@ function ContextMenuPreview({
           Right click here
         </ContextMenuTrigger>
         <ContextMenuContent className="w-64">
-          <ContextMenuItem inset>Back</ContextMenuItem>
-          <ContextMenuItem inset disabled>Forward</ContextMenuItem>
-          <ContextMenuItem inset>Reload</ContextMenuItem>
+          <ContextMenuItem>Back</ContextMenuItem>
+          <ContextMenuItem disabled>Forward</ContextMenuItem>
+          <ContextMenuItem>Reload</ContextMenuItem>
           <ContextMenuSeparator />
-          <ContextMenuItem inset>Bookmark this page</ContextMenuItem>
+          <ContextMenuItem>Bookmark this page</ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>
     </div>
@@ -2310,31 +3932,125 @@ function DataTablePreview({
 }
 
 function DatePickerPreview({
-  direction
+  direction,
+  name
 }: {
   direction?: string
+  name: string
 }): React.JSX.Element {
   const dir = direction === 'rtl' ? 'rtl' : undefined
   const [date, setDate] = useState<Date | undefined>(new Date())
+
+  if (name === 'date-picker-range') {
+    const [range, setRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
+      from: new Date(),
+      to: new Date(Date.now() + 7 * 86400000),
+    })
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="w-[300px] justify-start text-left font-normal">
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {range.from ? range.from.toLocaleDateString() : 'Start'} — {range.to ? range.to.toLocaleDateString() : 'End'}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar mode="range" selected={range} onSelect={setRange as any} numberOfMonths={2} />
+          </PopoverContent>
+        </Popover>
+      </div>
+    )
+  }
+
+  if (name === 'date-picker-date-of-birth') {
+    const [birthDate, setBirthDate] = useState<Date | undefined>(new Date(1995, 5, 15))
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="w-[240px] justify-start text-left font-normal">
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {birthDate ? birthDate.toLocaleDateString() : 'Pick a date'}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar mode="single" selected={birthDate} onSelect={setBirthDate} captionLayout="dropdown" />
+          </PopoverContent>
+        </Popover>
+      </div>
+    )
+  }
+
+  if (name === 'date-picker-input') {
+    const [inputDate, setInputDate] = useState<Date | undefined>(new Date())
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Popover>
+          <PopoverTrigger asChild>
+            <div className="relative w-[240px]">
+              <Input value={inputDate ? inputDate.toLocaleDateString() : ''} placeholder="Pick a date" readOnly className="cursor-pointer" />
+              <CalendarIcon className="absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            </div>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar mode="single" selected={inputDate} onSelect={setInputDate} />
+          </PopoverContent>
+        </Popover>
+      </div>
+    )
+  }
+
+  if (name === 'date-picker-time') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <div className="flex items-center gap-2">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="w-[140px] justify-start text-left font-normal">
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {date ? date.toLocaleDateString() : 'Date'}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar mode="single" selected={date} onSelect={setDate} />
+            </PopoverContent>
+          </Popover>
+          <Input type="time" defaultValue="12:00" className="w-[100px]" />
+        </div>
+      </div>
+    )
+  }
+
+  if (name === 'date-picker-rtl') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir="rtl">
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="w-[240px] justify-start text-left font-normal">
+              <CalendarIcon className="ml-2 h-4 w-4" />
+              {date ? date.toLocaleDateString('ar-SA') : <span>اختر تاريخًا</span>}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar mode="single" selected={date} onSelect={setDate} />
+          </PopoverContent>
+        </Popover>
+      </div>
+    )
+  }
 
   return (
     <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
       <Popover>
         <PopoverTrigger asChild>
-          <Button
-            variant={"outline"}
-            className="w-[240px] justify-start text-left font-normal"
-          >
-            <Terminal className="mr-2 h-4 w-4" />
-            {date ? date.toDateString() : <span>Pick a date</span>}
+          <Button variant="outline" className="w-[240px] justify-start text-left font-normal">
+            <CalendarIcon className="mr-2 h-4 w-4" />
+            {date ? date.toLocaleDateString() : <span>Pick a date</span>}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">
-          <Calendar
-            mode="single"
-            selected={date}
-            onSelect={setDate}
-          />
+          <Calendar mode="single" selected={date} onSelect={setDate} />
         </PopoverContent>
       </Popover>
     </div>
@@ -2363,11 +4079,122 @@ function DirectionPreview({
 }
 
 function DrawerPreview({
-  direction
+  direction,
+  name
 }: {
   direction?: string
+  name: string
 }): React.JSX.Element {
   const dir = direction === 'rtl' ? 'rtl' : undefined
+
+  if (name === 'drawer-scrollable') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Drawer>
+          <DrawerTrigger asChild>
+            <Button variant="outline">Scrollable</Button>
+          </DrawerTrigger>
+          <DrawerContent>
+            <div className="mx-auto w-full max-w-sm">
+              <DrawerHeader>
+                <DrawerTitle>Terms of Service</DrawerTitle>
+                <DrawerDescription>Please read and accept to continue.</DrawerDescription>
+              </DrawerHeader>
+              <div className="max-h-64 overflow-y-auto px-4 text-sm text-muted-foreground space-y-3">
+                {Array.from({ length: 8 }, (_, i) => (
+                  <p key={i}>Section {i + 1}: This is sample legal content that would scroll within the drawer. It demonstrates how long-form text flows inside a constrained container.</p>
+                ))}
+              </div>
+              <DrawerFooter>
+                <Button>Accept</Button>
+                <DrawerClose asChild><Button variant="outline">Decline</Button></DrawerClose>
+              </DrawerFooter>
+            </div>
+          </DrawerContent>
+        </Drawer>
+      </div>
+    )
+  }
+
+  if (name === 'drawer-directions') {
+    const [side, setSide] = useState<'top' | 'right' | 'bottom' | 'left'>('bottom')
+    return (
+      <div className="flex min-h-24 items-center justify-center gap-2 p-4" dir={dir}>
+        {(['top', 'right', 'bottom', 'left'] as const).map((s) => (
+          <Drawer key={s} direction={s}>
+            <DrawerTrigger asChild>
+              <Button variant={side === s ? 'default' : 'outline'} size="sm" onClick={() => setSide(s)}>
+                {s.charAt(0).toUpperCase() + s.slice(1)}
+              </Button>
+            </DrawerTrigger>
+            <DrawerContent>
+              <div className="mx-auto w-full max-w-sm">
+                <DrawerHeader>
+                  <DrawerTitle>{s.charAt(0).toUpperCase() + s.slice(1)} Drawer</DrawerTitle>
+                </DrawerHeader>
+                <div className="p-4 text-center text-sm text-muted-foreground">This drawer opens from the {s}.</div>
+                <DrawerFooter><DrawerClose asChild><Button variant="outline">Close</Button></DrawerClose></DrawerFooter>
+              </div>
+            </DrawerContent>
+          </Drawer>
+        ))}
+      </div>
+    )
+  }
+
+  if (name === 'drawer-responsive-dialog') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Drawer>
+          <DrawerTrigger asChild>
+            <Button variant="outline">Responsive</Button>
+          </DrawerTrigger>
+          <DrawerContent>
+            <div className="mx-auto w-full max-w-sm">
+              <DrawerHeader>
+                <DrawerTitle>Edit profile</DrawerTitle>
+                <DrawerDescription>Make changes to your profile here. Click save when done.</DrawerDescription>
+              </DrawerHeader>
+              <div className="grid gap-3 px-4">
+                <Input placeholder="Name" defaultValue="John Doe" />
+                <Input placeholder="Email" defaultValue="john@example.com" />
+              </div>
+              <DrawerFooter>
+                <Button>Save changes</Button>
+                <DrawerClose asChild><Button variant="outline">Cancel</Button></DrawerClose>
+              </DrawerFooter>
+            </div>
+          </DrawerContent>
+        </Drawer>
+      </div>
+    )
+  }
+
+  if (name === 'drawer-rtl') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir="rtl">
+        <Drawer>
+          <DrawerTrigger asChild>
+            <Button variant="outline">افتح الدرج</Button>
+          </DrawerTrigger>
+          <DrawerContent>
+            <div className="mx-auto w-full max-w-sm">
+              <DrawerHeader>
+                <DrawerTitle>نقل الهدف</DrawerTitle>
+                <DrawerDescription>حدد هدف نشاطك اليومي.</DrawerDescription>
+              </DrawerHeader>
+              <div className="p-4 pb-0 text-center text-sm">منطقة محتوى الدرج المنزلقة.</div>
+              <DrawerFooter>
+                <Button>إرسال</Button>
+                <DrawerClose asChild><Button variant="outline">إلغاء</Button></DrawerClose>
+              </DrawerFooter>
+            </div>
+          </DrawerContent>
+        </Drawer>
+      </div>
+    )
+  }
+
   return (
     <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
       <Drawer>
@@ -2397,11 +4224,204 @@ function DrawerPreview({
 }
 
 function DropdownMenuPreview({
-  direction
+  direction,
+  name
 }: {
   direction?: string
+  name: string
 }): React.JSX.Element {
   const dir = direction === 'rtl' ? 'rtl' : undefined
+
+  if (name === 'dropdown-menu-submenu') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild><Button variant="outline">Open Menu</Button></DropdownMenuTrigger>
+          <DropdownMenuContent className="w-56">
+            <DropdownMenuItem>New Tab</DropdownMenuItem>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>More Tools</DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="w-48">
+                <DropdownMenuItem>Save Page As…</DropdownMenuItem>
+                <DropdownMenuItem>Create Shortcut…</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem>Developer Tools</DropdownMenuItem>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem>Print</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    )
+  }
+
+  if (name === 'dropdown-menu-shortcuts') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild><Button variant="outline">Open Menu</Button></DropdownMenuTrigger>
+          <DropdownMenuContent className="w-56">
+            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            <DropdownMenuItem>
+              New Tab
+              <DropdownMenuShortcut>⌘T</DropdownMenuShortcut>
+            </DropdownMenuItem>
+            <DropdownMenuItem>
+              New Window
+              <DropdownMenuShortcut>⌘N</DropdownMenuShortcut>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem>
+              Print
+              <DropdownMenuShortcut>⌘P</DropdownMenuShortcut>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    )
+  }
+
+  if (name === 'dropdown-menu-icons') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild><Button variant="outline">Open Menu</Button></DropdownMenuTrigger>
+          <DropdownMenuContent className="w-56">
+            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            <DropdownMenuItem><ArrowUpRight /> New Tab</DropdownMenuItem>
+            <DropdownMenuItem><Copy /> Copy Link</DropdownMenuItem>
+            <DropdownMenuItem><BookOpen /> Bookmarks</DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem><Settings /> Settings</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    )
+  }
+
+  if (name === 'dropdown-menu-checkboxes') {
+    const [showBar, setShowBar] = useState(true)
+    const [showGrid, setShowGrid] = useState(false)
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild><Button variant="outline">View</Button></DropdownMenuTrigger>
+          <DropdownMenuContent className="w-56">
+            <DropdownMenuLabel>Appearance</DropdownMenuLabel>
+            <DropdownMenuCheckboxItem checked={showBar} onCheckedChange={setShowBar}>
+              Show Status Bar
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuCheckboxItem checked={showGrid} onCheckedChange={setShowGrid}>
+              Show Grid
+            </DropdownMenuCheckboxItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    )
+  }
+
+  if (name === 'dropdown-menu-radio-group') {
+    const [position, setPosition] = useState('bottom')
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild><Button variant="outline">Panel: {position}</Button></DropdownMenuTrigger>
+          <DropdownMenuContent className="w-56">
+            <DropdownMenuLabel>Panel Position</DropdownMenuLabel>
+            <DropdownMenuRadioGroup value={position} onValueChange={setPosition}>
+              <DropdownMenuRadioItem value="top">Top</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="bottom">Bottom</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="right">Right</DropdownMenuRadioItem>
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    )
+  }
+
+  if (name === 'dropdown-menu-destructive') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild><Button variant="outline">Open Menu</Button></DropdownMenuTrigger>
+          <DropdownMenuContent className="w-56">
+            <DropdownMenuItem>Edit</DropdownMenuItem>
+            <DropdownMenuItem>Duplicate</DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive">Delete</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    )
+  }
+
+  if (name === 'dropdown-menu-avatar') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Avatar className="cursor-pointer">
+              <AvatarImage src="https://github.com/shadcn.png" alt="@shadcn" />
+              <AvatarFallback>CN</AvatarFallback>
+            </Avatar>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-56" align="end">
+            <DropdownMenuLabel>My Account</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem>Profile</DropdownMenuItem>
+            <DropdownMenuItem>Settings</DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem>Log out</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    )
+  }
+
+  if (name === 'dropdown-menu-complex') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild><Button variant="outline">Open Menu</Button></DropdownMenuTrigger>
+          <DropdownMenuContent className="w-56">
+            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            <DropdownMenuItem><ArrowUpRight /> New Tab <DropdownMenuShortcut>⌘T</DropdownMenuShortcut></DropdownMenuItem>
+            <DropdownMenuItem><Copy /> Copy Link</DropdownMenuItem>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger><Settings /> More</DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="w-48">
+                <DropdownMenuItem>Save Page</DropdownMenuItem>
+                <DropdownMenuItem>Print…</DropdownMenuItem>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive">Delete</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    )
+  }
+
+  if (name === 'dropdown-menu-rtl') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir="rtl">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild><Button variant="outline">القائمة</Button></DropdownMenuTrigger>
+          <DropdownMenuContent className="w-56">
+            <DropdownMenuLabel>حسابي</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem>الملف الشخصي</DropdownMenuItem>
+            <DropdownMenuItem>الإعدادات</DropdownMenuItem>
+            <DropdownMenuItem>الفوترة</DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem>تسجيل الخروج</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    )
+  }
+
   return (
     <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
       <DropdownMenu>
@@ -2431,73 +4451,127 @@ function EmptyPreview({
 }): React.JSX.Element {
   const dir = direction === 'rtl' ? 'rtl' : undefined
 
-  if (name === 'empty-search') {
-    return (
-      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
-        <div className="w-full max-w-xl rounded-xl border bg-gradient-to-b from-muted/20 via-background to-background p-6 text-center shadow-xs">
-          <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full border bg-muted/40">
-            <Search className="size-5 text-muted-foreground" />
-          </div>
-          <div className="space-y-1">
-            <h4 className="text-lg font-semibold">404 - Not Found</h4>
-            <p className="text-sm text-muted-foreground">
-              The page you&apos;re looking for doesn&apos;t exist. Try searching for what you need below.
-            </p>
-          </div>
-          <div className="mx-auto mt-5 flex max-w-md gap-2">
-            <Input defaultValue="/" className="text-center" />
-            <Button variant="outline">Search</Button>
-          </div>
-          <Button variant="link" className="mt-3 text-sm text-muted-foreground">
-            Need help? Contact support
-          </Button>
-        </div>
-      </div>
-    )
-  }
-
   if (name === 'empty-outline') {
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
-        <div className="w-full max-w-lg rounded-xl border border-dashed bg-background p-6 text-center">
-          <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full border bg-muted/30">
-            <HardDrive className="size-5 text-muted-foreground" />
-          </div>
-          <h4 className="text-lg font-semibold">Cloud Storage Empty</h4>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Upload files to your cloud storage to access them anywhere.
-          </p>
-          <Button className="mt-5">Upload Files</Button>
-        </div>
+        <Empty className="rounded-xl border">
+          <EmptyHeader>
+            <EmptyMedia variant="icon"><HardDrive className="text-muted-foreground" /></EmptyMedia>
+            <EmptyTitle>Cloud Storage Empty</EmptyTitle>
+            <EmptyDescription>Upload files to your cloud storage to access them anywhere.</EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent><Button>Upload Files</Button></EmptyContent>
+        </Empty>
       </div>
     )
   }
 
+  if (name === 'empty-background') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Empty className="rounded-xl bg-gradient-to-b from-sky-50 to-white dark:from-sky-950/20 dark:to-background">
+          <EmptyHeader>
+            <EmptyMedia variant="icon"><Package className="text-muted-foreground" /></EmptyMedia>
+            <EmptyTitle>No releases yet</EmptyTitle>
+            <EmptyDescription>Create your first release to get started with your project.</EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent><Button>Create Release</Button></EmptyContent>
+        </Empty>
+      </div>
+    )
+  }
+
+  if (name === 'empty-avatar') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia>
+              <Avatar size="lg">
+                <AvatarFallback>U</AvatarFallback>
+              </Avatar>
+            </EmptyMedia>
+            <EmptyTitle>No followers yet</EmptyTitle>
+            <EmptyDescription>When someone follows you, they will appear here.</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      </div>
+    )
+  }
+
+  if (name === 'empty-avatar-group') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia>
+              <AvatarGroup>
+                <Avatar><AvatarFallback>A</AvatarFallback></Avatar>
+                <Avatar><AvatarFallback>B</AvatarFallback></Avatar>
+                <Avatar><AvatarFallback>C</AvatarFallback></Avatar>
+              </AvatarGroup>
+            </EmptyMedia>
+            <EmptyTitle>No team members</EmptyTitle>
+            <EmptyDescription>Invite team members to start collaborating.</EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent><Button>Invite Members</Button></EmptyContent>
+        </Empty>
+      </div>
+    )
+  }
+
+  if (name === 'empty-input-group') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon"><Search className="text-muted-foreground" /></EmptyMedia>
+            <EmptyTitle>No results found</EmptyTitle>
+            <EmptyDescription>Try adjusting your search or filter to find what you are looking for.</EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <div className="flex w-full max-w-xs gap-2">
+              <Input placeholder="Search..." />
+              <Button variant="outline">Search</Button>
+            </div>
+          </EmptyContent>
+        </Empty>
+      </div>
+    )
+  }
+
+  if (name === 'empty-rtl') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir="rtl">
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon"><FolderOpen className="text-muted-foreground" /></EmptyMedia>
+            <EmptyTitle>لا توجد مشاريع بعد</EmptyTitle>
+            <EmptyDescription>لم تقم بإنشاء أي مشاريع بعد. ابدأ بإنشاء مشروعك الأول.</EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <Button>إنشاء مشروع</Button>
+            <Button variant="outline">استيراد مشروع</Button>
+          </EmptyContent>
+        </Empty>
+      </div>
+    )
+  }
+
+  // empty-demo
   return (
     <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
-      <div className="w-full max-w-lg rounded-2xl border bg-background p-6 text-center shadow-xs">
-        <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-muted/40">
-          <FolderOpen className="size-6 text-muted-foreground" />
-        </div>
-        <div className="space-y-1">
-          <h4 className="text-lg font-semibold">
-            {name === 'empty-rtl' ? 'لا توجد مشاريع بعد' : 'No Projects Yet'}
-          </h4>
-          <p className="text-sm text-muted-foreground">
-            {name === 'empty-rtl'
-              ? 'لم تقم بإنشاء أي مشاريع بعد. ابدأ بإنشاء مشروعك الأول.'
-              : "You haven't created any projects yet. Get started by creating your first project."}
-          </p>
-        </div>
-        <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+      <Empty>
+        <EmptyHeader>
+          <EmptyMedia variant="icon"><FolderOpen className="text-muted-foreground" /></EmptyMedia>
+          <EmptyTitle>No Projects Yet</EmptyTitle>
+          <EmptyDescription>You haven&apos;t created any projects yet. Get started by creating your first project.</EmptyDescription>
+        </EmptyHeader>
+        <EmptyContent>
           <Button>Create Project</Button>
           <Button variant="outline">Import Project</Button>
-        </div>
-        <Button variant="link" className="mt-3 gap-1.5 text-muted-foreground">
-          Learn More
-          <ArrowUpRight className="size-4" />
-        </Button>
-      </div>
+        </EmptyContent>
+      </Empty>
     </div>
   )
 }
@@ -2514,96 +4588,181 @@ function FieldPreview({
   if (name === 'field-grouped') {
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
-        <Card className="w-full max-w-2xl">
-          <CardHeader>
-            <CardTitle>Profile</CardTitle>
-            <CardDescription>This appears on invoices and emails.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Full name</label>
-                <Input placeholder="Evil Rabbit" />
-                <p className="text-xs text-muted-foreground">
-                  This appears on invoices and emails.
-                </p>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Username</label>
-                <Input placeholder="@evilrabbit" />
-              </div>
-            </div>
-            <div className="h-px bg-border" />
-            <div className="flex items-center gap-3 rounded-lg border p-3">
-              <Checkbox id="field-notify" defaultChecked />
-              <div className="space-y-1">
-                <label htmlFor="field-notify" className="text-sm font-medium">
-                  Email me product updates
-                </label>
-                <p className="text-xs text-muted-foreground">
-                  Weekly release notes and security alerts.
-                </p>
-              </div>
-            </div>
-          </CardContent>
-          <CardFooter className="justify-end gap-2">
-            <Button variant="outline">Cancel</Button>
-            <Button>Save Changes</Button>
-          </CardFooter>
-        </Card>
+        <FieldSet className="w-full max-w-2xl">
+          <FieldLegend>Profile</FieldLegend>
+          <FieldDescription>This appears on invoices and emails.</FieldDescription>
+          <FieldGroup>
+            <Field>
+              <FieldLabel htmlFor="fname">Full name</FieldLabel>
+              <Input id="fname" placeholder="Evil Rabbit" />
+              <FieldDescription>This appears on invoices and emails.</FieldDescription>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="uname">Username</FieldLabel>
+              <Input id="uname" placeholder="@evilrabbit" />
+            </Field>
+          </FieldGroup>
+        </FieldSet>
+      </div>
+    )
+  }
+
+  if (name === 'field-input') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Field className="w-full max-w-md">
+          <FieldLabel htmlFor="email">Email</FieldLabel>
+          <Input id="email" placeholder="you@example.com" />
+          <FieldDescription>We&apos;ll never share your email with anyone else.</FieldDescription>
+        </Field>
+      </div>
+    )
+  }
+
+  if (name === 'field-textarea') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Field className="w-full max-w-md">
+          <FieldLabel htmlFor="bio">Bio</FieldLabel>
+          <Textarea id="bio" placeholder="Tell us about yourself..." />
+          <FieldDescription>You can @mention other users and organizations.</FieldDescription>
+        </Field>
+      </div>
+    )
+  }
+
+  if (name === 'field-select') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Field className="w-full max-w-md">
+          <FieldLabel htmlFor="role">Role</FieldLabel>
+          <Select>
+            <SelectTrigger id="role" className="w-full">
+              <SelectValue placeholder="Select a role" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="admin">Admin</SelectItem>
+              <SelectItem value="member">Member</SelectItem>
+            </SelectContent>
+          </Select>
+          <FieldDescription>This will be displayed on your profile.</FieldDescription>
+        </Field>
+      </div>
+    )
+  }
+
+  if (name === 'field-checkbox') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Field className="w-full max-w-md flex-row items-start gap-3 rounded-lg border p-4">
+          <Checkbox id="terms-field" />
+          <div className="grid gap-1.5 leading-none">
+            <FieldLabel htmlFor="terms-field" className="cursor-pointer">Accept terms and conditions</FieldLabel>
+            <FieldDescription>You agree to our Terms of Service and Privacy Policy.</FieldDescription>
+          </div>
+        </Field>
+      </div>
+    )
+  }
+
+  if (name === 'field-switch') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Field className="w-full max-w-md flex-row items-center justify-between rounded-lg border p-4">
+          <div className="space-y-0.5">
+            <FieldLabel htmlFor="marketing-field">Marketing emails</FieldLabel>
+            <FieldDescription>Receive emails about new products and features.</FieldDescription>
+          </div>
+          <Switch id="marketing-field" />
+        </Field>
+      </div>
+    )
+  }
+
+  if (name === 'field-choice-card') {
+    const [plan, setPlan] = useState('starter')
+    const plans = [
+      { id: 'starter', label: 'Starter', desc: 'For small teams', price: '$9/mo' },
+      { id: 'pro', label: 'Pro', desc: 'For growing teams', price: '$29/mo' },
+    ]
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <FieldSet className="w-full max-w-md">
+          <FieldLegend>Plan</FieldLegend>
+          <FieldDescription>Choose the plan that fits your needs.</FieldDescription>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {plans.map((p) => (
+              <label key={p.id} className={`flex cursor-pointer flex-col gap-2 rounded-lg border p-4 transition-colors ${plan === p.id ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'}`}>
+                <input type="radio" name="plan" className="sr-only" checked={plan === p.id} onChange={() => setPlan(p.id)} />
+                <span className="text-sm font-medium">{p.label}</span>
+                <span className="text-xs text-muted-foreground">{p.desc}</span>
+                <span className="text-sm font-semibold">{p.price}</span>
+              </label>
+            ))}
+          </div>
+        </FieldSet>
+      </div>
+    )
+  }
+
+  if (name === 'field-fieldset') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <FieldSet className="w-full max-w-lg">
+          <FieldLegend>Account Settings</FieldLegend>
+          <FieldDescription>Manage your account preferences.</FieldDescription>
+          <FieldGroup>
+            <Field>
+              <FieldLabel htmlFor="fname2">Full name</FieldLabel>
+              <Input id="fname2" placeholder="Your name" />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="email2">Email</FieldLabel>
+              <Input id="email2" placeholder="Your email" />
+            </Field>
+          </FieldGroup>
+          <FieldSeparator />
+          <FieldGroup>
+            <Field>
+              <FieldLabel htmlFor="pass">Password</FieldLabel>
+              <Input id="pass" type="password" placeholder="••••••••" />
+              <FieldDescription>Must be at least 8 characters.</FieldDescription>
+            </Field>
+          </FieldGroup>
+        </FieldSet>
+      </div>
+    )
+  }
+
+  if (name === 'field-rtl') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir="rtl">
+        <Field className="w-full max-w-md">
+          <FieldLabel htmlFor="email-rtl">البريد الإلكتروني</FieldLabel>
+          <Input id="email-rtl" placeholder="you@example.com" />
+          <FieldDescription>لن نشارك بريدك الإلكتروني مع أي شخص آخر.</FieldDescription>
+        </Field>
       </div>
     )
   }
 
   return (
     <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
-      <Card className="w-full max-w-2xl">
-        <CardHeader>
-          <CardTitle>Payment Method</CardTitle>
-          <CardDescription>All transactions are secure and encrypted</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-5">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Name on Card</label>
-            <Input placeholder="Evil Rabbit" />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Card Number</label>
-            <Input placeholder="1234 5678 9012 3456" />
-            <p className="text-xs text-muted-foreground">Enter your 16-digit card number</p>
-          </div>
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Month</label>
-              <Input placeholder="MM" />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Year</label>
-              <Input placeholder="YYYY" />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">CVV</label>
-              <Input placeholder="123" />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Billing Address</label>
-            <p className="text-xs text-muted-foreground">
-              The billing address associated with your payment method
-            </p>
-            <div className="flex items-center gap-3 rounded-lg border p-3">
-              <Checkbox id="same-as-shipping" defaultChecked />
-              <label htmlFor="same-as-shipping" className="text-sm">
-                Same as shipping address
-              </label>
-            </div>
-          </div>
-        </CardContent>
-        <CardFooter className="justify-end gap-2">
-          <Button variant="outline">Cancel</Button>
-          <Button>Submit</Button>
-        </CardFooter>
-      </Card>
+      <FieldSet className="w-full max-w-2xl">
+        <FieldLegend>Payment Method</FieldLegend>
+        <FieldDescription>All transactions are secure and encrypted</FieldDescription>
+        <FieldGroup>
+          <Field>
+            <FieldLabel htmlFor="card-name">Name on Card</FieldLabel>
+            <Input id="card-name" placeholder="Evil Rabbit" />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="card-number">Card Number</FieldLabel>
+            <Input id="card-number" placeholder="1234 5678 9012 3456" />
+            <FieldDescription>Enter your 16-digit card number</FieldDescription>
+          </Field>
+        </FieldGroup>
+      </FieldSet>
     </div>
   )
 }
@@ -2616,34 +4775,119 @@ function HoverCardPreview({
   name: string
 }): React.JSX.Element {
   const dir = direction === 'rtl' ? 'rtl' : undefined
-  const title = name === 'hover-card-delay' ? 'Open with Delays' : '@shadcn'
-  const description =
-    name === 'hover-card-delay'
-      ? 'Use openDelay and closeDelay to slow the interaction for dense interfaces.'
-      : 'The React Framework creator toolkit with fast iteration and polished defaults.'
 
-  return (
-    <div className="flex min-h-32 items-center justify-center p-8" dir={dir}>
-      <div className="group flex w-full max-w-sm flex-col items-center gap-4">
-        <Button variant="outline">
-          {name === 'hover-card-delay' ? 'Hover with Delay' : 'Hover Here'}
-        </Button>
-        <div className="w-full rounded-xl border bg-background p-4 shadow-sm transition-all duration-200 group-hover:-translate-y-1 group-hover:shadow-lg">
-          <div className="flex items-start gap-3">
-            <div className="flex size-10 items-center justify-center rounded-full bg-muted text-sm font-semibold">
-              CN
-            </div>
-            <div className="space-y-1">
-              <div className="text-sm font-semibold">{title}</div>
-              <p className="text-sm text-muted-foreground">{description}</p>
-              <div className="flex items-center gap-2 pt-1 text-xs text-muted-foreground">
-                <Clock3 className="size-3.5" />
-                Joined December 2020
+  if (name === 'hover-card-delay') {
+    return (
+      <div className="flex min-h-40 items-center justify-center p-8" dir={dir}>
+        <HoverCard openDelay={100} closeDelay={200}>
+          <HoverCardTrigger asChild>
+            <Button variant="link" className="text-sm">Hover (100ms delay)</Button>
+          </HoverCardTrigger>
+          <HoverCardContent className="w-80">
+            <div className="flex justify-between space-x-4">
+              <div className="space-y-1">
+                <h4 className="text-sm font-semibold">@nextjs</h4>
+                <p className="text-sm text-muted-foreground">
+                  The React Framework – created and maintained by @vercel.
+                </p>
+                <div className="flex items-center pt-2 gap-2 text-xs text-muted-foreground">
+                  <Clock3 className="size-3.5" />
+                  <span>Joined December 2021</span>
+                </div>
               </div>
             </div>
+          </HoverCardContent>
+        </HoverCard>
+      </div>
+    )
+  }
+
+  if (name === 'hover-card-sides') {
+    const sideLabels = ['left', 'top', 'bottom', 'right'] as const
+
+    return (
+      <div className="flex min-h-40 items-center justify-center p-8" dir={dir}>
+        <div className="grid gap-3">
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            {sideLabels.map((side) => (
+              <HoverCard key={side}>
+                <HoverCardTrigger asChild>
+                  <Button className="min-w-20" variant="outline">
+                    {side}
+                  </Button>
+                </HoverCardTrigger>
+                <HoverCardContent side={side} className="w-44 text-sm">
+                  Hover Card positioned on the {side}.
+                </HoverCardContent>
+              </HoverCard>
+            ))}
           </div>
+          <p className="text-center text-xs text-muted-foreground">
+            Hover each trigger to preview `side` positioning.
+          </p>
         </div>
       </div>
+    )
+  }
+
+  if (name === 'hover-card-rtl') {
+    return (
+      <div className="flex min-h-40 items-center justify-center p-8" dir="rtl">
+        <HoverCard>
+          <HoverCardTrigger asChild>
+            <Button variant="link" className="text-sm font-medium">@nextjs</Button>
+          </HoverCardTrigger>
+          <HoverCardContent className="w-80" dir="rtl">
+            <div className="flex justify-between gap-4">
+              <div className="space-y-1 flex-1 text-right">
+                <h4 className="text-sm font-semibold">@nextjs</h4>
+                <p className="text-sm text-muted-foreground font-normal">
+                  إطار عمل React — تم إنشاؤه وصيانته بواسطة @vercel.
+                </p>
+                <div className="flex items-center justify-end gap-2 pt-2 text-xs text-muted-foreground">
+                  <span>انضم في ديسمبر 2021</span>
+                  <Clock3 className="size-3.5" />
+                </div>
+              </div>
+            </div>
+          </HoverCardContent>
+        </HoverCard>
+      </div>
+    )
+  }
+
+  // hover-card-demo
+  return (
+    <div className="flex min-h-40 items-center justify-center p-8" dir={dir}>
+      <HoverCard>
+        <HoverCardTrigger asChild>
+          <Button variant="link" className="text-sm font-medium">@nextjs</Button>
+        </HoverCardTrigger>
+        <HoverCardContent className="w-80">
+          <div className="flex justify-between gap-4">
+            <div className="flex size-10 shrink-0 overflow-hidden rounded-full border bg-muted">
+              <img
+                className="aspect-square h-full w-full object-cover"
+                src="https://github.com/vercel.png"
+                alt="@vercel"
+              />
+            </div>
+            <div className="space-y-1 flex-1">
+              <h4 className="text-sm font-semibold">@nextjs</h4>
+              <p className="text-sm text-muted-foreground font-normal">
+                The React Framework – created and maintained by @vercel.
+              </p>
+              <div className="flex items-center gap-2 pt-2 text-xs text-muted-foreground">
+                <Clock3 className="size-3.5" />
+                <span>Joined December 2021</span>
+              </div>
+            </div>
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-md border bg-muted text-xs font-semibold text-muted-foreground select-none">
+              v15
+            </div>
+          </div>
+        </HoverCardContent>
+      </HoverCard>
     </div>
   )
 }
@@ -2675,9 +4919,78 @@ function InputPreview({
         <div className="w-full max-w-md space-y-2">
           <label className="text-sm font-medium">Username</label>
           <Input placeholder="shadcn" />
-          <p className="text-xs text-muted-foreground">
-            Choose a unique username for your account.
-          </p>
+          <p className="text-xs text-muted-foreground">Choose a unique username for your account.</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (name === 'input-invalid') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <div className="w-full max-w-md space-y-2">
+          <label className="text-sm font-medium text-destructive">Email</label>
+          <Input defaultValue="invalid-email" className="border-destructive focus-visible:ring-destructive/20" />
+          <p className="text-xs text-destructive">Please enter a valid email address.</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (name === 'input-file') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <div className="w-full max-w-md space-y-2">
+          <label className="text-sm font-medium">Picture</label>
+          <Input type="file" className="cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90" />
+        </div>
+      </div>
+    )
+  }
+
+  if (name === 'input-required') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <div className="w-full max-w-md space-y-2">
+          <label className="text-sm font-medium">Name <span className="text-destructive">*</span></label>
+          <Input placeholder="Your name" required />
+          <p className="text-xs text-muted-foreground">This field is required.</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (name === 'input-form') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <div className="w-full max-w-md space-y-4">
+          <div className="space-y-2"><label className="text-sm font-medium">Email</label><Input placeholder="you@example.com" /></div>
+          <div className="space-y-2"><label className="text-sm font-medium">Password</label><Input type="password" placeholder="••••••••" /></div>
+          <Button className="w-full">Sign In</Button>
+        </div>
+      </div>
+    )
+  }
+
+  if (name === 'input-inline') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <div className="w-full max-w-md space-y-2">
+          <label className="text-sm font-medium">Project Name</label>
+          <Input defaultValue="Untitled Project" className="border-none bg-transparent shadow-none px-0 focus-visible:ring-0 rounded-none border-b border-dashed border-muted-foreground/30 hover:border-muted-foreground focus-visible:border-solid focus-visible:border-primary" />
+          <p className="text-xs text-muted-foreground">Click to edit the project name inline.</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (name === 'input-rtl') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir="rtl">
+        <div className="w-full max-w-md space-y-2">
+          <label className="text-sm font-medium">البريد الإلكتروني</label>
+          <Input placeholder="you@example.com" />
+          <p className="text-xs text-muted-foreground">لن نشارك بريدك الإلكتروني مع أي شخص.</p>
         </div>
       </div>
     )
@@ -2689,12 +5002,8 @@ function InputPreview({
         <label className="text-sm font-medium">API Key</label>
         <Input defaultValue="sk_live_xxxxxxxxxxxxxxxxxxxx" />
         <div className="flex items-center justify-between gap-3">
-          <p className="text-xs text-muted-foreground">
-            Your API key is encrypted and stored securely.
-          </p>
-          <Button size="sm" variant="outline">
-            Copy
-          </Button>
+          <p className="text-xs text-muted-foreground">Your API key is encrypted and stored securely.</p>
+          <Button size="sm" variant="outline">Copy</Button>
         </div>
       </div>
     </div>
@@ -2715,23 +5024,12 @@ function InputGroupPreview({
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
         <div className="w-full max-w-xl space-y-2">
           <div className="rounded-xl border bg-background p-3 shadow-xs">
-            <textarea
-              className="min-h-28 w-full resize-none border-0 bg-transparent text-sm outline-hidden"
-              defaultValue={'Line 1, Column 1'}
-            />
+            <InputGroupTextarea className="min-h-28" defaultValue="Line 1, Column 1" />
             <div className="mt-3 flex items-center justify-between border-t pt-3 text-xs text-muted-foreground">
               <span>script.js</span>
-              <div className="flex items-center gap-2">
-                <span>0/280</span>
-                <Button size="sm" variant="ghost">
-                  Run
-                </Button>
-              </div>
+              <div className="flex items-center gap-2"><span>0/280</span><Button size="sm" variant="ghost">Run</Button></div>
             </div>
           </div>
-          <p className="text-xs text-muted-foreground">
-            Footer positioned below the textarea.
-          </p>
         </div>
       </div>
     )
@@ -2740,20 +5038,69 @@ function InputGroupPreview({
   if (name === 'input-group-button') {
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
-        <div className="w-full max-w-xl space-y-2">
-          <div className="flex overflow-hidden rounded-xl border bg-background shadow-xs">
-            <div className="flex items-center border-r bg-muted/30 px-3 text-sm text-muted-foreground">
-              https://
-            </div>
-            <Input
-              className="h-11 rounded-none border-0 shadow-none focus-visible:ring-0"
-              placeholder="comictokindle.dev"
-            />
-            <Button className="m-1">Search</Button>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Inline button actions keep the control compact.
-          </p>
+        <div className="w-full max-w-lg">
+          <InputGroup>
+            <InputGroupInput placeholder="comictokindle.dev" />
+            <InputGroupAddon align="inline-end">
+              <InputGroupButton>Search</InputGroupButton>
+            </InputGroupAddon>
+          </InputGroup>
+        </div>
+      </div>
+    )
+  }
+
+  if (name === 'input-group-icon') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <div className="w-full max-w-lg">
+          <InputGroup>
+            <InputGroupAddon><Search className="size-4 text-muted-foreground" /></InputGroupAddon>
+            <InputGroupInput placeholder="Search..." />
+          </InputGroup>
+        </div>
+      </div>
+    )
+  }
+
+  if (name === 'input-group-spinner') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <div className="w-full max-w-lg">
+          <InputGroup>
+            <InputGroupInput placeholder="Loading..." disabled />
+            <InputGroupAddon align="inline-end">
+              <Loader2 className="size-4 animate-spin text-muted-foreground" />
+            </InputGroupAddon>
+          </InputGroup>
+        </div>
+      </div>
+    )
+  }
+
+  if (name === 'input-group-kbd') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <div className="w-full max-w-lg">
+          <InputGroup>
+            <InputGroupInput placeholder="Search documentation..." />
+            <InputGroupAddon align="inline-end">
+              <InputGroupText><Kbd>⌘K</Kbd></InputGroupText>
+            </InputGroupAddon>
+          </InputGroup>
+        </div>
+      </div>
+    )
+  }
+
+  if (name === 'input-group-rtl') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir="rtl">
+        <div className="w-full max-w-lg">
+          <InputGroup>
+            <InputGroupAddon><Search className="size-4 text-muted-foreground" /></InputGroupAddon>
+            <InputGroupInput placeholder="بحث..." />
+          </InputGroup>
         </div>
       </div>
     )
@@ -2761,17 +5108,13 @@ function InputGroupPreview({
 
   return (
     <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
-      <div className="w-full max-w-lg space-y-2">
-        <div className="flex overflow-hidden rounded-xl border bg-background shadow-xs">
-          <Input
-            className="h-11 rounded-none border-0 shadow-none focus-visible:ring-0"
-            placeholder="Search documentation..."
-          />
-          <div className="flex items-center border-l px-3 text-muted-foreground">
-            <Search className="size-4" />
-          </div>
-        </div>
-        <p className="text-xs text-muted-foreground">Icon positioned at the end.</p>
+      <div className="w-full max-w-lg">
+        <InputGroup>
+          <InputGroupInput placeholder="Search documentation..." />
+          <InputGroupAddon align="inline-end">
+            <Search className="size-4 text-muted-foreground" />
+          </InputGroupAddon>
+        </InputGroup>
       </div>
     </div>
   )
@@ -2785,37 +5128,126 @@ function InputOtpPreview({
   name: string
 }): React.JSX.Element {
   const dir = direction === 'rtl' ? 'rtl' : undefined
-  const [otp, setOtp] = useState(name === 'input-otp-separator' ? '826491' : '123456')
-  const slots = otp.padEnd(6, ' ').slice(0, 6).split('')
+  const [otp, setOtp] = useState('')
+
+  if (name === 'input-otp-separator') {
+    return (
+      <div className="flex min-h-24 flex-col items-center justify-center gap-4 p-4" dir={dir}>
+        <InputOTP maxLength={6} value={otp} onChange={setOtp}>
+          <InputOTPGroup>
+            <InputOTPSlot index={0} /><InputOTPSlot index={1} /><InputOTPSlot index={2} />
+          </InputOTPGroup>
+          <InputOTPSeparator />
+          <InputOTPGroup>
+            <InputOTPSlot index={3} /><InputOTPSlot index={4} /><InputOTPSlot index={5} />
+          </InputOTPGroup>
+        </InputOTP>
+        <Button size="sm" variant="ghost" onClick={() => setOtp('')}>Clear</Button>
+      </div>
+    )
+  }
+
+  if (name === 'input-otp-disabled') {
+    return (
+      <div className="flex min-h-24 flex-col items-center justify-center p-4" dir={dir}>
+        <InputOTP maxLength={6} disabled>
+          <InputOTPGroup>
+            <InputOTPSlot index={0} /><InputOTPSlot index={1} /><InputOTPSlot index={2} />
+            <InputOTPSlot index={3} /><InputOTPSlot index={4} /><InputOTPSlot index={5} />
+          </InputOTPGroup>
+        </InputOTP>
+      </div>
+    )
+  }
+
+  if (name === 'input-otp-controlled') {
+    return (
+      <div className="flex min-h-24 flex-col items-center justify-center gap-4 p-4" dir={dir}>
+        <InputOTP maxLength={6} value={otp} onChange={setOtp}>
+          <InputOTPGroup>
+            <InputOTPSlot index={0} /><InputOTPSlot index={1} /><InputOTPSlot index={2} />
+            <InputOTPSlot index={3} /><InputOTPSlot index={4} /><InputOTPSlot index={5} />
+          </InputOTPGroup>
+        </InputOTP>
+        <div className="text-sm text-muted-foreground">
+          {otp === "" ? "Enter your code." : `You entered: ${otp}`}
+        </div>
+      </div>
+    )
+  }
+
+  if (name === 'input-otp-invalid') {
+    return (
+      <div className="flex min-h-24 flex-col items-center justify-center gap-4 p-4" dir={dir}>
+        <InputOTP maxLength={6} value={otp} onChange={setOtp}>
+          <InputOTPGroup>
+            <InputOTPSlot index={0} aria-invalid /><InputOTPSlot index={1} aria-invalid /><InputOTPSlot index={2} aria-invalid />
+            <InputOTPSlot index={3} aria-invalid /><InputOTPSlot index={4} aria-invalid /><InputOTPSlot index={5} aria-invalid />
+          </InputOTPGroup>
+        </InputOTP>
+        <div className="text-sm text-destructive font-medium">
+          Invalid code. Please try again.
+        </div>
+      </div>
+    )
+  }
+
+  if (name === 'input-otp-four-digits') {
+    return (
+      <div className="flex min-h-24 flex-col items-center justify-center p-4" dir={dir}>
+        <InputOTP maxLength={4} value={otp} onChange={setOtp}>
+          <InputOTPGroup>
+            <InputOTPSlot index={0} /><InputOTPSlot index={1} /><InputOTPSlot index={2} /><InputOTPSlot index={3} />
+          </InputOTPGroup>
+        </InputOTP>
+      </div>
+    )
+  }
+
+  if (name === 'input-otp-form') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <div className="w-full max-w-sm space-y-4">
+          <div className="text-center space-y-1">
+            <h3 className="text-lg font-semibold">Verification Code</h3>
+            <p className="text-sm text-muted-foreground">Enter the 6-digit code sent to your phone.</p>
+          </div>
+          <InputOTP maxLength={6} value={otp} onChange={setOtp}>
+            <InputOTPGroup>
+              <InputOTPSlot index={0} /><InputOTPSlot index={1} /><InputOTPSlot index={2} />
+              <InputOTPSlot index={3} /><InputOTPSlot index={4} /><InputOTPSlot index={5} />
+            </InputOTPGroup>
+          </InputOTP>
+          <Button className="w-full" disabled={otp.length < 6}>Verify</Button>
+        </div>
+      </div>
+    )
+  }
+
+  if (name === 'input-otp-rtl') {
+    return (
+      <div className="flex min-h-24 flex-col items-center justify-center p-4" dir="rtl">
+        <InputOTP maxLength={6} value={otp} onChange={setOtp}>
+          <InputOTPGroup>
+            <InputOTPSlot index={0} /><InputOTPSlot index={1} /><InputOTPSlot index={2} />
+            <InputOTPSlot index={3} /><InputOTPSlot index={4} /><InputOTPSlot index={5} />
+          </InputOTPGroup>
+        </InputOTP>
+      </div>
+    )
+  }
 
   return (
     <div className="flex min-h-24 flex-col items-center justify-center gap-4 p-4" dir={dir}>
+      <InputOTP maxLength={6} value={otp} onChange={setOtp}>
+        <InputOTPGroup>
+          <InputOTPSlot index={0} /><InputOTPSlot index={1} /><InputOTPSlot index={2} />
+          <InputOTPSlot index={3} /><InputOTPSlot index={4} /><InputOTPSlot index={5} />
+        </InputOTPGroup>
+      </InputOTP>
       <div className="flex items-center gap-2">
-        {slots.slice(0, 3).map((digit, index) => (
-          <div
-            className="flex h-12 w-10 items-center justify-center rounded-lg border bg-background text-lg font-semibold shadow-xs"
-            key={`otp-a-${index}`}
-          >
-            {digit.trim() || '•'}
-          </div>
-        ))}
-        <div className="px-1 text-muted-foreground">-</div>
-        {slots.slice(3).map((digit, index) => (
-          <div
-            className="flex h-12 w-10 items-center justify-center rounded-lg border bg-background text-lg font-semibold shadow-xs"
-            key={`otp-b-${index}`}
-          >
-            {digit.trim() || '•'}
-          </div>
-        ))}
-      </div>
-      <div className="flex items-center gap-2">
-        <Button size="sm" variant="outline" onClick={() => setOtp('654321')}>
-          Paste sample
-        </Button>
-        <Button size="sm" variant="ghost" onClick={() => setOtp('')}>
-          Clear
-        </Button>
+        <Button size="sm" variant="outline" onClick={() => setOtp('123456')}>Paste sample</Button>
+        <Button size="sm" variant="ghost" onClick={() => setOtp('')}>Clear</Button>
       </div>
     </div>
   )
@@ -2833,25 +5265,14 @@ function ItemPreview({
   if (name === 'item-actions') {
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
-        <div className="w-full max-w-2xl rounded-xl border bg-background p-3 shadow-xs">
-          <div className="flex items-center gap-4">
-            <div className="flex size-10 items-center justify-center rounded-full bg-muted">
-              <Package className="size-5 text-muted-foreground" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-sm font-medium">Build artifacts ready</div>
-              <div className="text-sm text-muted-foreground">
-                Generated desktop bundles for macOS and Windows.
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button size="sm" variant="outline">
-                Review
-              </Button>
-              <Button size="sm">Publish</Button>
-            </div>
-          </div>
-        </div>
+        <Item className="w-full max-w-2xl rounded-xl border">
+          <ItemMedia variant="icon"><Package className="text-muted-foreground" /></ItemMedia>
+          <ItemContent>
+            <ItemTitle>Build artifacts ready</ItemTitle>
+            <ItemDescription>Generated desktop bundles for macOS and Windows.</ItemDescription>
+          </ItemContent>
+          <ItemActions><Button size="sm" variant="outline">Review</Button><Button size="sm">Publish</Button></ItemActions>
+        </Item>
       </div>
     )
   }
@@ -2859,21 +5280,533 @@ function ItemPreview({
   if (name === 'item-icon') {
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
-        <div className="w-full max-w-2xl rounded-xl border bg-background p-3 shadow-xs">
-          <div className="flex items-center gap-4">
-            <div className="flex size-10 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600">
-              <CheckCircle2 className="size-5" />
+        <Item className="w-full max-w-2xl rounded-xl border">
+          <ItemMedia variant="icon"><CheckCircle2 className="text-emerald-600" /></ItemMedia>
+          <ItemContent>
+            <ItemTitle>Your profile has been verified.</ItemTitle>
+            <ItemDescription>You can now publish assets and invite collaborators.</ItemDescription>
+          </ItemContent>
+          <ItemActions><Button size="icon-sm" variant="ghost"><ChevronRight className="size-4" /></Button></ItemActions>
+        </Item>
+      </div>
+    )
+  }
+
+  if (name === 'item-avatar') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Item className="w-full max-w-2xl rounded-xl border">
+          <ItemMedia><Avatar><AvatarFallback>SH</AvatarFallback></Avatar></ItemMedia>
+          <ItemContent>
+            <ItemTitle>shadcn</ItemTitle>
+            <ItemDescription>Created the shadcn/ui design system.</ItemDescription>
+          </ItemContent>
+          <ItemActions><Button size="sm">Follow</Button></ItemActions>
+        </Item>
+      </div>
+    )
+  }
+
+  if (name === 'item-image') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Item className="w-full max-w-2xl rounded-xl border">
+          <ItemMedia>
+            <img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=80&auto=format&fit=crop" className="size-10 rounded object-cover" alt="Thumb" />
+          </ItemMedia>
+          <ItemContent>
+            <ItemTitle>Mountain Landscape</ItemTitle>
+            <ItemDescription>Photograph captured at sunrise.</ItemDescription>
+          </ItemContent>
+          <ItemActions><Button size="sm">View</Button></ItemActions>
+        </Item>
+      </div>
+    )
+  }
+
+  if (name === 'item-group') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <div className="w-full max-w-2xl rounded-xl border divide-y">
+          {['Plan Upgrade', 'Security Alert', 'Payment Received'].map((title, i) => (
+            <Item key={title} className="border-0 rounded-none">
+              <ItemMedia variant="icon">{i === 0 ? <ArrowUp className="text-emerald-600" /> : i === 1 ? <AlertCircle className="text-amber-600" /> : <BadgeCheck className="text-sky-600" />}</ItemMedia>
+              <ItemContent>
+                <ItemTitle>{title}</ItemTitle>
+                <ItemDescription>{i === 0 ? 'Your plan will renew next month.' : i === 1 ? 'New login from San Francisco.' : 'Invoice #1234 has been paid.'}</ItemDescription>
+              </ItemContent>
+            </Item>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (name === 'item-dropdown') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Item className="w-full max-w-2xl rounded-xl border">
+          <ItemMedia variant="icon"><Settings className="text-muted-foreground" /></ItemMedia>
+          <ItemContent>
+            <ItemTitle>Project Settings</ItemTitle>
+            <ItemDescription>Manage access, notifications, and integrations.</ItemDescription>
+          </ItemContent>
+          <ItemActions>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild><Button size="icon-sm" variant="ghost"><MoreHorizontal className="size-4" /></Button></DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem>Edit</DropdownMenuItem>
+                <DropdownMenuItem>Duplicate</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem variant="destructive">Delete</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </ItemActions>
+        </Item>
+      </div>
+    )
+  }
+
+  if (name === 'item-rtl') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir="rtl">
+        <Item className="w-full max-w-2xl rounded-xl border">
+          <ItemMedia variant="icon"><BadgeCheck className="text-emerald-600" /></ItemMedia>
+          <ItemContent>
+            <ItemTitle>تم التحقق من الملف الشخصي</ItemTitle>
+            <ItemDescription>يمكنك الآن نشر الأصول ودعوة المتعاونين.</ItemDescription>
+          </ItemContent>
+          <ItemActions><Button size="sm">نشر</Button></ItemActions>
+        </Item>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+      <Item className="w-full max-w-2xl rounded-xl border">
+        <ItemMedia variant="icon"><BadgeCheck className="text-muted-foreground" /></ItemMedia>
+        <ItemContent>
+          <ItemTitle>Basic Item</ItemTitle>
+          <ItemDescription>A simple item with title and description.</ItemDescription>
+        </ItemContent>
+        <ItemActions><Button size="sm">Action</Button></ItemActions>
+      </Item>
+    </div>
+  )
+}
+
+function KbdPreview({
+  direction,
+  name
+}: {
+  direction?: string
+  name: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+
+  if (name === 'kbd-group') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+          <Kbd>⌘</Kbd> + <Kbd>Shift</Kbd> + <Kbd>N</Kbd>
+        </div>
+      </div>
+    )
+  }
+
+  if (name === 'kbd-button') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Button variant="outline">
+          Open Command Palette
+          <Kbd>⌘K</Kbd>
+        </Button>
+      </div>
+    )
+  }
+
+  if (name === 'kbd-input-group') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <InputGroup>
+          <InputGroupInput placeholder="Search..." />
+          <InputGroupAddon align="inline-end">
+            <InputGroupText><Kbd>⌘K</Kbd></InputGroupText>
+          </InputGroupAddon>
+        </InputGroup>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+      <Kbd>⌘</Kbd> + <Kbd>K</Kbd>
+    </div>
+  )
+}
+
+function LabelPreview({
+  direction
+}: {
+  direction?: string
+  name: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+  return (
+    <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+      <div className="flex items-center space-x-2">
+        <Checkbox id="terms-label" />
+        <Label htmlFor="terms-label" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">
+          Accept terms and conditions
+        </Label>
+      </div>
+    </div>
+  )
+}
+
+function MenubarPreview({
+  direction,
+  name
+}: {
+  direction?: string
+  name: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+
+  if (name === 'menubar-checkbox') {
+    const [checkedState, setCheckedState] = useState({
+      showShortcuts: true,
+      showFullUrls: false,
+    })
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Menubar>
+          <MenubarMenu>
+            <MenubarTrigger>View</MenubarTrigger>
+            <MenubarContent>
+              <MenubarCheckboxItem
+                checked={checkedState.showShortcuts}
+                onCheckedChange={(checked) =>
+                  setCheckedState((prev) => ({ ...prev, showShortcuts: !!checked }))
+                }
+              >
+                Always Show Bookmarks Bar
+              </MenubarCheckboxItem>
+              <MenubarCheckboxItem
+                checked={checkedState.showFullUrls}
+                onCheckedChange={(checked) =>
+                  setCheckedState((prev) => ({ ...prev, showFullUrls: !!checked }))
+                }
+              >
+                Always Show Full URLs
+              </MenubarCheckboxItem>
+            </MenubarContent>
+          </MenubarMenu>
+        </Menubar>
+      </div>
+    )
+  }
+
+  if (name === 'menubar-radio') {
+    const [radioValue, setRadioValue] = useState('andy')
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Menubar>
+          <MenubarMenu>
+            <MenubarTrigger>Profiles</MenubarTrigger>
+            <MenubarContent>
+              <MenubarRadioGroup value={radioValue} onValueChange={setRadioValue}>
+                <MenubarRadioItem value="andy">Andy</MenubarRadioItem>
+                <MenubarRadioItem value="benoit">Benoit</MenubarRadioItem>
+                <MenubarRadioItem value="luis">Luis</MenubarRadioItem>
+              </MenubarRadioGroup>
+            </MenubarContent>
+          </MenubarMenu>
+        </Menubar>
+      </div>
+    )
+  }
+
+  if (name === 'menubar-submenu') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Menubar>
+          <MenubarMenu>
+            <MenubarTrigger>File</MenubarTrigger>
+            <MenubarContent>
+              <MenubarItem>New Tab <MenubarShortcut>⌘T</MenubarShortcut></MenubarItem>
+              <MenubarItem>New Window <MenubarShortcut>⌘N</MenubarShortcut></MenubarItem>
+              <MenubarSeparator />
+              <MenubarSub>
+                <MenubarSubTrigger>Share</MenubarSubTrigger>
+                <MenubarSubContent>
+                  <MenubarItem>Email Link</MenubarItem>
+                  <MenubarItem>Messages</MenubarItem>
+                  <MenubarItem>Notes</MenubarItem>
+                </MenubarSubContent>
+              </MenubarSub>
+              <MenubarSeparator />
+              <MenubarItem>Print... <MenubarShortcut>⌘P</MenubarShortcut></MenubarItem>
+            </MenubarContent>
+          </MenubarMenu>
+        </Menubar>
+      </div>
+    )
+  }
+
+  if (name === 'menubar-icons') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Menubar>
+          <MenubarMenu>
+            <MenubarTrigger><FileText className="mr-2 size-4" />File</MenubarTrigger>
+            <MenubarContent>
+              <MenubarItem><Plus className="mr-2 size-4" />New <MenubarShortcut>⌘N</MenubarShortcut></MenubarItem>
+              <MenubarItem><FolderOpen className="mr-2 size-4" />Open... <MenubarShortcut>⌘O</MenubarShortcut></MenubarItem>
+            </MenubarContent>
+          </MenubarMenu>
+          <MenubarMenu>
+            <MenubarTrigger><Settings className="mr-2 size-4" />Edit</MenubarTrigger>
+            <MenubarContent>
+              <MenubarItem><Settings className="mr-2 size-4" />Preferences</MenubarItem>
+            </MenubarContent>
+          </MenubarMenu>
+        </Menubar>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+      <Menubar>
+        <MenubarMenu><MenubarTrigger>File</MenubarTrigger><MenubarContent><MenubarItem>New</MenubarItem><MenubarItem>Open</MenubarItem><MenubarItem>Save</MenubarItem></MenubarContent></MenubarMenu>
+        <MenubarMenu><MenubarTrigger>Edit</MenubarTrigger><MenubarContent><MenubarItem>Undo</MenubarItem><MenubarItem>Redo</MenubarItem></MenubarContent></MenubarMenu>
+      </Menubar>
+    </div>
+  )
+}
+
+function NativeSelectPreview({
+  direction,
+  name
+}: {
+  direction?: string
+  name: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+
+  if (name === 'native-select-groups') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <NativeSelect className="w-[200px]">
+          <option value="" disabled>Select a fruit</option>
+          <optgroup label="Citrus">
+            <option value="orange">Orange</option>
+            <option value="lemon">Lemon</option>
+          </optgroup>
+          <optgroup label="Berries">
+            <option value="strawberry">Strawberry</option>
+            <option value="blueberry">Blueberry</option>
+          </optgroup>
+        </NativeSelect>
+      </div>
+    )
+  }
+
+  if (name === 'native-select-disabled') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <NativeSelect disabled className="w-[200px]">
+          <option>Select an option</option>
+        </NativeSelect>
+      </div>
+    )
+  }
+
+  if (name === 'native-select-invalid') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <NativeSelect className="w-[200px] border-destructive">
+          <option value="">Select an option</option>
+          <option>Option 1</option>
+        </NativeSelect>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+      <NativeSelect className="w-[200px]">
+        <option value="" disabled>Select an option</option>
+        <option value="1">Option 1</option>
+        <option value="2">Option 2</option>
+        <option value="3">Option 3</option>
+      </NativeSelect>
+    </div>
+  )
+}
+
+function NavigationMenuPreview({
+  direction
+}: {
+  direction?: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+  return (
+    <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+      <NavigationMenu>
+        <NavigationMenuList>
+          <NavigationMenuItem>
+            <NavigationMenuTrigger>Getting Started</NavigationMenuTrigger>
+            <NavigationMenuContent className="p-4 w-[300px]">
+              <NavigationMenuLink>Introduction</NavigationMenuLink>
+            </NavigationMenuContent>
+          </NavigationMenuItem>
+          <NavigationMenuItem>
+            <NavigationMenuTrigger>Components</NavigationMenuTrigger>
+            <NavigationMenuContent className="p-4 w-[300px]">
+              <NavigationMenuLink>Button</NavigationMenuLink>
+            </NavigationMenuContent>
+          </NavigationMenuItem>
+        </NavigationMenuList>
+      </NavigationMenu>
+    </div>
+  )
+}
+
+function PaginationPreview({
+  direction,
+  name
+}: {
+  direction?: string
+  name: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+  const [page, setPage] = useState(1)
+
+  if (name === 'pagination-icons-only') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Pagination>
+          <PaginationContent>
+            <PaginationItem><PaginationPrevious href="#" /></PaginationItem>
+            <PaginationItem><PaginationNext href="#" /></PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+      <Pagination>
+        <PaginationContent>
+          <PaginationItem><PaginationPrevious href="#" /></PaginationItem>
+          {[1,2,3].map((p) => <PaginationItem key={p}><PaginationLink href="#" isActive={p === page} onClick={() => setPage(p)}>{p}</PaginationLink></PaginationItem>)}
+          <PaginationItem><PaginationNext href="#" /></PaginationItem>
+        </PaginationContent>
+      </Pagination>
+    </div>
+  )
+}
+
+function PopoverPreview({
+  direction,
+  name
+}: {
+  direction?: string
+  name: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+
+  if (name === 'popover-align') {
+    return (
+      <div className="flex min-h-24 items-start justify-center gap-4 p-4" dir={dir}>
+        <Popover>
+          <PopoverTrigger asChild><Button variant="outline" size="sm">Start</Button></PopoverTrigger>
+          <PopoverContent align="start" className="w-48 text-sm">Aligned to start.</PopoverContent>
+        </Popover>
+        <Popover>
+          <PopoverTrigger asChild><Button variant="outline" size="sm">Center</Button></PopoverTrigger>
+          <PopoverContent align="center" className="w-48 text-sm">Aligned to center.</PopoverContent>
+        </Popover>
+        <Popover>
+          <PopoverTrigger asChild><Button variant="outline" size="sm">End</Button></PopoverTrigger>
+          <PopoverContent align="end" className="w-48 text-sm">Aligned to end.</PopoverContent>
+        </Popover>
+      </div>
+    )
+  }
+
+  if (name === 'popover-with-form') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Popover>
+          <PopoverTrigger asChild><Button variant="outline">Edit</Button></PopoverTrigger>
+          <PopoverContent className="w-80">
+            <div className="space-y-3">
+              <h4 className="font-medium">Edit Name</h4>
+              <Input placeholder="Name" />
+              <div className="flex justify-end gap-2"><Button size="sm">Save</Button></div>
             </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-sm font-medium">Your profile has been verified.</div>
-              <div className="text-sm text-muted-foreground">
-                You can now publish assets and invite collaborators.
-              </div>
-            </div>
-            <Button size="icon-sm" variant="ghost" aria-label="Open">
-              <ChevronRight className="size-4" />
-            </Button>
-          </div>
+          </PopoverContent>
+        </Popover>
+      </div>
+    )
+  }
+
+  if (name === 'popover-rtl') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir="rtl">
+        <Popover>
+          <PopoverTrigger asChild><Button variant="outline">افتح</Button></PopoverTrigger>
+          <PopoverContent className="w-48 text-sm">محتوى منبثق</PopoverContent>
+        </Popover>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+      <Popover>
+        <PopoverTrigger asChild><Button variant="outline">Open Popover</Button></PopoverTrigger>
+        <PopoverContent className="w-64 text-sm">This is a basic popover with some content.</PopoverContent>
+      </Popover>
+    </div>
+  )
+}
+
+function ProgressPreview({
+  direction,
+  name
+}: {
+  direction?: string
+  name: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+  const [val, setVal] = useState(60)
+
+  if (name === 'progress-label') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <div className="w-full max-w-md space-y-2">
+          <label className="text-sm font-medium">Upload Progress</label>
+          <Progress value={75} className="w-full" />
+          <p className="text-xs text-muted-foreground">3 of 4 files uploaded.</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (name === 'progress-controlled') {
+    return (
+      <div className="flex min-h-24 flex-col items-center justify-center gap-3 p-4" dir={dir}>
+        <Progress value={val} className="w-full max-w-md" />
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={() => setVal(Math.max(0, val - 10))}>-10</Button>
+          <span className="text-sm font-medium w-10 text-center">{val}%</span>
+          <Button size="sm" variant="outline" onClick={() => setVal(Math.min(100, val + 10))}>+10</Button>
         </div>
       </div>
     )
@@ -2881,20 +5814,978 @@ function ItemPreview({
 
   return (
     <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
-      <div className="w-full max-w-2xl rounded-xl border bg-background p-3 shadow-xs">
-        <div className="flex items-center gap-4">
-          <div className="flex size-10 items-center justify-center rounded-full bg-muted">
-            <BadgeCheck className="size-5 text-muted-foreground" />
+      <Progress value={60} className="w-full max-w-md" />
+    </div>
+  )
+}
+
+function RadioGroupPreview({
+  direction,
+  name
+}: {
+  direction?: string
+  name: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+
+  if (name === 'radio-group-description') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <RadioGroup defaultValue="comfortable" className="w-full max-w-md space-y-2">
+          <div className="flex items-start space-x-2">
+            <RadioGroupItem value="comfortable" id="r1" />
+            <label htmlFor="r1" className="text-sm font-medium">Comfortable</label>
           </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-sm font-medium">Basic Item</div>
-            <div className="text-sm text-muted-foreground">
-              A simple item with title and description.
-            </div>
+          <div className="flex items-start space-x-2">
+            <RadioGroupItem value="compact" id="r2" />
+            <label htmlFor="r2" className="text-sm font-medium">Compact</label>
           </div>
-          <Button size="sm">Action</Button>
+        </RadioGroup>
+      </div>
+    )
+  }
+
+  if (name === 'radio-group-choice-card') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <RadioGroup defaultValue="starter" className="w-full max-w-md">
+          {[{v:'starter',l:'Starter',d:'$9/mo'},{v:'pro',l:'Pro',d:'$29/mo'}].map(p => (
+            <label key={p.v} className="flex cursor-pointer items-center gap-3 rounded-lg border p-3 hover:bg-muted/50">
+              <RadioGroupItem value={p.v} id={p.v} />
+              <div><div className="text-sm font-medium">{p.l}</div><div className="text-xs text-muted-foreground">{p.d}</div></div>
+            </label>
+          ))}
+        </RadioGroup>
+      </div>
+    )
+  }
+
+  if (name === 'radio-group-disabled') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <RadioGroup defaultValue="option-one" disabled className="w-full max-w-md space-y-2">
+          <div className="flex items-center space-x-2"><RadioGroupItem value="option-one" id="rd1" /><label htmlFor="rd1" className="text-sm">Option One</label></div>
+          <div className="flex items-center space-x-2"><RadioGroupItem value="option-two" id="rd2" /><label htmlFor="rd2" className="text-sm">Option Two</label></div>
+        </RadioGroup>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+      <RadioGroup defaultValue="option-one" className="w-full max-w-md space-y-2">
+        <div className="flex items-center space-x-2"><RadioGroupItem value="option-one" id="r-b1" /><label htmlFor="r-b1" className="text-sm">Option One</label></div>
+        <div className="flex items-center space-x-2"><RadioGroupItem value="option-two" id="r-b2" /><label htmlFor="r-b2" className="text-sm">Option Two</label></div>
+        <div className="flex items-center space-x-2"><RadioGroupItem value="option-three" id="r-b3" /><label htmlFor="r-b3" className="text-sm">Option Three</label></div>
+      </RadioGroup>
+    </div>
+  )
+}
+
+function ResizablePreview({
+  direction,
+  name
+}: {
+  direction?: string
+  name: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+
+  if (name === 'resizable-vertical') {
+    return (
+      <div className="flex min-h-[200px] items-center justify-center p-4 w-full" dir={dir}>
+        <div className="w-full max-w-md h-[200px] border rounded-lg overflow-hidden">
+          <ResizablePanelGroup orientation="vertical">
+            <ResizablePanel defaultSize={25}>
+              <div className="flex h-full items-center justify-center p-6 bg-muted/20">
+                <span className="font-semibold text-sm">Header</span>
+              </div>
+            </ResizablePanel>
+            <ResizableHandle />
+            <ResizablePanel defaultSize={75}>
+              <div className="flex h-full items-center justify-center p-6">
+                <span className="font-semibold text-sm">Content</span>
+              </div>
+            </ResizablePanel>
+          </ResizablePanelGroup>
         </div>
       </div>
+    )
+  }
+
+  if (name === 'resizable-handle') {
+    return (
+      <div className="flex min-h-[200px] items-center justify-center p-4 w-full" dir={dir}>
+        <div className="w-full max-w-md h-[200px] border rounded-lg overflow-hidden">
+          <ResizablePanelGroup orientation="horizontal">
+            <ResizablePanel defaultSize={30}>
+              <div className="flex h-full items-center justify-center p-6 bg-muted/20">
+                <span className="font-semibold text-sm">Sidebar</span>
+              </div>
+            </ResizablePanel>
+            <ResizableHandle withHandle />
+            <ResizablePanel defaultSize={70}>
+              <div className="flex h-full items-center justify-center p-6">
+                <span className="font-semibold text-sm">Content</span>
+              </div>
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        </div>
+      </div>
+    )
+  }
+
+  // resizable-demo
+  return (
+    <div className="flex min-h-[200px] items-center justify-center p-4 w-full" dir={dir}>
+      <div className="w-full max-w-md h-[200px] border rounded-lg overflow-hidden">
+        <ResizablePanelGroup orientation="horizontal">
+          <ResizablePanel defaultSize={50}>
+            <div className="flex h-full items-center justify-center p-6 bg-muted/20">
+              <span className="font-semibold text-sm">One</span>
+            </div>
+          </ResizablePanel>
+          <ResizableHandle />
+          <ResizablePanel defaultSize={50}>
+            <div className="flex h-full items-center justify-center p-6">
+              <span className="font-semibold text-sm">Two</span>
+            </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      </div>
+    </div>
+  )
+}
+
+function SelectPreview({
+  direction,
+  name
+}: {
+  direction?: string
+  name: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+
+  if (name === 'select-groups') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Select>
+          <SelectTrigger className="w-[200px]"><SelectValue placeholder="Select a fruit" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="apple">Apple</SelectItem>
+            <SelectItem value="banana">Banana</SelectItem>
+            <SelectItem value="orange">Orange</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+    )
+  }
+
+  if (name === 'select-scrollable') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Select>
+          <SelectTrigger className="w-[200px]"><SelectValue placeholder="Select..." /></SelectTrigger>
+          <SelectContent>
+            {Array.from({length:20},(_,i) => <SelectItem key={i} value={`item-${i}`}>Item {i+1}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+    )
+  }
+
+  if (name === 'select-disabled') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Select disabled>
+          <SelectTrigger className="w-[200px]"><SelectValue placeholder="Disabled" /></SelectTrigger>
+          <SelectContent><SelectItem value="a">A</SelectItem></SelectContent>
+        </Select>
+      </div>
+    )
+  }
+
+  if (name === 'select-rtl') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir="rtl">
+        <Select>
+          <SelectTrigger className="w-[200px]"><SelectValue placeholder="اختر خيارًا" /></SelectTrigger>
+          <SelectContent><SelectItem value="a">الخيار أ</SelectItem><SelectItem value="b">الخيار ب</SelectItem></SelectContent>
+        </Select>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+      <Select>
+        <SelectTrigger className="w-[200px]"><SelectValue placeholder="Select an option" /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value="1">Option 1</SelectItem>
+          <SelectItem value="2">Option 2</SelectItem>
+          <SelectItem value="3">Option 3</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+  )
+}
+
+function SheetPreview({
+  direction,
+  name
+}: {
+  direction?: string
+  name: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+
+  if (name === 'sheet-side') {
+    const sides: ('top'|'right'|'bottom'|'left')[] = ['top','right','bottom','left']
+    return (
+      <div className="flex min-h-24 items-center justify-center gap-2 p-4" dir={dir}>
+        {sides.map(s => (
+          <Sheet key={s}>
+            <SheetTrigger asChild><Button variant="outline" size="sm">{s}</Button></SheetTrigger>
+            <SheetContent side={s}>
+              <SheetHeader><SheetTitle>{s} Sheet</SheetTitle><SheetDescription>This sheet opens from the {s}.</SheetDescription></SheetHeader>
+            </SheetContent>
+          </Sheet>
+        ))}
+      </div>
+    )
+  }
+
+  if (name === 'sheet-no-close-button') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Sheet>
+          <SheetTrigger asChild><Button variant="outline">Open Sheet</Button></SheetTrigger>
+          <SheetContent showCloseButton={false}>
+            <SheetHeader><SheetTitle>No Close Button</SheetTitle><SheetDescription>This sheet has no default close button.</SheetDescription></SheetHeader>
+          </SheetContent>
+        </Sheet>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+      <Sheet>
+        <SheetTrigger asChild><Button variant="outline">Open Sheet</Button></SheetTrigger>
+        <SheetContent>
+          <SheetHeader><SheetTitle>Sheet Title</SheetTitle><SheetDescription>This is a basic sheet panel.</SheetDescription></SheetHeader>
+        </SheetContent>
+      </Sheet>
+    </div>
+  )
+}
+
+function SkeletonPreview({
+  direction,
+  name
+}: {
+  direction?: string
+  name: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+
+  if (name === 'skeleton-avatar') {
+    return (
+      <div className="flex min-h-24 items-center justify-center gap-4 p-4" dir={dir}>
+        <Skeleton className="size-12 rounded-full" />
+        <div className="space-y-2"><Skeleton className="h-4 w-[200px]" /><Skeleton className="h-4 w-[150px]" /></div>
+      </div>
+    )
+  }
+
+  if (name === 'skeleton-card') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <div className="w-full max-w-sm space-y-3 rounded-xl border p-4">
+          <Skeleton className="h-48 w-full rounded-lg" />
+          <Skeleton className="h-4 w-3/4" />
+          <Skeleton className="h-4 w-1/2" />
+        </div>
+      </div>
+    )
+  }
+
+  if (name === 'skeleton-text') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <div className="w-full max-w-md space-y-2">
+          <Skeleton className="h-4 w-full" /><Skeleton className="h-4 w-5/6" /><Skeleton className="h-4 w-4/6" /><Skeleton className="h-4 w-3/6" />
+        </div>
+      </div>
+    )
+  }
+
+  if (name === 'skeleton-form') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <div className="w-full max-w-md space-y-4">
+          <Skeleton className="h-4 w-20" /><Skeleton className="h-10 w-full" />
+          <Skeleton className="h-4 w-20" /><Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-24" />
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+      <div className="w-full max-w-md space-y-2">
+        <Skeleton className="h-4 w-[250px]" />
+        <Skeleton className="h-4 w-[200px]" />
+        <Skeleton className="h-4 w-[300px]" />
+      </div>
+    </div>
+  )
+}
+
+function SliderPreview({
+  direction,
+  name
+}: {
+  direction?: string
+  name: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+
+  if (name === 'slider-range') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-8" dir={dir}>
+        <Slider defaultValue={[25, 75]} className="w-full max-w-md" />
+      </div>
+    )
+  }
+
+  if (name === 'slider-vertical') {
+    return (
+      <div className="flex min-h-48 items-center justify-center p-4" dir={dir}>
+        <Slider defaultValue={[50]} orientation="vertical" className="h-40" />
+      </div>
+    )
+  }
+
+  if (name === 'slider-disabled') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-8" dir={dir}>
+        <Slider defaultValue={[33]} disabled className="w-full max-w-md" />
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex min-h-24 items-center justify-center p-8" dir={dir}>
+      <Slider defaultValue={[50]} className="w-full max-w-md" />
+    </div>
+  )
+}
+
+function SwitchPreview({
+  direction,
+  name
+}: {
+  direction?: string
+  name: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+
+  if (name === 'switch-description') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <div className="flex items-start space-x-3">
+          <Switch id="airplane-mode" />
+          <div className="grid gap-1.5"><label htmlFor="airplane-mode" className="text-sm font-medium">Airplane Mode</label><p className="text-xs text-muted-foreground">Disable all wireless connections.</p></div>
+        </div>
+      </div>
+    )
+  }
+
+  if (name === 'switch-disabled') {
+    return (
+      <div className="flex min-h-24 items-center justify-center gap-6 p-4" dir={dir}>
+        <div className="flex items-center space-x-2"><Switch id="s1" checked disabled /><label htmlFor="s1" className="text-sm text-muted-foreground">On</label></div>
+        <div className="flex items-center space-x-2"><Switch id="s2" disabled /><label htmlFor="s2" className="text-sm text-muted-foreground">Off</label></div>
+      </div>
+    )
+  }
+
+  if (name === 'switch-size') {
+    return (
+      <div className="flex min-h-24 items-center justify-center gap-4 p-4" dir={dir}>
+        <Switch />
+        <Switch className="scale-75" />
+        <Switch className="scale-125" />
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+      <Switch />
+    </div>
+  )
+}
+
+function ScrollAreaPreview({
+  direction
+}: {
+  direction?: string
+  name: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+  const tags = Array.from({ length: 50 }).map((_, i, a) => `v1.2.0-beta.${a.length - i}`)
+
+  return (
+    <div className="flex min-h-24 items-center justify-center p-6" dir={dir}>
+      <ScrollArea className="h-72 w-48 rounded-md border bg-card text-card-foreground shadow-xs">
+        <div className="p-4">
+          <h4 className="mb-4 text-sm font-semibold leading-none">Tags</h4>
+          {tags.map((tag, idx) => (
+            <div key={tag}>
+              <div className="text-sm py-2">{tag}</div>
+              {idx < tags.length - 1 && <Separator className="my-2" />}
+            </div>
+          ))}
+        </div>
+      </ScrollArea>
+    </div>
+  )
+}
+
+function SeparatorPreview({
+  direction
+}: {
+  direction?: string
+  name: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+
+  return (
+    <div className="flex min-h-24 items-center justify-center p-8" dir={dir}>
+      <div className="w-full max-w-sm">
+        <div className="space-y-1">
+          <h4 className="text-sm font-medium leading-none">Radix Design System</h4>
+          <p className="text-sm text-muted-foreground">
+            An open-source UI component library.
+          </p>
+        </div>
+        <Separator className="my-4" />
+        <div className="flex h-5 items-center space-x-4 text-sm">
+          <div>Blog</div>
+          <Separator orientation="vertical" />
+          <div>Docs</div>
+          <Separator orientation="vertical" />
+          <div>Source</div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function SonnerPreview({
+  direction,
+  name
+}: {
+  direction?: string
+  name: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+
+  if (name === 'sonner-types') {
+    return (
+      <div className="flex flex-wrap items-center justify-center gap-2 p-6" dir={dir}>
+        <Button
+          variant="outline"
+          onClick={() =>
+            toast.success("Success Toast", {
+              description: "The action completed successfully.",
+            })
+          }
+        >
+          Success
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() =>
+            toast.info("Info Toast", {
+              description: "Here is some information.",
+            })
+          }
+        >
+          Info
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() =>
+            toast.warning("Warning Toast", {
+              description: "Please check your inputs.",
+            })
+          }
+        >
+          Warning
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() =>
+            toast.error("Error Toast", {
+              description: "Something went wrong.",
+            })
+          }
+        >
+          Error
+        </Button>
+      </div>
+    )
+  }
+
+  if (name === 'sonner-position') {
+    const positions: ("top-left" | "top-right" | "bottom-left" | "bottom-right" | "top-center" | "bottom-center")[] = [
+      "top-left",
+      "top-right",
+      "bottom-left",
+      "bottom-right",
+      "top-center",
+      "bottom-center"
+    ]
+    return (
+      <div className="grid grid-cols-2 gap-2 p-6 max-w-sm mx-auto" dir={dir}>
+        {positions.map((pos) => (
+          <Button
+            key={pos}
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              toast(`Toast at ${pos}`, {
+                position: pos,
+                description: `This toast is configured at position: ${pos}`,
+              })
+            }
+          >
+            {pos}
+          </Button>
+        ))}
+      </div>
+    )
+  }
+
+  // sonner-demo (default)
+  return (
+    <div className="flex min-h-24 items-center justify-center p-6" dir={dir}>
+      <Button
+        variant="outline"
+        onClick={() =>
+          toast("Event has been created", {
+            description: "Sunday, December 03, 2023 at 9:00 AM",
+            action: {
+              label: "Undo",
+              onClick: () => console.log("Undo Clicked"),
+            },
+          })
+        }
+      >
+        Show Toast
+      </Button>
+    </div>
+  )
+}
+
+function SpinnerPreview({
+  direction,
+  name
+}: {
+  direction?: string
+  name: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+
+  if (name === 'spinner-size') {
+    return (
+      <div className="flex items-center justify-center gap-6 p-6" dir={dir}>
+        <div className="flex flex-col items-center gap-1">
+          <Spinner className="size-4" />
+          <span className="text-xs text-muted-foreground">sm</span>
+        </div>
+        <div className="flex flex-col items-center gap-1">
+          <Spinner className="size-6" />
+          <span className="text-xs text-muted-foreground">md</span>
+        </div>
+        <div className="flex flex-col items-center gap-1">
+          <Spinner className="size-8" />
+          <span className="text-xs text-muted-foreground">lg</span>
+        </div>
+        <div className="flex flex-col items-center gap-1">
+          <Spinner className="size-10" />
+          <span className="text-xs text-muted-foreground">xl</span>
+        </div>
+      </div>
+    )
+  }
+
+  if (name === 'spinner-button') {
+    return (
+      <div className="flex items-center justify-center gap-4 p-6" dir={dir}>
+        <Button disabled>
+          <Spinner className="size-4 mr-2" />
+          Please wait
+        </Button>
+        <Button variant="secondary" disabled>
+          <Spinner className="size-4 mr-2" />
+          Loading...
+        </Button>
+      </div>
+    )
+  }
+
+  if (name === 'spinner-badge') {
+    return (
+      <div className="flex items-center justify-center gap-4 p-6" dir={dir}>
+        <Badge variant="default" className="gap-1.5">
+          <Spinner className="size-3 text-current" />
+          Syncing
+        </Badge>
+        <Badge variant="secondary" className="gap-1.5">
+          <Spinner className="size-3 text-current" />
+          Processing
+        </Badge>
+        <Badge variant="outline" className="gap-1.5">
+          <Spinner className="size-3 text-current" />
+          Loading
+        </Badge>
+      </div>
+    )
+  }
+
+  if (name === 'spinner-input-group') {
+    return (
+      <div className="flex items-center justify-center p-6 w-full max-w-sm mx-auto" dir={dir}>
+        <InputGroup className="w-full">
+          <InputGroupInput placeholder="Validating license..." disabled />
+          <InputGroupAddon align="inline-end">
+            <Spinner className="size-4 text-muted-foreground" />
+          </InputGroupAddon>
+        </InputGroup>
+      </div>
+    )
+  }
+
+  // spinner-demo (default)
+  return (
+    <div className="flex min-h-24 items-center justify-center gap-2 p-6 animate-pulse" dir={dir}>
+      <Spinner className="size-6 text-primary" />
+      <span className="text-sm font-medium text-muted-foreground">Loading assets...</span>
+    </div>
+  )
+}
+
+function TabsPreview({
+  direction,
+  name
+}: {
+  direction?: string
+  name: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+
+  if (name === 'tabs-line') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Tabs defaultValue="account" className="w-[400px]">
+          <TabsList variant="line">
+            <TabsTrigger value="account">Account</TabsTrigger>
+            <TabsTrigger value="password">Password</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+    )
+  }
+
+  if (name === 'tabs-vertical') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Tabs defaultValue="account" orientation="vertical" className="flex gap-4">
+          <TabsList className="flex-col h-auto">
+            <TabsTrigger value="account">Account</TabsTrigger>
+            <TabsTrigger value="password">Password</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+    )
+  }
+
+  if (name === 'tabs-disabled') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Tabs defaultValue="account" className="w-[400px]">
+          <TabsList>
+            <TabsTrigger value="account">Account</TabsTrigger>
+            <TabsTrigger value="password" disabled>Password</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+    )
+  }
+
+  if (name === 'tabs-icons') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Tabs defaultValue="account" className="w-[400px]">
+          <TabsList>
+            <TabsTrigger value="account"><Settings className="mr-2 size-4" />Account</TabsTrigger>
+            <TabsTrigger value="password"><Search className="mr-2 size-4" />Search</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+      <Tabs defaultValue="account" className="w-[400px]">
+        <TabsList>
+          <TabsTrigger value="account">Account</TabsTrigger>
+          <TabsTrigger value="password">Password</TabsTrigger>
+        </TabsList>
+      </Tabs>
+    </div>
+  )
+}
+
+function TogglePreview({
+  direction,
+  name
+}: {
+  direction?: string
+  name: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+
+  if (name === 'toggle-outline') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Toggle variant="outline" aria-label="Toggle italic"><Type className="size-4" /></Toggle>
+      </div>
+    )
+  }
+
+  if (name === 'toggle-with-text') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Toggle variant="outline" aria-label="Toggle bold"><Type className="size-4" /> Bold</Toggle>
+      </div>
+    )
+  }
+
+  if (name === 'toggle-size') {
+    return (
+      <div className="flex min-h-24 items-center justify-center gap-2 p-4" dir={dir}>
+        <Toggle size="sm" aria-label="Toggle"><Type className="size-3" /></Toggle>
+        <Toggle aria-label="Toggle"><Type className="size-4" /></Toggle>
+        <Toggle size="lg" aria-label="Toggle"><Type className="size-5" /></Toggle>
+      </div>
+    )
+  }
+
+  if (name === 'toggle-disabled') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <Toggle disabled aria-label="Toggle"><Type className="size-4" /></Toggle>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+      <Toggle aria-label="Toggle"><Type className="size-4" /></Toggle>
+    </div>
+  )
+}
+
+function ToggleGroupPreview({
+  direction,
+  name
+}: {
+  direction?: string
+  name: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+
+  if (name === 'toggle-group-outline') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <ToggleGroup type="single" variant="outline" defaultValue="left">
+          <ToggleGroupItem value="left" aria-label="Left">Left</ToggleGroupItem>
+          <ToggleGroupItem value="center" aria-label="Center">Center</ToggleGroupItem>
+          <ToggleGroupItem value="right" aria-label="Right">Right</ToggleGroupItem>
+        </ToggleGroup>
+      </div>
+    )
+  }
+
+  if (name === 'toggle-group-size') {
+    return (
+      <div className="flex min-h-24 items-center justify-center gap-3 p-4" dir={dir}>
+        <ToggleGroup type="single" size="sm" defaultValue="a"><ToggleGroupItem value="a">A</ToggleGroupItem><ToggleGroupItem value="b">B</ToggleGroupItem></ToggleGroup>
+        <ToggleGroup type="single" defaultValue="a"><ToggleGroupItem value="a">A</ToggleGroupItem><ToggleGroupItem value="b">B</ToggleGroupItem></ToggleGroup>
+        <ToggleGroup type="single" size="lg" defaultValue="a"><ToggleGroupItem value="a">A</ToggleGroupItem><ToggleGroupItem value="b">B</ToggleGroupItem></ToggleGroup>
+      </div>
+    )
+  }
+
+  if (name === 'toggle-group-vertical') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <ToggleGroup type="single" orientation="vertical" defaultValue="top">
+          <ToggleGroupItem value="top">Top</ToggleGroupItem>
+          <ToggleGroupItem value="center">Center</ToggleGroupItem>
+          <ToggleGroupItem value="bottom">Bottom</ToggleGroupItem>
+        </ToggleGroup>
+      </div>
+    )
+  }
+
+  if (name === 'toggle-group-disabled') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+        <ToggleGroup type="single" disabled defaultValue="a">
+          <ToggleGroupItem value="a">A</ToggleGroupItem>
+          <ToggleGroupItem value="b">B</ToggleGroupItem>
+        </ToggleGroup>
+      </div>
+    )
+  }
+
+  if (name === 'toggle-group-rtl') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-4" dir="rtl">
+        <ToggleGroup type="single" defaultValue="right">
+          <ToggleGroupItem value="right">يمين</ToggleGroupItem>
+          <ToggleGroupItem value="center">وسط</ToggleGroupItem>
+          <ToggleGroupItem value="left">يسار</ToggleGroupItem>
+        </ToggleGroup>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
+      <ToggleGroup type="single" defaultValue="center">
+        <ToggleGroupItem value="left">Left</ToggleGroupItem>
+        <ToggleGroupItem value="center">Center</ToggleGroupItem>
+        <ToggleGroupItem value="right">Right</ToggleGroupItem>
+      </ToggleGroup>
+    </div>
+  )
+}
+
+function TextareaPreview({
+  direction
+}: {
+  direction?: string
+  name?: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+
+  return (
+    <div className="flex min-h-24 items-center justify-center p-6 w-full max-w-sm mx-auto" dir={dir}>
+      <div className="grid w-full gap-1.5">
+        <Label htmlFor="message">Your Message</Label>
+        <Textarea placeholder="Type your message here." id="message" />
+        <p className="text-xs text-muted-foreground">
+          Your message will be sent to our support team.
+        </p>
+      </div>
+    </div>
+  )
+}
+
+function TooltipPreview({
+  direction,
+  name
+}: {
+  direction?: string
+  name: string
+}): React.JSX.Element {
+  const dir = direction === 'rtl' ? 'rtl' : undefined
+
+  if (name === 'tooltip-side') {
+    const sides: ('top' | 'right' | 'bottom' | 'left')[] = ['top', 'right', 'bottom', 'left']
+    return (
+      <div className="flex flex-wrap items-center justify-center gap-2 p-6" dir={dir}>
+        <TooltipProvider>
+          {sides.map((side) => (
+            <Tooltip key={side}>
+              <TooltipTrigger asChild>
+                <Button variant="outline" size="sm">
+                  {side}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side={side}>
+                <p>Tooltip on the {side}</p>
+              </TooltipContent>
+            </Tooltip>
+          ))}
+        </TooltipProvider>
+      </div>
+    )
+  }
+
+  if (name === 'tooltip-with-keyboard-shortcut') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-6" dir={dir}>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="outline">Hover</Button>
+            </TooltipTrigger>
+            <TooltipContent className="flex items-center gap-2">
+              <span>Add to library</span>
+              <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
+                <span className="text-xs">⌘</span>B
+              </kbd>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+    )
+  }
+
+  if (name === 'tooltip-disabled-button') {
+    return (
+      <div className="flex min-h-24 items-center justify-center p-6" dir={dir}>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="inline-block cursor-not-allowed">
+                <Button disabled style={{ pointerEvents: 'none' }}>
+                  Hover
+                </Button>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Tooltip on a disabled button</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+    )
+  }
+
+  // tooltip-demo (default)
+  return (
+    <div className="flex min-h-24 items-center justify-center p-6" dir={dir}>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="outline">Hover</Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Add to library</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     </div>
   )
 }
@@ -2907,15 +6798,15 @@ function ShadcnComponentPreview({
   name: string
 }): React.JSX.Element {
   if (name.startsWith('calendar')) {
-    return <CalendarPreview direction={direction} />
+    return <CalendarPreview name={name} direction={direction} />
   }
 
   if (name.startsWith('card')) {
-    return <CardPreview direction={direction} />
+    return <CardPreview name={name} direction={direction} />
   }
 
   if (name.startsWith('carousel')) {
-    return <CarouselPreview direction={direction} />
+    return <CarouselPreview name={name} direction={direction} />
   }
 
   if (name.startsWith('chart')) {
@@ -2923,23 +6814,23 @@ function ShadcnComponentPreview({
   }
 
   if (name.startsWith('checkbox')) {
-    return <CheckboxPreview direction={direction} />
+    return <CheckboxPreview name={name} direction={direction} />
   }
 
   if (name.startsWith('collapsible')) {
-    return <CollapsiblePreview direction={direction} />
+    return <CollapsiblePreview name={name} direction={direction} />
   }
 
   if (name.startsWith('combobox')) {
-    return <ComboboxPreview direction={direction} />
+    return <ComboboxPreview name={name} direction={direction} />
   }
 
   if (name.startsWith('command')) {
-    return <CommandPreview direction={direction} />
+    return <CommandPreview name={name} direction={direction} />
   }
 
   if (name.startsWith('context-menu')) {
-    return <ContextMenuPreview direction={direction} />
+    return <ContextMenuPreview name={name} direction={direction} />
   }
 
   if (name.startsWith('data-table')) {
@@ -2947,7 +6838,7 @@ function ShadcnComponentPreview({
   }
 
   if (name.startsWith('date-picker')) {
-    return <DatePickerPreview direction={direction} />
+    return <DatePickerPreview name={name} direction={direction} />
   }
 
   if (name.startsWith('direction')) {
@@ -2955,11 +6846,11 @@ function ShadcnComponentPreview({
   }
 
   if (name.startsWith('drawer')) {
-    return <DrawerPreview direction={direction} />
+    return <DrawerPreview name={name} direction={direction} />
   }
 
   if (name.startsWith('dropdown-menu')) {
-    return <DropdownMenuPreview direction={direction} />
+    return <DropdownMenuPreview name={name} direction={direction} />
   }
 
   if (name.startsWith('empty')) {
@@ -2990,8 +6881,104 @@ function ShadcnComponentPreview({
     return <ItemPreview name={name} direction={direction} />
   }
 
+  if (name.startsWith('kbd')) {
+    return <KbdPreview name={name} direction={direction} />
+  }
+
+  if (name.startsWith('label')) {
+    return <LabelPreview name={name} direction={direction} />
+  }
+
+  if (name.startsWith('menubar')) {
+    return <MenubarPreview name={name} direction={direction} />
+  }
+
+  if (name.startsWith('native-select')) {
+    return <NativeSelectPreview name={name} direction={direction} />
+  }
+
+  if (name.startsWith('navigation-menu')) {
+    return <NavigationMenuPreview direction={direction} />
+  }
+
+  if (name.startsWith('pagination')) {
+    return <PaginationPreview name={name} direction={direction} />
+  }
+
+  if (name.startsWith('popover')) {
+    return <PopoverPreview name={name} direction={direction} />
+  }
+
+  if (name.startsWith('progress')) {
+    return <ProgressPreview name={name} direction={direction} />
+  }
+
+  if (name.startsWith('radio-group')) {
+    return <RadioGroupPreview name={name} direction={direction} />
+  }
+
+  if (name.startsWith('resizable')) {
+    return <ResizablePreview name={name} direction={direction} />
+  }
+
+  if (name.startsWith('scroll-area')) {
+    return <ScrollAreaPreview name={name} direction={direction} />
+  }
+
+  if (name.startsWith('select')) {
+    return <SelectPreview name={name} direction={direction} />
+  }
+
+  if (name.startsWith('separator')) {
+    return <SeparatorPreview name={name} direction={direction} />
+  }
+
+  if (name.startsWith('sheet')) {
+    return <SheetPreview name={name} direction={direction} />
+  }
+
+  if (name.startsWith('skeleton')) {
+    return <SkeletonPreview name={name} direction={direction} />
+  }
+
+  if (name.startsWith('slider')) {
+    return <SliderPreview name={name} direction={direction} />
+  }
+
+  if (name.startsWith('sonner')) {
+    return <SonnerPreview name={name} direction={direction} />
+  }
+
+  if (name.startsWith('spinner')) {
+    return <SpinnerPreview name={name} direction={direction} />
+  }
+
+  if (name.startsWith('switch')) {
+    return <SwitchPreview name={name} direction={direction} />
+  }
+
+  if (name.startsWith('tabs')) {
+    return <TabsPreview name={name} direction={direction} />
+  }
+
+  if (name.startsWith('textarea')) {
+    return <TextareaPreview direction={direction} />
+  }
+
+  if (name.startsWith('toggle-group')) {
+    return <ToggleGroupPreview name={name} direction={direction} />
+  }
+
+  if (name.startsWith('toggle')) {
+    return <TogglePreview name={name} direction={direction} />
+  }
+
+  if (name.startsWith('tooltip')) {
+    return <TooltipPreview name={name} direction={direction} />
+  }
+
   if (name.startsWith('alert-dialog')) {
-    return <AlertDialogPreview direction={direction} />
+    return <AlertDialogPreview name={name} direction={direction} />
   }
 
   if (name.startsWith('alert')) {
@@ -2999,11 +6986,11 @@ function ShadcnComponentPreview({
   }
 
   if (name.startsWith('aspect-ratio')) {
-    return <AspectRatioPreview direction={direction} />
+    return <AspectRatioPreview name={name} direction={direction} />
   }
 
   if (name.startsWith('avatar')) {
-    return <AvatarPreview direction={direction} />
+    return <AvatarPreview name={name} direction={direction} />
   }
 
   if (name.startsWith('badge')) {
@@ -3015,7 +7002,7 @@ function ShadcnComponentPreview({
   }
 
   if (name.startsWith('button-group')) {
-    return <ButtonPreview name={name} direction={direction} />
+    return <ButtonGroupPreview name={name} direction={direction} />
   }
 
   if (name.startsWith('button') || name === 'spinner-button') {
