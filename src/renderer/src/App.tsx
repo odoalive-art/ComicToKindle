@@ -896,11 +896,10 @@ function App(): React.JSX.Element {
                       aria-label={
                         themeMode === 'dark' ? text.header.switchToLight : text.header.switchToDark
                       }
-                      className="size-10"
                       onClick={() =>
                         setThemeMode((current) => (current === 'dark' ? 'light' : 'dark'))
                       }
-                      size="icon"
+                      size="icon-sm"
                       variant="outline"
                     >
                       {themeMode === 'dark' ? <Sun /> : <Moon />}
@@ -916,9 +915,9 @@ function App(): React.JSX.Element {
                   <TooltipTrigger asChild>
                     <Button
                       aria-label={text.header.switchLanguage}
-                      className="size-10 text-xs"
+                      className="text-xs"
                       onClick={() => setLanguageMode((current) => (current === 'zh' ? 'en' : 'zh'))}
-                      size="icon"
+                      size="icon-sm"
                       variant="outline"
                     >
                       {languageMode === 'zh' ? '中' : 'EN'}
