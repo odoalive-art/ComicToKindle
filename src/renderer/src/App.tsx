@@ -890,43 +890,45 @@ function App(): React.JSX.Element {
                 className="flex shrink-0 items-center gap-2"
                 style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
               >
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      aria-label={
-                        themeMode === 'dark' ? text.header.switchToLight : text.header.switchToDark
-                      }
-                      onClick={() =>
-                        setThemeMode((current) => (current === 'dark' ? 'light' : 'dark'))
-                      }
-                      size="icon-sm"
-                      variant="outline"
-                    >
-                      {themeMode === 'dark' ? <Sun /> : <Moon />}
-                      <span className="sr-only">{text.header.themeTitle}</span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" sideOffset={8}>
-                    {text.header.themeTitle}
-                  </TooltipContent>
-                </Tooltip>
+                <ButtonGroup>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        aria-label={
+                          themeMode === 'dark' ? text.header.switchToLight : text.header.switchToDark
+                        }
+                        onClick={() =>
+                          setThemeMode((current) => (current === 'dark' ? 'light' : 'dark'))
+                        }
+                        size="icon-sm"
+                        variant="outline"
+                      >
+                        {themeMode === 'dark' ? <Sun /> : <Moon />}
+                        <span className="sr-only">{text.header.themeTitle}</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" sideOffset={8}>
+                      {text.header.themeTitle}
+                    </TooltipContent>
+                  </Tooltip>
 
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      aria-label={text.header.switchLanguage}
-                      className="text-xs"
-                      onClick={() => setLanguageMode((current) => (current === 'zh' ? 'en' : 'zh'))}
-                      size="icon-sm"
-                      variant="outline"
-                    >
-                      {languageMode === 'zh' ? '中' : 'EN'}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" sideOffset={8}>
-                    {text.header.languageTitle}
-                  </TooltipContent>
-                </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        aria-label={text.header.switchLanguage}
+                        className="text-xs"
+                        onClick={() => setLanguageMode((current) => (current === 'zh' ? 'en' : 'zh'))}
+                        size="icon-sm"
+                        variant="outline"
+                      >
+                        {languageMode === 'zh' ? '中' : 'EN'}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" sideOffset={8}>
+                      {text.header.languageTitle}
+                    </TooltipContent>
+                  </Tooltip>
+                </ButtonGroup>
 
                 {isComponentView ? (
                   <Tooltip>
