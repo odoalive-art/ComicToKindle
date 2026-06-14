@@ -39,7 +39,6 @@ import {
   Search,
   Send,
   Settings,
-  SlidersHorizontal,
   Sun,
   SwatchBook,
   Terminal,
@@ -161,7 +160,8 @@ import {
   SidebarProvider,
   SidebarRail,
   SidebarSeparator,
-  SidebarTrigger
+  SidebarTrigger,
+  useSidebar
 } from '@/components/ui/sidebar'
 import {
   Table,
@@ -547,8 +547,7 @@ const sidebarGroups: SidebarGroupConfig[] = [
     titleKey: 'groupMyLibrary',
     items: [
       { id: 'library', icon: Library, badge: '128' },
-      { id: 'add-library', icon: FolderPlus },
-      { id: 'web-push', icon: Globe }
+      { id: 'add-library', icon: FolderPlus }
     ]
   },
   {
@@ -717,8 +716,8 @@ function getPreviewHeader(
 
 function App(): React.JSX.Element {
   const [activeView, setActiveView] = useState<ViewId>('library')
-  const [componentSearch, setComponentSearch] = useState('')
-  const [appComponentSearch, setAppComponentSearch] = useState('')
+  const [componentSearch] = useState('')
+  const [appComponentSearch] = useState('')
   const [selectedComponentSlug, setSelectedComponentSlug] = useState('button')
   const [themeMode, setThemeMode] = useState<ThemeMode>(getInitialThemeMode)
   const [languageMode, setLanguageMode] = useState<LanguageMode>(getInitialLanguageMode)
@@ -796,173 +795,66 @@ function App(): React.JSX.Element {
   return (
     <SidebarProvider>
       <div className="flex h-dvh w-full bg-muted/50 text-foreground">
-        <AppSidebar activeView={activeView} locale={languageMode} onSelect={setActiveView} />
+        <AppSidebar
+          activeView={activeView}
+          locale={languageMode}
+          onSelect={setActiveView}
+          themeMode={themeMode}
+          setThemeMode={setThemeMode}
+          languageMode={languageMode}
+          setLanguageMode={setLanguageMode}
+        />
         <SidebarInset className="flex min-w-0 flex-col overflow-hidden">
           <header
-            className="flex min-h-14 shrink-0 items-center gap-3 border-b bg-background px-4 py-2"
+            className="flex h-12 shrink-0 items-center gap-2 border-b bg-background px-4"
             style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
           >
             <SidebarTrigger
-              className="md:hidden"
+              className="-ml-1"
               style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
             />
-            <div className="min-w-0 flex-1">
-              <h1 className="truncate text-base font-semibold">{text.nav[activeNavItem.id]}</h1>
-              {isComponentView ? (
-                <div
-                  className="flex max-w-full flex-wrap items-center gap-x-2 gap-y-1 overflow-hidden text-xs text-muted-foreground"
-                  style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-                >
-                  <span>{shadcnDocsSource.repository}</span>
-                  <span>·</span>
-                  <span>{shadcnDocsSource.license}</span>
-                  <span>·</span>
-                  <a
-                    className="inline-flex min-w-0 items-center gap-1 hover:text-foreground"
-                    href={
-                      mirroredShadcnDocs[selectedComponentSlug]?.officialUrl ??
-                      `https://ui.shadcn.com/docs/components/radix/${selectedComponentSlug}`
-                    }
-                    rel="noreferrer"
-                    target="_blank"
-                  >
-                    {text.header.officialPage}
-                    <ExternalLink className="size-3" />
-                  </a>
-                  <ShadcnSourceDialog
-                    locale={languageMode}
-                    selectedPath={mirroredShadcnDocs[selectedComponentSlug]?.sourcePath}
-                  />
-                </div>
-              ) : activeView === 'app-components' ? (
-                <p className="truncate text-xs text-muted-foreground">
-                  {text.header.appComponentsDescription}
-                </p>
-              ) : isFoundationView ? (
-                <p className="truncate text-xs text-muted-foreground">
-                  {text.header.foundationDescription}
-                </p>
-              ) : (
-                <p className="truncate text-xs text-muted-foreground">
-                  {text.header.libraryDescription}
-                </p>
-              )}
+            <Separator orientation="vertical" className="mr-2 h-4" />
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm font-semibold text-foreground">
+                {text.nav[activeNavItem.id]}
+              </span>
             </div>
-            {!isFoundationView && activeView !== 'app-components' ? (
+
+            {isComponentView ? (
               <div
-                className="hidden min-w-64 items-center gap-2 rounded-md border bg-background px-3 md:flex"
+                className="ml-auto flex items-center gap-2"
                 style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
               >
-                <Search className="size-4 text-muted-foreground" />
-                {isComponentView ? (
-                  <Input
-                    aria-label={text.header.searchComponents}
-                    className="h-9 border-0 px-0 shadow-none focus-visible:ring-0"
-                    onChange={(event) => setComponentSearch(event.target.value)}
-                    placeholder={text.header.searchComponents}
-                    value={componentSearch}
-                  />
-                ) : (
-                  <Input
-                    aria-label={text.header.searchComics}
-                    className="h-9 border-0 px-0 shadow-none focus-visible:ring-0"
-                    placeholder={text.header.searchComics}
-                  />
-                )}
-              </div>
-            ) : activeView === 'app-components' ? (
-              <div
-                className="hidden min-w-64 items-center gap-2 rounded-md border bg-background px-3 md:flex"
-                style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-              >
-                <Search className="size-4 text-muted-foreground" />
-                <Input
-                  aria-label="搜索应用组件"
-                  className="h-9 border-0 px-0 shadow-none focus-visible:ring-0"
-                  onChange={(event) => setAppComponentSearch(event.target.value)}
-                  placeholder="搜索应用组件..."
-                  value={appComponentSearch}
+                <a
+                  aria-label={text.header.officialDocs}
+                  className="inline-flex size-8 shrink-0 items-center justify-center rounded-md border bg-background text-sm font-medium whitespace-nowrap shadow-xs transition-all hover:bg-accent hover:text-accent-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+                  href={
+                    mirroredShadcnDocs[selectedComponentSlug]?.officialUrl ??
+                    `https://ui.shadcn.com/docs/components/radix/${selectedComponentSlug}`
+                  }
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  <ExternalLink className="size-4" />
+                </a>
+                <ShadcnSourceDialog
+                  locale={languageMode}
+                  selectedPath={mirroredShadcnDocs[selectedComponentSlug]?.sourcePath}
                 />
               </div>
-            ) : null}
-            <TooltipProvider>
+            ) : (
               <div
-                className="flex shrink-0 items-center gap-2"
+                className="ml-auto flex items-center gap-3"
                 style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
               >
-                <ButtonGroup>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        aria-label={
-                          themeMode === 'dark' ? text.header.switchToLight : text.header.switchToDark
-                        }
-                        onClick={() =>
-                          setThemeMode((current) => (current === 'dark' ? 'light' : 'dark'))
-                        }
-                        size="icon-sm"
-                        variant="outline"
-                      >
-                        {themeMode === 'dark' ? <Sun /> : <Moon />}
-                        <span className="sr-only">{text.header.themeTitle}</span>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" sideOffset={8}>
-                      {text.header.themeTitle}
-                    </TooltipContent>
-                  </Tooltip>
-
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        aria-label={text.header.switchLanguage}
-                        className="text-xs"
-                        onClick={() => setLanguageMode((current) => (current === 'zh' ? 'en' : 'zh'))}
-                        size="icon-sm"
-                        variant="outline"
-                      >
-                        {languageMode === 'zh' ? '中' : 'EN'}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" sideOffset={8}>
-                      {text.header.languageTitle}
-                    </TooltipContent>
-                  </Tooltip>
-                </ButtonGroup>
-
-                {isComponentView ? (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <a
-                        aria-label={text.header.officialDocs}
-                        className="hidden size-10 shrink-0 items-center justify-center rounded-md border bg-background text-sm font-medium whitespace-nowrap shadow-xs transition-all hover:bg-accent hover:text-accent-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none sm:inline-flex"
-                        href="https://ui.shadcn.com/docs/components"
-                        rel="noreferrer"
-                        target="_blank"
-                      >
-                        <ExternalLink className="size-4" />
-                      </a>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" sideOffset={8}>
-                      {text.header.officialDocs}
-                    </TooltipContent>
-                  </Tooltip>
-                ) : null}
-              </div>
-            </TooltipProvider>
-            {isComponentView || isFoundationView || activeView === 'app-components' ? null : (
-              <div
-                className="flex items-center gap-2"
-                style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-              >
-                <Button variant="outline" size="sm">
-                  <SlidersHorizontal />
-                  {text.header.filter}
-                </Button>
-                <Button size="sm">
-                  <Plus />
-                  {text.header.add}
-                </Button>
+                <a
+                  href="https://github.com/odoalive-art/ComicToKindle"
+                  rel="noreferrer"
+                  target="_blank"
+                  className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline transition-all"
+                >
+                  GitHub
+                </a>
               </div>
             )}
           </header>
@@ -8328,13 +8220,22 @@ function SidebarPreview({
 function AppSidebar({
   activeView,
   locale,
-  onSelect
+  onSelect,
+  themeMode,
+  setThemeMode,
+  languageMode,
+  setLanguageMode
 }: {
   activeView: ViewId
   locale: LanguageMode
   onSelect: (view: ViewId) => void
+  themeMode: ThemeMode
+  setThemeMode: React.Dispatch<React.SetStateAction<ThemeMode>>
+  languageMode: LanguageMode
+  setLanguageMode: React.Dispatch<React.SetStateAction<LanguageMode>>
 }): React.JSX.Element {
   const text = uiText[locale]
+  const { state } = useSidebar()
 
   return (
     <Sidebar collapsible="icon" variant="inset">
@@ -8375,15 +8276,64 @@ function AppSidebar({
         ))}
       </SidebarContent>
 
-      <SidebarFooter className="border-t">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton tooltip={text.sidebar.settings}>
-              <Settings />
-              <span>{text.sidebar.settings}</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+      <SidebarFooter className="border-t p-2">
+        <div className="flex items-center justify-between w-full gap-2">
+          <SidebarMenu className="flex-1 min-w-0">
+            <SidebarMenuItem>
+              <SidebarMenuButton tooltip={text.sidebar.settings}>
+                <Settings className="size-4 shrink-0" />
+                <span>{text.sidebar.settings}</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+
+          {state === 'expanded' && (
+            <TooltipProvider>
+              <div className="flex items-center gap-1 shrink-0">
+                <ButtonGroup>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        aria-label={
+                          themeMode === 'dark' ? text.header.switchToLight : text.header.switchToDark
+                        }
+                        onClick={() =>
+                          setThemeMode((current) => (current === 'dark' ? 'light' : 'dark'))
+                        }
+                        size="icon-sm"
+                        variant="outline"
+                        className="shadow-none"
+                      >
+                        {themeMode === 'dark' ? <Sun /> : <Moon />}
+                        <span className="sr-only">{text.header.themeTitle}</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" sideOffset={8}>
+                      {text.header.themeTitle}
+                    </TooltipContent>
+                  </Tooltip>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        aria-label={text.header.switchLanguage}
+                        className="text-xs shadow-none"
+                        onClick={() => setLanguageMode((current) => (current === 'zh' ? 'en' : 'zh'))}
+                        size="icon-sm"
+                        variant="outline"
+                      >
+                        {languageMode === 'zh' ? '中' : 'EN'}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" sideOffset={8}>
+                      {text.header.languageTitle}
+                    </TooltipContent>
+                  </Tooltip>
+                </ButtonGroup>
+              </div>
+            </TooltipProvider>
+          )}
+        </div>
       </SidebarFooter>
     </Sidebar>
   )
