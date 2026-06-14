@@ -795,7 +795,7 @@ function App(): React.JSX.Element {
 
   return (
     <SidebarProvider>
-      <div className="flex h-dvh w-full bg-background text-foreground">
+      <div className="flex h-dvh w-full bg-muted/50 text-foreground">
         <AppSidebar activeView={activeView} locale={languageMode} onSelect={setActiveView} />
         <SidebarInset className="flex min-w-0 flex-col overflow-hidden">
           <header
@@ -8336,7 +8336,7 @@ function AppSidebar({
   const text = uiText[locale]
 
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="icon" variant="inset">
       <div
         className="h-9 w-full shrink-0"
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
@@ -8384,7 +8384,6 @@ function AppSidebar({
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
-      <SidebarRail />
     </Sidebar>
   )
 }
