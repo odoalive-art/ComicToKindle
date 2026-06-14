@@ -59,6 +59,7 @@ import {
   AccordionTrigger
 } from '@/components/ui/accordion'
 import { Button } from '@/components/ui/button'
+import { TrafficLights } from '@/components/ui/traffic-lights'
 import {
   Card,
   CardAction,
@@ -721,7 +722,6 @@ function App(): React.JSX.Element {
   const [selectedComponentSlug, setSelectedComponentSlug] = useState('button')
   const [themeMode, setThemeMode] = useState<ThemeMode>(getInitialThemeMode)
   const [languageMode, setLanguageMode] = useState<LanguageMode>(getInitialLanguageMode)
-  const text = uiText[languageMode]
   const activeNavItem = primaryNav.find((item) => item.id === activeView) ?? primaryNav[0]
   const isComponentView = activeView === 'design-components'
   const isFoundationView = activeView === 'foundation-standards'
@@ -805,59 +805,12 @@ function App(): React.JSX.Element {
           setLanguageMode={setLanguageMode}
         />
         <SidebarInset className="flex min-w-0 flex-col overflow-hidden">
-          <header
-            className="flex h-12 shrink-0 items-center gap-2 border-b bg-background px-4"
-            style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
-          >
-            <SidebarTrigger
-              className="-ml-1"
-              style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-            />
-            <Separator orientation="vertical" className="mr-2 h-4" />
-            <div className="flex items-center gap-1.5">
-              <span className="text-sm font-semibold text-foreground">
-                {text.nav[activeNavItem.id]}
-              </span>
-            </div>
-
-            {isComponentView ? (
-              <div
-                className="ml-auto flex items-center gap-2"
-                style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-              >
-                <a
-                  aria-label={text.header.officialDocs}
-                  className="inline-flex size-8 shrink-0 items-center justify-center rounded-md border bg-background text-sm font-medium whitespace-nowrap shadow-xs transition-all hover:bg-accent hover:text-accent-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
-                  href={
-                    mirroredShadcnDocs[selectedComponentSlug]?.officialUrl ??
-                    `https://ui.shadcn.com/docs/components/radix/${selectedComponentSlug}`
-                  }
-                  rel="noreferrer"
-                  target="_blank"
-                >
-                  <ExternalLink className="size-4" />
-                </a>
-                <ShadcnSourceDialog
-                  locale={languageMode}
-                  selectedPath={mirroredShadcnDocs[selectedComponentSlug]?.sourcePath}
-                />
-              </div>
-            ) : (
-              <div
-                className="ml-auto flex items-center gap-3"
-                style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-              >
-                <a
-                  href="https://github.com/odoalive-art/ComicToKindle"
-                  rel="noreferrer"
-                  target="_blank"
-                  className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline transition-all"
-                >
-                  GitHub
-                </a>
-              </div>
-            )}
-          </header>
+          <AppHeader
+            languageMode={languageMode}
+            activeNavItemId={activeNavItem.id}
+            isComponentView={isComponentView}
+            selectedComponentSlug={selectedComponentSlug}
+          />
 
           {isComponentView || activeView === 'app-components' ? (
             <DesignComponentsView
@@ -886,6 +839,83 @@ function App(): React.JSX.Element {
       </div>
       <Toaster theme={themeMode} />
     </SidebarProvider>
+  )
+}
+
+interface AppHeaderProps {
+  languageMode: LanguageMode
+  activeNavItemId: ViewId
+  isComponentView: boolean
+  selectedComponentSlug: string
+}
+
+function AppHeader({
+  languageMode,
+  activeNavItemId,
+  isComponentView,
+  selectedComponentSlug
+}: AppHeaderProps): React.JSX.Element {
+  const text = uiText[languageMode]
+  const { state } = useSidebar()
+
+  return (
+    <header
+      className="flex h-12 shrink-0 items-center gap-2 border-b bg-background px-4"
+      style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
+    >
+      {state === 'expanded' && (
+        <>
+          <SidebarTrigger
+            className="-ml-1"
+            style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+          />
+          <Separator orientation="vertical" className="mr-2 !h-3 opacity-50" />
+        </>
+      )}
+      <div className="flex items-center gap-1.5">
+        <span className="text-sm font-semibold text-foreground">
+          {text.nav[activeNavItemId]}
+        </span>
+      </div>
+
+      {isComponentView ? (
+        <div
+          className="ml-auto flex items-center gap-2"
+          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+        >
+          <a
+            aria-label={text.header.officialDocs}
+            className="inline-flex size-8 shrink-0 items-center justify-center rounded-md border bg-background text-sm font-medium whitespace-nowrap shadow-xs transition-all hover:bg-accent hover:text-accent-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+            href={
+              mirroredShadcnDocs[selectedComponentSlug]?.officialUrl ??
+              `https://ui.shadcn.com/docs/components/radix/${selectedComponentSlug}`
+            }
+            rel="noreferrer"
+            target="_blank"
+          >
+            <ExternalLink className="size-4" />
+          </a>
+          <ShadcnSourceDialog
+            locale={languageMode}
+            selectedPath={mirroredShadcnDocs[selectedComponentSlug]?.sourcePath}
+          />
+        </div>
+      ) : (
+        <div
+          className="ml-auto flex items-center gap-3"
+          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+        >
+          <a
+            href="https://github.com/odoalive-art/ComicToKindle"
+            rel="noreferrer"
+            target="_blank"
+            className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline transition-all"
+          >
+            GitHub
+          </a>
+        </div>
+      )}
+    </header>
   )
 }
 
@@ -8240,9 +8270,20 @@ function AppSidebar({
   return (
     <Sidebar collapsible="icon" variant="inset">
       <div
-        className="h-9 w-full shrink-0"
+        className={`h-9 w-full shrink-0 flex items-center ${
+          state === 'expanded' ? 'px-4' : 'justify-center px-0'
+        }`}
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
-      />
+      >
+        {state === 'expanded' ? (
+          <TrafficLights />
+        ) : (
+          <SidebarTrigger
+            className="size-7"
+            style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+          />
+        )}
+      </div>
       <SidebarContent>
         {sidebarGroups.map((group, groupIdx) => (
           <React.Fragment key={group.titleKey}>

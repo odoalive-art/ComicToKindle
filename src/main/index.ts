@@ -10,7 +10,7 @@ function createWindow(): void {
     height: 670,
     show: false,
     autoHideMenuBar: true,
-    ...(process.platform === 'darwin' ? { titleBarStyle: 'hiddenInset' } : {}),
+    ...(process.platform === 'darwin' ? { titleBarStyle: 'hidden' } : {}),
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -19,6 +19,9 @@ function createWindow(): void {
   })
 
   mainWindow.on('ready-to-show', () => {
+    if (process.platform === 'darwin') {
+      mainWindow.setWindowButtonVisibility(false)
+    }
     mainWindow.show()
   })
 
@@ -52,6 +55,27 @@ app.whenReady().then(() => {
 
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
+
+  ipcMain.on('window-close', (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (win) win.close()
+  })
+
+  ipcMain.on('window-minimize', (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (win) win.minimize()
+  })
+
+  ipcMain.on('window-maximize', (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (win) {
+      if (win.isMaximized()) {
+        win.unmaximize()
+      } else {
+        win.maximize()
+      }
+    }
+  })
 
   createWindow()
 
