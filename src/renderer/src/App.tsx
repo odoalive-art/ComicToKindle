@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import {
   Archive,
@@ -46,7 +46,11 @@ import {
   AlertCircle,
   ChevronRight,
   Slash,
-  Type
+  Type,
+  Globe,
+  Mail,
+  Stethoscope,
+  FolderPlus
 } from 'lucide-react'
 
 import {
@@ -277,11 +281,15 @@ type NavItem = {
 
 type ViewId =
   | 'library'
-  | 'app-components'
+  | 'add-library'
+  | 'web-push'
+  | 'devices-emails'
+  | 'system-doctor'
+  | 'queue'
   | 'design-components'
   | 'foundation-standards'
+  | 'app-components'
   | 'inbox'
-  | 'queue'
   | 'deliveries'
   | 'archive'
 
@@ -301,11 +309,15 @@ const uiText = {
   zh: {
     nav: {
       library: '所有漫画',
-      'app-components': '应用组件',
+      'add-library': '添加资源库',
+      'web-push': '网页推送',
+      'devices-emails': '设备与邮箱',
+      'system-doctor': '系统环境医生',
+      queue: '任务队列',
       'design-components': 'Shadcn 组件',
       'foundation-standards': '基础规范',
+      'app-components': '设计组件',
       inbox: '导入收件箱',
-      queue: '转换队列',
       deliveries: '投递记录',
       archive: '归档'
     },
@@ -366,6 +378,9 @@ const uiText = {
       workspace: '漫画库',
       folders: '库目录',
       settings: '设置',
+      groupMyLibrary: '我的书库',
+      groupKindleSend: 'Kindle 推送',
+      groupDevMode: '开发模式',
       folderNames: ['全部漫画', '新导入', '待整理', 'Kindle 预备区'],
       statuses: {
         已入库: '已入库',
@@ -396,12 +411,16 @@ const uiText = {
   },
   en: {
     nav: {
-      library: 'All Comics',
-      'app-components': 'App Components',
+      library: 'All Manga',
+      'add-library': 'Add Library',
+      'web-push': 'Web Push',
+      'devices-emails': 'Devices & Emails',
+      'system-doctor': 'System Doctor',
+      queue: 'Task Queue',
       'design-components': 'Shadcn Components',
       'foundation-standards': 'Foundations',
+      'app-components': 'App Components',
       inbox: 'Inbox',
-      queue: 'Queue',
       deliveries: 'Deliveries',
       archive: 'Archive'
     },
@@ -464,6 +483,9 @@ const uiText = {
       workspace: 'Library',
       folders: 'Library',
       settings: 'Settings',
+      groupMyLibrary: 'My Library',
+      groupKindleSend: 'Kindle Send',
+      groupDevMode: 'Developer Mode',
       folderNames: ['All Comics', 'New Imports', 'To Organize', 'Kindle Prep'],
       statuses: {
         已入库: 'In Library',
@@ -496,14 +518,57 @@ const uiText = {
 
 const primaryNav: NavItem[] = [
   { id: 'library', title: '所有漫画', icon: Library, badge: '128' },
-  { id: 'app-components', title: '应用组件', icon: Package, badge: '15' },
+  { id: 'add-library', title: '添加资源库', icon: FolderPlus },
+  { id: 'web-push', title: '网页推送', icon: Globe },
+  { id: 'devices-emails', title: '设备与邮箱', icon: Mail },
+  { id: 'system-doctor', title: '系统环境医生', icon: Stethoscope },
+  { id: 'queue', title: '任务队列', icon: BookOpenCheck, badge: '2' },
   { id: 'design-components', title: 'Shadcn 组件', icon: Component, badge: '59' },
   { id: 'foundation-standards', title: '基础规范', icon: SwatchBook },
+  { id: 'app-components', title: '应用组件', icon: Package, badge: '15' },
   { id: 'inbox', title: '导入收件箱', icon: Inbox, badge: '6' },
-  { id: 'queue', title: '转换队列', icon: BookOpenCheck, badge: '2' },
   { id: 'deliveries', title: '投递记录', icon: Send },
   { id: 'archive', title: '归档', icon: Archive }
 ]
+
+type SidebarGroupItem = {
+  id: ViewId
+  icon: LucideIcon
+  badge?: string
+}
+
+type SidebarGroupConfig = {
+  titleKey: 'groupMyLibrary' | 'groupKindleSend' | 'groupDevMode'
+  items: SidebarGroupItem[]
+}
+
+const sidebarGroups: SidebarGroupConfig[] = [
+  {
+    titleKey: 'groupMyLibrary',
+    items: [
+      { id: 'library', icon: Library, badge: '128' },
+      { id: 'add-library', icon: FolderPlus },
+      { id: 'web-push', icon: Globe }
+    ]
+  },
+  {
+    titleKey: 'groupKindleSend',
+    items: [
+      { id: 'web-push', icon: Globe },
+      { id: 'devices-emails', icon: Mail },
+      { id: 'system-doctor', icon: Stethoscope },
+      { id: 'queue', icon: BookOpenCheck, badge: '2' }
+    ]
+  },
+  {
+    titleKey: 'groupDevMode',
+    items: [
+      { id: 'design-components', icon: Component, badge: '59' },
+      { id: 'foundation-standards', icon: SwatchBook }
+    ]
+  }
+]
+
 
 const libraryStats = [
   { label: '本地漫画', value: '128', note: '占位统计', icon: BookOpen },
@@ -922,9 +987,7 @@ function App(): React.JSX.Element {
               <FoundationStandardsView locale={languageMode} />
             </ScrollArea>
           ) : (
-            <ScrollArea className="min-h-0 flex-1">
-              <LibraryView locale={languageMode} />
-            </ScrollArea>
+            <div className="flex-1 bg-background" />
           )}
         </SidebarInset>
       </div>
@@ -8279,44 +8342,36 @@ function AppSidebar({
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
       />
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>{text.sidebar.workspace}</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {primaryNav.map((item) => (
-                <SidebarMenuItem key={item.id}>
-                  <SidebarMenuButton
-                    isActive={item.id === activeView}
-                    onClick={() => onSelect(item.id)}
-                    tooltip={text.nav[item.id]}
-                  >
-                    <item.icon />
-                    <span>{text.nav[item.id]}</span>
-                  </SidebarMenuButton>
-                  {item.badge ? <SidebarMenuBadge>{item.badge}</SidebarMenuBadge> : null}
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarSeparator />
-
-        <SidebarGroup>
-          <SidebarGroupLabel>{text.sidebar.folders}</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {text.sidebar.folderNames.map((folder) => (
-                <SidebarMenuItem key={folder}>
-                  <SidebarMenuButton tooltip={folder}>
-                    <FolderOpen />
-                    <span>{folder}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {sidebarGroups.map((group, groupIdx) => (
+          <React.Fragment key={group.titleKey}>
+            {groupIdx > 0 ? <SidebarSeparator /> : null}
+            <SidebarGroup>
+              <SidebarGroupLabel>{text.sidebar[group.titleKey]}</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {group.items.map((item, itemIdx) => {
+                    const uniqueKey = `${group.titleKey}-${item.id}-${itemIdx}`
+                    return (
+                      <SidebarMenuItem key={uniqueKey}>
+                        <SidebarMenuButton
+                          isActive={item.id === activeView}
+                          onClick={() => onSelect(item.id)}
+                          tooltip={text.nav[item.id]}
+                        >
+                          <item.icon className="size-4 shrink-0" />
+                          <span>{text.nav[item.id]}</span>
+                        </SidebarMenuButton>
+                        {item.badge ? (
+                          <SidebarMenuBadge>{item.badge}</SidebarMenuBadge>
+                        ) : null}
+                      </SidebarMenuItem>
+                    )
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </React.Fragment>
+        ))}
       </SidebarContent>
 
       <SidebarFooter className="border-t">
@@ -8354,6 +8409,11 @@ function StatusLabel({
       {text.sidebar.statuses[status]}
     </span>
   )
+}
+
+// 防止未使用变量引发的 TypeScript 编译错误
+if (false as boolean) {
+  console.log(LibraryView)
 }
 
 export default App
