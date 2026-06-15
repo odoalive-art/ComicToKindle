@@ -8270,7 +8270,7 @@ function AppSidebar({
   return (
     <Sidebar collapsible="icon" variant="inset">
       <div
-        className={`h-9 w-full shrink-0 flex items-center ${
+        className={`h-12 w-full shrink-0 flex items-center ${
           state === 'expanded' ? 'px-4' : 'justify-center px-0'
         }`}
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
