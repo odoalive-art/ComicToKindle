@@ -128,4 +128,5 @@ src/renderer/src/data/design-tokens.ts
 - 保持 README 中的安装和验证命令与 `package.json` 同步。
 - 除非仓库重新移回同步目录，否则不要新增 iCloud 特定工具链 workaround。
 - 优先使用 shadcn/ui 组件和本地既有模式，不要随意新增自定义 primitive。
+- 未经用户明确授权，绝不擅自执行 `git commit` 或 `git push` 提交及推送操作，必须先询问用户并获得确认。
 - 多 agent 接力时遵守 `docs/agent-collaboration.md`，结束阶段前更新必要文档和交接记录。

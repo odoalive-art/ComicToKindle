@@ -51,6 +51,7 @@ src/renderer/src/assets/main.css
 - 不绕过 `components.json`、`src/renderer/src/components/ui/` 和现有 shadcn/ui 模式。
 - 不擅自改动 unrelated 文件或回滚他人改动。
 - 不在未确认的情况下执行破坏性 git 操作，例如 `reset --hard`、强推或大范围 checkout。
+- 未经用户明确授权，绝不擅自执行 `git commit` 或 `git push` 提交及推送操作，必须先询问用户并获得口头/文字确认。
 - 不把开发期页面 `设计组件`、`基础规范` 描述成终端用户功能。
 
 ## 交接前检查

@@ -8284,7 +8284,7 @@ function AppSidebar({
           />
         )}
       </div>
-      <SidebarContent>
+      <SidebarContent className={state === 'expanded' ? '-mt-4' : '-mt-2'}>
         {sidebarGroups.map((group, groupIdx) => (
           <React.Fragment key={group.titleKey}>
             {groupIdx > 0 ? <SidebarSeparator /> : null}
@@ -8317,7 +8317,7 @@ function AppSidebar({
         ))}
       </SidebarContent>
 
-      <Separator className="-mx-2 w-auto bg-sidebar-border" />
+      <Separator className="-mx-2 !w-auto bg-sidebar-border" />
       <SidebarFooter className="p-2 pt-2">
         <div className="flex items-center justify-between w-full gap-2">
           <SidebarMenu className="flex-1 min-w-0">
