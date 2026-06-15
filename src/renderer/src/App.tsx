@@ -8317,7 +8317,8 @@ function AppSidebar({
         ))}
       </SidebarContent>
 
-      <SidebarFooter className="border-t p-2">
+      <Separator className="-mx-2 w-auto bg-sidebar-border" />
+      <SidebarFooter className="p-2 pt-2">
         <div className="flex items-center justify-between w-full gap-2">
           <SidebarMenu className="flex-1 min-w-0">
             <SidebarMenuItem>
