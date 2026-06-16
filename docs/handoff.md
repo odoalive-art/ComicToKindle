@@ -28,13 +28,13 @@ ComicToKindle 处于桌面应用基础阶段。已微调侧边栏导航，并支
 
 ## 重要上下文
 
-仓库应保持在本地非同步盘路径：
+当前仓库路径：
 
 ```txt
-/Users/linweiqiang/Desktop/ComicToKindle
+/Users/linweiqiang/Library/Mobile Documents/com~apple~CloudDocs/Dev/Projects/ComicToKindle
 ```
 
-旧 iCloud Drive 路径下曾出现 Node toolchain binary 卡住问题，不要把项目移回同步盘后继续开发。
+补充说明（2026-06-15）：该仓库已按用户要求迁回 iCloud Drive 同步目录。已知风险仍然存在，旧同步盘路径下曾出现 Node toolchain binary 卡住问题；如果再次复现，优先迁回本地非同步目录后再继续开发。
 
 `设计组件` 和 `基础规范` 都是开发期提效页面，便于搭建 UI 时选择组件和 token。它们不是终端用户产品功能。
 

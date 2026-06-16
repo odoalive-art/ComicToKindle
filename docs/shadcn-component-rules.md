@@ -39,7 +39,7 @@
     *   **修饰变体 (Modifier Variants)**：如带图标的组件（With Icon）、带有加载动画的组件（Loading / Spinner）。
     *   **尺寸变体 (Sizes)**：展示不同宽度/高度/间距等级的组件集合。
     *   **复合逻辑变体 (Compound Layouts/Actions)**：如 Avatar Group（头像群组）、Dropdown 嵌套触发（如头像作为下拉菜单触发器）。
-*   **完整登记**：上述提取到的每一个独立变体预览，都必须在 [shadcn-docs.ts](file:///Users/linweiqiang/Desktop/ComicToKindle/src/renderer/src/data/shadcn-docs.ts) 的 `mirroredShadcnDocs` 中的 `sections` 里以 `{ type: 'preview', name: '<example-slug>' }` 结构进行逐一注册，并在 [App.tsx](file:///Users/linweiqiang/Desktop/ComicToKindle/src/renderer/src/App.tsx) 中实现独立的分支渲染渲染。
+*   **完整登记**：上述提取到的每一个独立变体预览，都必须在 [shadcn-docs.ts](file:///Users/linweiqiang/Library/Mobile%20Documents/com~apple~CloudDocs/Dev/Projects/ComicToKindle/src/renderer/src/data/shadcn-docs.ts) 的 `mirroredShadcnDocs` 中的 `sections` 里以 `{ type: 'preview', name: '<example-slug>' }` 结构进行逐一注册，并在 [App.tsx](file:///Users/linweiqiang/Library/Mobile%20Documents/com~apple~CloudDocs/Dev/Projects/ComicToKindle/src/renderer/src/App.tsx) 中实现独立的分支渲染渲染。
 
 ### 2. 禁止的“拼盘简化”行为
 *   **严禁**将官方多个截然不同的独立案例（如 `Avatar Basic`, `Avatar Group`, `Avatar Sizes`）擅自合并成一个单一预览容器展示。每个官方案例在左侧的 Examples 菜单/文档树中**必须对应独立的预览区块与复制代码块**，以方便后续开发直接复用。
@@ -48,7 +48,7 @@
 
 ## 四、 组件状态定义与判定
 
-每个组件在梳理时，必须分清以下三种状态，并在 [shadcn-docs.ts](file:///Users/linweiqiang/Desktop/ComicToKindle/src/renderer/src/data/shadcn-docs.ts) 中准确标记：
+每个组件在梳理时，必须分清以下三种状态，并在 [shadcn-docs.ts](file:///Users/linweiqiang/Library/Mobile%20Documents/com~apple~CloudDocs/Dev/Projects/ComicToKindle/src/renderer/src/data/shadcn-docs.ts) 中准确标记：
 
 | 状态 | 判定标准 | 对应的配置修改 |
 | :--- | :--- | :--- |
@@ -78,7 +78,7 @@
 
 ## 六、 预览完成度标准 (Preview Quality Standards)
 
-在 [App.tsx](file:///Users/linweiqiang/Desktop/ComicToKindle/src/renderer/src/App.tsx) 中编写 Live 预览时，需根据组件的安装状态，按以下三个级别进行高保真呈现：
+在 [App.tsx](file:///Users/linweiqiang/Library/Mobile%20Documents/com~apple~CloudDocs/Dev/Projects/ComicToKindle/src/renderer/src/App.tsx) 中编写 Live 预览时，需根据组件的安装状态，按以下三个级别进行高保真呈现：
 
 ```mermaid
 graph TD
@@ -116,8 +116,8 @@ graph TD
 
 1.  **官方案例完整性比对 (Examples Check)**：
     *   质检员需通过搜索引擎、本地文档缓存或网络请求抓取对应组件的官方 MDX 文档或页面。
-    *   **比对列表**：逐项检查官方 Examples 下的每个 heading/ComponentPreview，与本地 [shadcn-docs.ts](file:///Users/linweiqiang/Desktop/ComicToKindle/src/renderer/src/data/shadcn-docs.ts) 中注册的 `sections` 列表是否在数量和 Slug 命名上 100% 一致。
-    *   **多预览分支检查**：检查 [App.tsx](file:///Users/linweiqiang/Desktop/ComicToKindle/src/renderer/src/App.tsx) 中是否有针对上述每一个案例 Slug 的条件渲染（分支代码），严禁出现配置了Examples 但预览回退到 default 兜底或报错的情况。
+    *   **比对列表**：逐项检查官方 Examples 下的每个 heading/ComponentPreview，与本地 [shadcn-docs.ts](file:///Users/linweiqiang/Library/Mobile%20Documents/com~apple~CloudDocs/Dev/Projects/ComicToKindle/src/renderer/src/data/shadcn-docs.ts) 中注册的 `sections` 列表是否在数量和 Slug 命名上 100% 一致。
+    *   **多预览分支检查**：检查 [App.tsx](file:///Users/linweiqiang/Library/Mobile%20Documents/com~apple~CloudDocs/Dev/Projects/ComicToKindle/src/renderer/src/App.tsx) 中是否有针对上述每一个案例 Slug 的条件渲染（分支代码），严禁出现配置了Examples 但预览回退到 default 兜底或报错的情况。
 2.  **双语校验**：
     *   验证切换顶栏的“中文/EN”按钮时，文档描述和组件预览标题是否能流畅自适应。
 3.  **零报错编译**：

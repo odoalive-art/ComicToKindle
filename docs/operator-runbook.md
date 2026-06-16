@@ -7,10 +7,10 @@
 当前工作区路径：
 
 ```txt
-/Users/linweiqiang/Desktop/ComicToKindle
+/Users/linweiqiang/Library/Mobile Documents/com~apple~CloudDocs/Dev/Projects/ComicToKindle
 ```
 
-不要使用旧 iCloud Drive 路径。2026-06-11 项目迁出同步盘路径，是因为 `esbuild` 和 Node `.bin` shim 在同步目录下执行卡住。
+注意：该路径位于 iCloud Drive 同步目录，这是 2026-06-15 按用户要求迁回的结果。2026-06-11 项目曾因 `esbuild` 和 Node `.bin` shim 在同步目录下执行卡住而迁出；如果问题再次出现，优先迁回本地非同步目录。
 
 ## 安装
 
@@ -85,7 +85,7 @@ git status --short
 
 ## 已知工具链说明
 
-- 仓库应放在 iCloud Drive、Dropbox 等同步目录之外。
+- 当前仓库位于 iCloud Drive 同步目录；若再次出现 Node toolchain 卡住，优先迁回本地非同步目录。
 - shadcn CLI 无法自动把该 Electron Vite 项目识别为标准 Vite app，因此项目通过 `components.json` 手动配置 shadcn。
 - `设计组件` 和 `基础规范` 是开发期提效页面，不代表已实现终端用户功能。
 - `npm run build` 是当前验证设置是否正确的事实来源。

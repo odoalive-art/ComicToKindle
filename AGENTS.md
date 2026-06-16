@@ -7,10 +7,10 @@ ComicToKindle 是一个桌面应用项目，用于后续实现本地漫画库、
 当前仓库路径：
 
 ```txt
-/Users/linweiqiang/Desktop/ComicToKindle
+/Users/linweiqiang/Library/Mobile Documents/com~apple~CloudDocs/Dev/Projects/ComicToKindle
 ```
 
-不要使用旧 iCloud Drive 路径。项目在 2026-06-11 从同步盘路径迁出，因为在该路径运行 Node 工具链二进制时出现过 `esbuild` 和 `.bin` shim 卡住。
+当前仓库位于 iCloud Drive 同步目录，这是 2026-06-15 按用户要求手动迁回的结果。已知风险仍然存在：2026-06-11 曾在同步盘路径下遇到 `esbuild` 和 `.bin` shim 卡住；如果再次复现，优先把仓库迁回本地非同步目录后再继续开发。
 
 ## 技术栈
 
