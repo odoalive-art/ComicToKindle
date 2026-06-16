@@ -1,6 +1,6 @@
 # 架构说明
 
-本文描述 2026-06-11 时点的应用基础架构。
+本文描述 2026-06-16 时点的应用基础架构。
 
 ## 当前范围
 
@@ -18,6 +18,7 @@ ComicToKindle 目前是一个桌面应用工作台基础，用于后续承载本
 - 使用静态数据的漫画库占位工作区
 - 顶栏应用级深浅模式切换
 - 顶栏中英切换
+- 自定义交通灯窗口控件（通过 IPC 接管关闭/最小化/最大化）
 - 开发期使用的 shadcn 组件索引和本地文档镜像
 - 开发期使用的基础规范页，覆盖颜色、字体、字号和间距
 
@@ -36,6 +37,7 @@ ComicToKindle 目前是一个桌面应用工作台基础，用于后续承载本
 Electron main process
   src/main/index.ts
   负责 BrowserWindow 创建、应用生命周期、外部链接打开行为和 main-process IPC。
+  处理自定义交通灯的 window-close / window-minimize / window-maximize IPC 事件。
 
 Preload process
   src/preload/index.ts
@@ -99,6 +101,7 @@ electron.vite.config.ts
 src/renderer/src/assets/main.css
 src/renderer/src/lib/utils.ts
 src/renderer/src/components/ui/
+src/renderer/src/components/ui/traffic-lights.tsx  ← 自定义交通灯组件
 src/renderer/src/data/design-tokens.ts
 src/renderer/src/data/shadcn-docs.ts
 ```
