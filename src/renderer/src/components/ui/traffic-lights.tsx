@@ -21,7 +21,7 @@ export function TrafficLights(): React.JSX.Element {
 
   return (
     <div
-      className="group flex items-center gap-2"
+      className="group/tl flex items-center gap-2"
       style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
     >
       {/* 红色：关闭 */}
@@ -31,7 +31,7 @@ export function TrafficLights(): React.JSX.Element {
         title="关闭"
       >
         <svg
-          className="size-[6px] stroke-[#4c0002] stroke-[1.5] opacity-0 transition-opacity duration-150 group-hover:opacity-100"
+          className="size-[6px] stroke-[#4c0002] stroke-[1.5] opacity-0 transition-opacity duration-150 group-hover/tl:opacity-100"
           viewBox="0 0 10 10"
         >
           <path d="M1.5 1.5 L8.5 8.5 M8.5 1.5 L1.5 8.5" />
@@ -45,7 +45,7 @@ export function TrafficLights(): React.JSX.Element {
         title="最小化"
       >
         <svg
-          className="size-[6px] stroke-[#5c3e00] stroke-[2] opacity-0 transition-opacity duration-150 group-hover:opacity-100"
+          className="size-[6px] stroke-[#5c3e00] stroke-[2] opacity-0 transition-opacity duration-150 group-hover/tl:opacity-100"
           viewBox="0 0 10 10"
         >
           <path d="M1 5 L9 5" />
@@ -59,7 +59,7 @@ export function TrafficLights(): React.JSX.Element {
         title="最大化"
       >
         <svg
-          className="size-[5px] stroke-[#006505] stroke-[2.2] fill-none opacity-0 transition-opacity duration-150 group-hover:opacity-100"
+          className="size-[5px] stroke-[#006505] stroke-[2.2] fill-none opacity-0 transition-opacity duration-150 group-hover/tl:opacity-100"
           viewBox="0 0 10 10"
         >
           <path d="M1 9 L9 1 M9 4.5 L9 1 L5.5 1 M1 5.5 L1 9 L4.5 9" />

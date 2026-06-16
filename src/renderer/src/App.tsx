@@ -900,21 +900,7 @@ function AppHeader({
             selectedPath={mirroredShadcnDocs[selectedComponentSlug]?.sourcePath}
           />
         </div>
-      ) : (
-        <div
-          className="ml-auto flex items-center gap-3"
-          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-        >
-          <a
-            href="https://github.com/odoalive-art/ComicToKindle"
-            rel="noreferrer"
-            target="_blank"
-            className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline transition-all"
-          >
-            GitHub
-          </a>
-        </div>
-      )}
+      ) : null}
     </header>
   )
 }
