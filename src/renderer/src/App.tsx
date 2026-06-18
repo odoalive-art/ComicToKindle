@@ -3,6 +3,7 @@ import type { LucideIcon } from 'lucide-react'
 import {
   Archive,
   ArrowLeft,
+  ArrowLeftRight,
   ArrowRight,
   ArrowUp,
   ArrowUpRight,
@@ -35,6 +36,7 @@ import {
   Plus,
   Rows3,
   Ruler,
+  BookText,
   Search,
   Send,
   Settings,
@@ -352,7 +354,14 @@ const uiText = {
       loadingPages: '正在加载页面…',
       emptyVolume: '这一卷里没有可显示的页面。',
       prev: '上一页',
-      next: '下一页'
+      next: '下一页',
+      toggleDirection: '阅读方向',
+      directionLtr: '从左往右',
+      directionRtl: '从右往左',
+      toggleMode: '阅读模式',
+      modeSingle: '单页',
+      modeDouble: '双页',
+      resume: '继续'
     },
     components: {
       countSuffix: '个组件',
@@ -464,7 +473,14 @@ const uiText = {
       loadingPages: 'Loading pages…',
       emptyVolume: 'No pages to show in this volume.',
       prev: 'Previous page',
-      next: 'Next page'
+      next: 'Next page',
+      toggleDirection: 'Reading direction',
+      directionLtr: 'Left to right',
+      directionRtl: 'Right to left',
+      toggleMode: 'Reading mode',
+      modeSingle: 'Single page',
+      modeDouble: 'Double page',
+      resume: 'Resume'
     },
     components: {
       countSuffix: 'components',
@@ -906,6 +922,41 @@ function CoverImage({ src, alt }: { src: string | null; alt: string }): React.JS
 const LIBRARY_GRID =
   'grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'
 
+// ---------- 阅读偏好与进度（持久化于 localStorage） ----------
+type ReadingDirection = 'ltr' | 'rtl'
+type ReadingMode = 'single' | 'double'
+
+const READING_DIR_KEY = 'comic-to-kindle-reading-direction'
+const READING_MODE_KEY = 'comic-to-kindle-reading-mode'
+const READING_PROGRESS_KEY = 'comic-to-kindle-reading-progress'
+
+function getInitialDirection(): ReadingDirection {
+  return window.localStorage.getItem(READING_DIR_KEY) === 'rtl' ? 'rtl' : 'ltr'
+}
+function getInitialMode(): ReadingMode {
+  return window.localStorage.getItem(READING_MODE_KEY) === 'double' ? 'double' : 'single'
+}
+function readProgressMap(): Record<string, number> {
+  try {
+    return JSON.parse(window.localStorage.getItem(READING_PROGRESS_KEY) || '{}')
+  } catch {
+    return {}
+  }
+}
+function getProgress(volumePath: string): number {
+  const value = readProgressMap()[volumePath]
+  return typeof value === 'number' ? value : 0
+}
+function saveProgress(volumePath: string, index: number): void {
+  const map = readProgressMap()
+  map[volumePath] = index
+  try {
+    window.localStorage.setItem(READING_PROGRESS_KEY, JSON.stringify(map))
+  } catch {
+    /* 忽略写入失败 */
+  }
+}
+
 function VolumeReader({
   volume,
   locale,
@@ -919,15 +970,19 @@ function VolumeReader({
   const [pages, setPages] = useState<string[]>([])
   const [index, setIndex] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [direction, setDirection] = useState<ReadingDirection>(getInitialDirection)
+  const [mode, setMode] = useState<ReadingMode>(getInitialMode)
 
+  // 加载页面并恢复上次阅读进度
   useEffect(() => {
     let active = true
     setLoading(true)
-    setIndex(0)
     window.api.library
       .listPages(volume.path)
       .then((p) => {
-        if (active) setPages(p)
+        if (!active) return
+        setPages(p)
+        setIndex(Math.min(getProgress(volume.path), Math.max(0, p.length - 1)))
       })
       .catch((err) => toast.error(`${err}`))
       .finally(() => {
@@ -939,24 +994,69 @@ function VolumeReader({
   }, [volume.path])
 
   const total = pages.length
-  const goPrev = React.useCallback(() => setIndex((i) => Math.max(0, i - 1)), [])
-  const goNext = React.useCallback(() => setIndex((i) => Math.min(total - 1, i + 1)), [total])
+  const step = mode === 'double' ? 2 : 1
+  const goPrev = React.useCallback(() => setIndex((i) => Math.max(0, i - step)), [step])
+  const goNext = React.useCallback(
+    () => setIndex((i) => Math.min(total - 1, i + step)),
+    [total, step]
+  )
 
+  // 持久化进度
+  useEffect(() => {
+    if (!loading && total > 0) saveProgress(volume.path, index)
+  }, [index, loading, total, volume.path])
+
+  const toggleDirection = (): void => {
+    const next = direction === 'ltr' ? 'rtl' : 'ltr'
+    setDirection(next)
+    window.localStorage.setItem(READING_DIR_KEY, next)
+    toast(
+      `${text.reader.toggleDirection}: ${next === 'rtl' ? text.reader.directionRtl : text.reader.directionLtr}`
+    )
+  }
+  const toggleMode = (): void => {
+    const next = mode === 'single' ? 'double' : 'single'
+    setMode(next)
+    window.localStorage.setItem(READING_MODE_KEY, next)
+    toast(
+      `${text.reader.toggleMode}: ${next === 'double' ? text.reader.modeDouble : text.reader.modeSingle}`
+    )
+  }
+
+  // 键盘导航
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
-      if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') {
+      if (e.key === 'Escape') {
+        onClose()
+        return
+      }
+      const rtl = direction === 'rtl'
+      if (e.key === 'ArrowDown' || e.key === ' ' || e.key === 'PageDown') {
         e.preventDefault()
         goNext()
-      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      } else if (e.key === 'ArrowUp' || e.key === 'PageUp') {
         e.preventDefault()
         goPrev()
-      } else if (e.key === 'Escape') {
-        onClose()
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault()
+        rtl ? goPrev() : goNext()
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault()
+        rtl ? goNext() : goPrev()
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [goNext, goPrev, onClose])
+  }, [direction, goNext, goPrev, onClose])
+
+  const rtl = direction === 'rtl'
+  const isDouble = mode === 'double'
+  const atFirst = index === 0
+  const atLast = index + step >= total
+  const hasSecond = isDouble && index + 1 < total
+  const counter = hasSecond
+    ? `${index + 1}–${index + 2} / ${total}`
+    : text.reader.pageOf(index + 1, total)
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-background">
@@ -973,13 +1073,35 @@ function VolumeReader({
           <ArrowLeft className="size-4" />
           {text.reader.back}
         </Button>
-        <span className="min-w-0 truncate text-sm font-semibold text-foreground" title={volume.title}>
+        <span
+          className="min-w-0 truncate text-sm font-semibold text-foreground"
+          title={volume.title}
+        >
           {volume.title}
         </span>
         {total > 0 ? (
-          <span className="ml-auto shrink-0 text-sm tabular-nums text-muted-foreground">
-            {text.reader.pageOf(index + 1, total)}
-          </span>
+          <div
+            className="ml-auto flex shrink-0 items-center gap-1"
+            style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+          >
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={toggleDirection}
+              title={`${text.reader.toggleDirection}: ${rtl ? text.reader.directionRtl : text.reader.directionLtr}`}
+            >
+              <ArrowLeftRight className="size-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={toggleMode}
+              title={`${text.reader.toggleMode}: ${isDouble ? text.reader.modeDouble : text.reader.modeSingle}`}
+            >
+              {isDouble ? <BookOpen className="size-4" /> : <BookText className="size-4" />}
+            </Button>
+            <span className="ml-1 text-sm tabular-nums text-muted-foreground">{counter}</span>
+          </div>
         ) : null}
       </header>
 
@@ -993,36 +1115,64 @@ function VolumeReader({
         </div>
       ) : (
         <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-neutral-900">
-          <img
-            key={pages[index]}
-            src={pages[index]}
-            alt={`${index + 1}`}
-            draggable={false}
-            className="max-h-full max-w-full object-contain select-none"
-          />
-          {/* 预加载下一页 */}
-          {index + 1 < total ? (
-            <img src={pages[index + 1]} alt="" aria-hidden className="hidden" />
-          ) : null}
+          {isDouble ? (
+            <div className={`flex h-full w-full ${rtl ? 'flex-row-reverse' : 'flex-row'}`}>
+              <img
+                key={pages[index]}
+                src={pages[index]}
+                alt={`${index + 1}`}
+                draggable={false}
+                style={{ objectPosition: rtl ? 'left' : 'right' }}
+                className="h-full w-1/2 object-contain select-none"
+              />
+              {hasSecond ? (
+                <img
+                  key={pages[index + 1]}
+                  src={pages[index + 1]}
+                  alt={`${index + 2}`}
+                  draggable={false}
+                  style={{ objectPosition: rtl ? 'right' : 'left' }}
+                  className="h-full w-1/2 object-contain select-none"
+                />
+              ) : null}
+            </div>
+          ) : (
+            <img
+              key={pages[index]}
+              src={pages[index]}
+              alt={`${index + 1}`}
+              draggable={false}
+              className="max-h-full max-w-full object-contain select-none"
+            />
+          )}
 
-          {/* 左半区：上一页 */}
+          {/* 预加载相邻页 */}
+          {Array.from({ length: 6 }, (_, k) => index - 2 + k)
+            .filter(
+              (i) => i >= 0 && i < total && i !== index && !(isDouble && i === index + 1)
+            )
+            .map((i) => (
+              <img key={`pre-${i}`} src={pages[i]} alt="" aria-hidden className="hidden" />
+            ))}
+
+          {/* 左半区 */}
           <button
             type="button"
-            aria-label={text.reader.prev}
-            onClick={goPrev}
-            disabled={index === 0}
+            aria-label={rtl ? text.reader.next : text.reader.prev}
+            onClick={rtl ? goNext : goPrev}
+            disabled={rtl ? atLast : atFirst}
             className="group absolute inset-y-0 left-0 flex w-1/2 items-center justify-start pl-3 disabled:pointer-events-none"
           >
             <span className="flex size-9 items-center justify-center rounded-full bg-black/40 text-white opacity-0 transition-opacity group-hover:opacity-100">
               <ChevronLeft className="size-5" />
             </span>
           </button>
-          {/* 右半区：下一页 */}
+          {/* 右半区 */}
           <button
             type="button"
-            aria-label={text.reader.next}
-            onClick={goNext}
-            disabled={index >= total - 1}
+            aria-label={rtl ? text.reader.prev : text.reader.next}
+            onClick={rtl ? goPrev : goNext}
+            disabled={rtl ? atFirst : atLast}
             className="group absolute inset-y-0 right-0 flex w-1/2 items-center justify-end pr-3 disabled:pointer-events-none"
           >
             <span className="flex size-9 items-center justify-center rounded-full bg-black/40 text-white opacity-0 transition-opacity group-hover:opacity-100">
@@ -1228,15 +1378,31 @@ function LibraryView({ locale }: { locale: LanguageMode }): React.JSX.Element {
                     <AspectRatio ratio={3 / 4} className="overflow-hidden rounded-lg bg-muted">
                       <CoverImage src={vol.coverUrl} alt={vol.title} />
                       <div className="pointer-events-none absolute inset-0 rounded-lg border border-foreground/10" />
+                      {(() => {
+                        const prog = getProgress(vol.path)
+                        if (prog <= 0 || vol.pageCount <= 0) return null
+                        const pct = Math.min(100, ((prog + 1) / vol.pageCount) * 100)
+                        return (
+                          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1 bg-black/30">
+                            <div className="h-full bg-primary" style={{ width: `${pct}%` }} />
+                          </div>
+                        )
+                      })()}
                     </AspectRatio>
                     <div className="min-w-0">
                       <div className="truncate text-sm font-medium" title={vol.title}>
                         {vol.title}
                       </div>
                       <div className="truncate text-xs text-muted-foreground">
-                        {vol.kind === 'file'
-                          ? text.library.fileVolume
-                          : text.library.pageUnit(vol.pageCount)}
+                        {(() => {
+                          const prog = getProgress(vol.path)
+                          if (prog > 0 && vol.pageCount > 0) {
+                            return `${text.reader.resume} · ${text.reader.pageOf(prog + 1, vol.pageCount)}`
+                          }
+                          return vol.kind === 'file'
+                            ? text.library.fileVolume
+                            : text.library.pageUnit(vol.pageCount)
+                        })()}
                       </div>
                     </div>
                   </button>
