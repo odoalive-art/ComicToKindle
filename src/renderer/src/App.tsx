@@ -8270,7 +8270,11 @@ function AppSidebar({
           />
         )}
       </div>
-      <SidebarContent className={state === 'expanded' ? '-mt-4' : '-mt-2'}>
+      <SidebarContent
+        className={`transition-[margin] duration-200 ease-out ${
+          state === 'expanded' ? '-mt-4' : '-mt-2'
+        }`}
+      >
         {sidebarGroups.map((group, groupIdx) => (
           <React.Fragment key={group.titleKey}>
             {groupIdx > 0 ? <SidebarSeparator /> : null}
