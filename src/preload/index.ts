@@ -7,7 +7,8 @@ const api = {
     pickFolder: (): Promise<string | null> => ipcRenderer.invoke('library:pickFolder'),
     getSavedRoot: (): Promise<string | null> => ipcRenderer.invoke('library:getSavedRoot'),
     scan: (root: string) => ipcRenderer.invoke('library:scan', root),
-    listVolumes: (seriesPath: string) => ipcRenderer.invoke('library:listVolumes', seriesPath)
+    listVolumes: (seriesPath: string) => ipcRenderer.invoke('library:listVolumes', seriesPath),
+    listPages: (volumePath: string) => ipcRenderer.invoke('library:listPages', volumePath)
   }
 }
 

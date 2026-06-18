@@ -188,6 +188,31 @@ async function listVolumes(seriesPath: string): Promise<LibraryVolume[]> {
   return result
 }
 
+/** 按阅读顺序递归收集一卷的所有页：本级图片（自然排序）在前，再依次进入子文件夹（自然排序） */
+async function collectPages(dir: string, depth = 5): Promise<string[]> {
+  const entries = await readDirSafe(dir)
+  const images = entries
+    .filter((e) => e.isFile() && isImage(e.name))
+    .map((e) => e.name)
+    .sort(naturalSort)
+  const pages = images.map((name) => join(dir, name))
+  if (depth > 0) {
+    const subDirs = entries
+      .filter((e) => e.isDirectory() && !isHidden(e.name))
+      .map((e) => e.name)
+      .sort(naturalSort)
+    for (const sub of subDirs) {
+      pages.push(...(await collectPages(join(dir, sub), depth - 1)))
+    }
+  }
+  return pages
+}
+
+async function listPages(volumePath: string): Promise<string[]> {
+  const pages = await collectPages(volumePath)
+  return pages.map(toComicUrl)
+}
+
 // ---------- comic:// 协议 ----------
 /** 必须在 app ready 之前调用 */
 export function registerComicScheme(): void {
@@ -262,4 +287,6 @@ export function setupLibrary(): void {
   ipcMain.handle('library:listVolumes', async (_event, seriesPath: string) =>
     listVolumes(seriesPath)
   )
+
+  ipcMain.handle('library:listPages', async (_event, volumePath: string) => listPages(volumePath))
 }

@@ -42,6 +42,7 @@ import {
   SwatchBook,
   Terminal,
   AlertCircle,
+  ChevronLeft,
   ChevronRight,
   Slash,
   Type,
@@ -345,6 +346,14 @@ const uiText = {
       volumeUnit: (n: number) => `${n} 卷`,
       pageUnit: (n: number) => `${n} 页`
     },
+    reader: {
+      back: '返回',
+      pageOf: (cur: number, total: number) => `${cur} / ${total}`,
+      loadingPages: '正在加载页面…',
+      emptyVolume: '这一卷里没有可显示的页面。',
+      prev: '上一页',
+      next: '下一页'
+    },
     components: {
       countSuffix: '个组件',
       mirrored: '已镜像',
@@ -448,6 +457,14 @@ const uiText = {
       fileVolume: 'Single file',
       volumeUnit: (n: number) => `${n} vol${n === 1 ? '' : 's'}`,
       pageUnit: (n: number) => `${n} page${n === 1 ? '' : 's'}`
+    },
+    reader: {
+      back: 'Back',
+      pageOf: (cur: number, total: number) => `${cur} / ${total}`,
+      loadingPages: 'Loading pages…',
+      emptyVolume: 'No pages to show in this volume.',
+      prev: 'Previous page',
+      next: 'Next page'
     },
     components: {
       countSuffix: 'components',
@@ -889,6 +906,135 @@ function CoverImage({ src, alt }: { src: string | null; alt: string }): React.JS
 const LIBRARY_GRID =
   'grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'
 
+function VolumeReader({
+  volume,
+  locale,
+  onClose
+}: {
+  volume: LibraryVolume
+  locale: LanguageMode
+  onClose: () => void
+}): React.JSX.Element {
+  const text = uiText[locale]
+  const [pages, setPages] = useState<string[]>([])
+  const [index, setIndex] = useState(0)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let active = true
+    setLoading(true)
+    setIndex(0)
+    window.api.library
+      .listPages(volume.path)
+      .then((p) => {
+        if (active) setPages(p)
+      })
+      .catch((err) => toast.error(`${err}`))
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+    return () => {
+      active = false
+    }
+  }, [volume.path])
+
+  const total = pages.length
+  const goPrev = React.useCallback(() => setIndex((i) => Math.max(0, i - 1)), [])
+  const goNext = React.useCallback(() => setIndex((i) => Math.min(total - 1, i + 1)), [total])
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') {
+        e.preventDefault()
+        goNext()
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        e.preventDefault()
+        goPrev()
+      } else if (e.key === 'Escape') {
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [goNext, goPrev, onClose])
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col bg-background">
+      <header
+        className="flex h-12 shrink-0 items-center gap-2 border-b bg-background px-4"
+        style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
+      >
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onClose}
+          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+        >
+          <ArrowLeft className="size-4" />
+          {text.reader.back}
+        </Button>
+        <span className="min-w-0 truncate text-sm font-semibold text-foreground" title={volume.title}>
+          {volume.title}
+        </span>
+        {total > 0 ? (
+          <span className="ml-auto shrink-0 text-sm tabular-nums text-muted-foreground">
+            {text.reader.pageOf(index + 1, total)}
+          </span>
+        ) : null}
+      </header>
+
+      {loading ? (
+        <div className="flex flex-1 items-center justify-center">
+          <Spinner />
+        </div>
+      ) : total === 0 ? (
+        <div className="flex flex-1 items-center justify-center p-6 text-sm text-muted-foreground">
+          {text.reader.emptyVolume}
+        </div>
+      ) : (
+        <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-neutral-900">
+          <img
+            key={pages[index]}
+            src={pages[index]}
+            alt={`${index + 1}`}
+            draggable={false}
+            className="max-h-full max-w-full object-contain select-none"
+          />
+          {/* 预加载下一页 */}
+          {index + 1 < total ? (
+            <img src={pages[index + 1]} alt="" aria-hidden className="hidden" />
+          ) : null}
+
+          {/* 左半区：上一页 */}
+          <button
+            type="button"
+            aria-label={text.reader.prev}
+            onClick={goPrev}
+            disabled={index === 0}
+            className="group absolute inset-y-0 left-0 flex w-1/2 items-center justify-start pl-3 disabled:pointer-events-none"
+          >
+            <span className="flex size-9 items-center justify-center rounded-full bg-black/40 text-white opacity-0 transition-opacity group-hover:opacity-100">
+              <ChevronLeft className="size-5" />
+            </span>
+          </button>
+          {/* 右半区：下一页 */}
+          <button
+            type="button"
+            aria-label={text.reader.next}
+            onClick={goNext}
+            disabled={index >= total - 1}
+            className="group absolute inset-y-0 right-0 flex w-1/2 items-center justify-end pr-3 disabled:pointer-events-none"
+          >
+            <span className="flex size-9 items-center justify-center rounded-full bg-black/40 text-white opacity-0 transition-opacity group-hover:opacity-100">
+              <ChevronRight className="size-5" />
+            </span>
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function LibraryView({ locale }: { locale: LanguageMode }): React.JSX.Element {
   const text = uiText[locale]
   const { state: sidebarState } = useSidebar()
@@ -896,6 +1042,7 @@ function LibraryView({ locale }: { locale: LanguageMode }): React.JSX.Element {
   const [series, setSeries] = useState<LibrarySeries[]>([])
   const [selected, setSelected] = useState<LibrarySeries | null>(null)
   const [volumes, setVolumes] = useState<LibraryVolume[]>([])
+  const [readingVolume, setReadingVolume] = useState<LibraryVolume | null>(null)
   const [loading, setLoading] = useState(false)
 
   const loadSeries = React.useCallback(async (target: string) => {
@@ -958,6 +1105,17 @@ function LibraryView({ locale }: { locale: LanguageMode }): React.JSX.Element {
   const backToSeries = (): void => {
     setSelected(null)
     setVolumes([])
+  }
+
+  // 阅读某一卷：接管整个内容区
+  if (readingVolume) {
+    return (
+      <VolumeReader
+        volume={readingVolume}
+        locale={locale}
+        onClose={() => setReadingVolume(null)}
+      />
+    )
   }
 
   const showVolumes = selected !== null
@@ -1061,7 +1219,12 @@ function LibraryView({ locale }: { locale: LanguageMode }): React.JSX.Element {
             ) : (
               <div className={LIBRARY_GRID}>
                 {volumes.map((vol) => (
-                  <button key={vol.id} type="button" className="group flex flex-col gap-2 text-left">
+                  <button
+                    key={vol.id}
+                    type="button"
+                    onClick={() => setReadingVolume(vol)}
+                    className="group flex flex-col gap-2 text-left"
+                  >
                     <AspectRatio ratio={3 / 4} className="overflow-hidden rounded-lg bg-muted">
                       <CoverImage src={vol.coverUrl} alt={vol.title} />
                       <div className="pointer-events-none absolute inset-0 rounded-lg border border-foreground/10" />

@@ -25,6 +25,7 @@ export interface LibraryAPI {
   getSavedRoot: () => Promise<string | null>
   scan: (root: string) => Promise<LibrarySeries[]>
   listVolumes: (seriesPath: string) => Promise<LibraryVolume[]>
+  listPages: (volumePath: string) => Promise<string[]>
 }
 
 export interface CustomAPI {
