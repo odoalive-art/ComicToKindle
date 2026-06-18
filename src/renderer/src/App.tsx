@@ -337,7 +337,6 @@ const uiText = {
       rescan: '重新扫描',
       emptyTitle: '还没有选择漫画库',
       emptyDescription: '选择一个包含「部 / 卷册」结构的本地文件夹，开始浏览你的漫画。',
-      rootCrumb: '漫画库',
       loading: '正在扫描漫画库…',
       noSeries: '这个文件夹里没有找到漫画作品。',
       noVolumes: '这个作品下没有可识别的卷册。',
@@ -442,7 +441,6 @@ const uiText = {
       emptyTitle: 'No library selected yet',
       emptyDescription:
         'Pick a local folder organized as Series / Volumes to start browsing your comics.',
-      rootCrumb: 'Library',
       loading: 'Scanning library…',
       noSeries: 'No comic series found in this folder.',
       noVolumes: 'No recognizable volumes under this series.',
@@ -754,37 +752,44 @@ function App(): React.JSX.Element {
           setLanguageMode={setLanguageMode}
         />
         <SidebarInset className="flex min-w-0 flex-col overflow-hidden">
-          <AppHeader
-            languageMode={languageMode}
-            activeNavItemId={activeNavItem.id}
-            isComponentView={isComponentView}
-            selectedComponentSlug={selectedComponentSlug}
-          />
-
-          {isComponentView || activeView === 'app-components' ? (
-            <DesignComponentsView
-              components={
-                activeView === 'app-components' ? filteredAppComponents : filteredDesignComponents
-              }
-              onSelect={setSelectedComponentSlug}
-              query={activeView === 'app-components' ? appComponentSearch : componentSearch}
-              selectedSlug={
-                activeView === 'app-components'
-                  ? filteredAppComponents.some((c) => c.slug === selectedComponentSlug)
-                    ? selectedComponentSlug
-                    : filteredAppComponents[0]?.slug || 'button'
-                  : selectedComponentSlug
-              }
-              locale={languageMode}
-            />
-          ) : isFoundationView ? (
-            <ScrollArea className="min-h-0 flex-1">
-              <FoundationStandardsView locale={languageMode} />
-            </ScrollArea>
-          ) : activeView === 'library' ? (
+          {activeView === 'library' ? (
+            // 库视图自带合并后的顶栏（标题/面包屑 + 操作），不再叠加 AppHeader
             <LibraryView locale={languageMode} />
           ) : (
-            <div className="flex-1 bg-background" />
+            <>
+              <AppHeader
+                languageMode={languageMode}
+                activeNavItemId={activeNavItem.id}
+                isComponentView={isComponentView}
+                selectedComponentSlug={selectedComponentSlug}
+              />
+
+              {isComponentView || activeView === 'app-components' ? (
+                <DesignComponentsView
+                  components={
+                    activeView === 'app-components'
+                      ? filteredAppComponents
+                      : filteredDesignComponents
+                  }
+                  onSelect={setSelectedComponentSlug}
+                  query={activeView === 'app-components' ? appComponentSearch : componentSearch}
+                  selectedSlug={
+                    activeView === 'app-components'
+                      ? filteredAppComponents.some((c) => c.slug === selectedComponentSlug)
+                        ? selectedComponentSlug
+                        : filteredAppComponents[0]?.slug || 'button'
+                      : selectedComponentSlug
+                  }
+                  locale={languageMode}
+                />
+              ) : isFoundationView ? (
+                <ScrollArea className="min-h-0 flex-1">
+                  <FoundationStandardsView locale={languageMode} />
+                </ScrollArea>
+              ) : (
+                <div className="flex-1 bg-background" />
+              )}
+            </>
           )}
         </SidebarInset>
       </div>
@@ -886,6 +891,7 @@ const LIBRARY_GRID =
 
 function LibraryView({ locale }: { locale: LanguageMode }): React.JSX.Element {
   const text = uiText[locale]
+  const { state: sidebarState } = useSidebar()
   const [root, setRoot] = useState<string | null>(null)
   const [series, setSeries] = useState<LibrarySeries[]>([])
   const [selected, setSelected] = useState<LibrarySeries | null>(null)
@@ -954,53 +960,44 @@ function LibraryView({ locale }: { locale: LanguageMode }): React.JSX.Element {
     setVolumes([])
   }
 
-  // 未选择库：空状态
-  if (!root) {
-    return (
-      <div className="flex flex-1 items-center justify-center bg-background p-6">
-        <Empty>
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <FolderOpen />
-            </EmptyMedia>
-            <EmptyTitle>{text.library.emptyTitle}</EmptyTitle>
-            <EmptyDescription>{text.library.emptyDescription}</EmptyDescription>
-          </EmptyHeader>
-          <EmptyContent>
-            <Button onClick={chooseFolder}>
-              <FolderOpen className="size-4" />
-              {text.library.chooseFolder}
-            </Button>
-          </EmptyContent>
-        </Empty>
-      </div>
-    )
-  }
-
   const showVolumes = selected !== null
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-background">
-      {/* 子工具栏：面包屑 + 操作 */}
-      <div className="flex h-12 shrink-0 items-center justify-between gap-2 border-b px-4">
-        <Breadcrumb>
+      {/* 合并后的顶栏：侧栏开关 + 标题/面包屑 + 操作 */}
+      <header
+        className="flex h-12 shrink-0 items-center gap-2 border-b bg-background px-4"
+        style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
+      >
+        {sidebarState === 'expanded' && (
+          <>
+            <SidebarTrigger
+              className="-ml-1"
+              style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+            />
+            <Separator orientation="vertical" className="mr-2 !h-3 opacity-50" />
+          </>
+        )}
+        <Breadcrumb style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
           <BreadcrumbList>
             <BreadcrumbItem>
               {showVolumes ? (
                 <BreadcrumbLink asChild>
                   <button type="button" onClick={backToSeries}>
-                    {text.library.rootCrumb}
+                    {text.nav.library}
                   </button>
                 </BreadcrumbLink>
               ) : (
-                <BreadcrumbPage>{text.library.rootCrumb}</BreadcrumbPage>
+                <BreadcrumbPage className="font-semibold text-foreground">
+                  {text.nav.library}
+                </BreadcrumbPage>
               )}
             </BreadcrumbItem>
             {showVolumes && selected ? (
               <>
                 <BreadcrumbSeparator />
                 <BreadcrumbItem>
-                  <BreadcrumbPage className="max-w-[40ch] truncate">
+                  <BreadcrumbPage className="max-w-[40ch] truncate font-semibold text-foreground">
                     {selected.title}
                   </BreadcrumbPage>
                 </BreadcrumbItem>
@@ -1008,20 +1005,44 @@ function LibraryView({ locale }: { locale: LanguageMode }): React.JSX.Element {
             ) : null}
           </BreadcrumbList>
         </Breadcrumb>
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="sm" onClick={rescan} disabled={loading}>
-            <RefreshCw className={`size-4 ${loading ? 'animate-spin' : ''}`} />
-            {text.library.rescan}
-          </Button>
-          <Button variant="outline" size="sm" onClick={chooseFolder}>
-            <FolderOpen className="size-4" />
-            {text.library.changeFolder}
-          </Button>
-        </div>
-      </div>
+        {root ? (
+          <div
+            className="ml-auto flex items-center gap-1"
+            style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+          >
+            <Button variant="ghost" size="sm" onClick={rescan} disabled={loading}>
+              <RefreshCw className={`size-4 ${loading ? 'animate-spin' : ''}`} />
+              {text.library.rescan}
+            </Button>
+            <Button variant="outline" size="sm" onClick={chooseFolder}>
+              <FolderOpen className="size-4" />
+              {text.library.changeFolder}
+            </Button>
+          </div>
+        ) : null}
+      </header>
 
-      <ScrollArea className="min-h-0 flex-1">
-        <div className="p-4 lg:p-6">
+      {!root ? (
+        <div className="flex flex-1 items-center justify-center p-6">
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <FolderOpen />
+              </EmptyMedia>
+              <EmptyTitle>{text.library.emptyTitle}</EmptyTitle>
+              <EmptyDescription>{text.library.emptyDescription}</EmptyDescription>
+            </EmptyHeader>
+            <EmptyContent>
+              <Button onClick={chooseFolder}>
+                <FolderOpen className="size-4" />
+                {text.library.chooseFolder}
+              </Button>
+            </EmptyContent>
+          </Empty>
+        </div>
+      ) : (
+        <ScrollArea className="min-h-0 flex-1">
+          <div className="p-4 lg:p-6">
           {loading ? (
             <div className={LIBRARY_GRID}>
               {Array.from({ length: 12 }).map((_, i) => (
@@ -1100,8 +1121,9 @@ function LibraryView({ locale }: { locale: LanguageMode }): React.JSX.Element {
               ))}
             </div>
           )}
-        </div>
-      </ScrollArea>
+          </div>
+        </ScrollArea>
+      )}
     </div>
   )
 }
