@@ -4,6 +4,7 @@ out
 .npm-cache
 .DS_Store
 .eslintcache
+*.tsbuildinfo
 *.log*
 .claude/
 .gemini/
