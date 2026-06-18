@@ -27,7 +27,6 @@ import {
   Home,
   Inbox,
   Library,
-  List,
   Loader2,
   Moon,
   MoreHorizontal,
@@ -49,7 +48,9 @@ import {
   Globe,
   Mail,
   Stethoscope,
-  FolderPlus
+  FolderPlus,
+  ImageOff,
+  RefreshCw
 } from 'lucide-react'
 
 import {
@@ -62,7 +63,6 @@ import { Button } from '@/components/ui/button'
 import { TrafficLights } from '@/components/ui/traffic-lights'
 import {
   Card,
-  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -294,15 +294,6 @@ type ViewId =
   | 'deliveries'
   | 'archive'
 
-type Comic = {
-  title: string
-  author: string
-  format: string
-  pages: number
-  status: '已入库' | '待整理' | '待转换'
-  updatedAt: string
-}
-
 type ThemeMode = 'light' | 'dark'
 type LanguageMode = 'zh' | 'en'
 
@@ -341,19 +332,19 @@ const uiText = {
       switchLanguage: 'Switch to English'
     },
     library: {
-      localComics: '本地漫画',
-      localComicsDescription: '第一版只展示库视图、整理状态和占位操作。',
-      all: '全部',
-      recent: '新导入',
-      todo: '待整理',
-      mobileSearch: '搜索漫画',
-      title: '标题',
-      format: '格式',
-      pages: '页数',
-      status: '状态',
-      updated: '更新',
-      gridView: '网格视图',
-      listView: '列表视图'
+      chooseFolder: '选择漫画库文件夹',
+      changeFolder: '切换文件夹',
+      rescan: '重新扫描',
+      emptyTitle: '还没有选择漫画库',
+      emptyDescription: '选择一个包含「部 / 卷册」结构的本地文件夹，开始浏览你的漫画。',
+      rootCrumb: '漫画库',
+      loading: '正在扫描漫画库…',
+      noSeries: '这个文件夹里没有找到漫画作品。',
+      noVolumes: '这个作品下没有可识别的卷册。',
+      unknownAuthor: '未知作者',
+      fileVolume: '单文件',
+      volumeUnit: (n: number) => `${n} 卷`,
+      pageUnit: (n: number) => `${n} 页`
     },
     components: {
       countSuffix: '个组件',
@@ -445,20 +436,20 @@ const uiText = {
       switchLanguage: '切换到中文'
     },
     library: {
-      localComics: 'Local Comics',
-      localComicsDescription:
-        'The first version only shows library views, states, and placeholder actions.',
-      all: 'All',
-      recent: 'Recent',
-      todo: 'To Organize',
-      mobileSearch: 'Search comics',
-      title: 'Title',
-      format: 'Format',
-      pages: 'Pages',
-      status: 'Status',
-      updated: 'Updated',
-      gridView: 'Grid view',
-      listView: 'List view'
+      chooseFolder: 'Choose library folder',
+      changeFolder: 'Change folder',
+      rescan: 'Rescan',
+      emptyTitle: 'No library selected yet',
+      emptyDescription:
+        'Pick a local folder organized as Series / Volumes to start browsing your comics.',
+      rootCrumb: 'Library',
+      loading: 'Scanning library…',
+      noSeries: 'No comic series found in this folder.',
+      noVolumes: 'No recognizable volumes under this series.',
+      unknownAuthor: 'Unknown author',
+      fileVolume: 'Single file',
+      volumeUnit: (n: number) => `${n} vol${n === 1 ? '' : 's'}`,
+      pageUnit: (n: number) => `${n} page${n === 1 ? '' : 's'}`
     },
     components: {
       countSuffix: 'components',
@@ -569,48 +560,6 @@ const sidebarGroups: SidebarGroupConfig[] = [
   }
 ]
 
-
-const libraryStats = [
-  { label: '本地漫画', value: '128', note: '占位统计', icon: BookOpen },
-  { label: '待整理', value: '18', note: '需要元数据', icon: FolderOpen },
-  { label: '待转换', value: '12', note: '准备中', icon: Clock3 },
-  { label: '本地空间', value: '42 GB', note: '示例读数', icon: HardDrive }
-]
-
-const comics: Comic[] = [
-  {
-    title: '深夜书店 01',
-    author: '示例作者',
-    format: 'CBZ',
-    pages: 186,
-    status: '已入库',
-    updatedAt: '2026-06-11'
-  },
-  {
-    title: '海岸线物语 合集',
-    author: '未填写',
-    format: '文件夹',
-    pages: 412,
-    status: '待整理',
-    updatedAt: '2026-06-10'
-  },
-  {
-    title: '机器猫短篇精选',
-    author: '示例作者',
-    format: 'PDF',
-    pages: 96,
-    status: '待转换',
-    updatedAt: '2026-06-08'
-  },
-  {
-    title: '城市猎人 Vol. 02',
-    author: '未填写',
-    format: 'CBR',
-    pages: 204,
-    status: '已入库',
-    updatedAt: '2026-06-01'
-  }
-]
 
 function getInitialThemeMode(): ThemeMode {
   if (typeof window === 'undefined') {
@@ -832,6 +781,8 @@ function App(): React.JSX.Element {
             <ScrollArea className="min-h-0 flex-1">
               <FoundationStandardsView locale={languageMode} />
             </ScrollArea>
+          ) : activeView === 'library' ? (
+            <LibraryView locale={languageMode} />
           ) : (
             <div className="flex-1 bg-background" />
           )}
@@ -905,116 +856,253 @@ function AppHeader({
   )
 }
 
+// 来自 preload 的 window.api.library 返回类型（单一事实来源：src/preload/index.d.ts）
+type LibrarySeries = Awaited<ReturnType<Window['api']['library']['scan']>>[number]
+type LibraryVolume = Awaited<ReturnType<Window['api']['library']['listVolumes']>>[number]
+
+function CoverImage({ src, alt }: { src: string | null; alt: string }): React.JSX.Element {
+  const [failed, setFailed] = useState(false)
+  if (!src || failed) {
+    return (
+      <div className="flex h-full w-full items-center justify-center bg-muted text-muted-foreground">
+        <ImageOff className="size-7" />
+      </div>
+    )
+  }
+  return (
+    <img
+      src={src}
+      alt={alt}
+      loading="lazy"
+      decoding="async"
+      onError={() => setFailed(true)}
+      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+    />
+  )
+}
+
+const LIBRARY_GRID =
+  'grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'
+
 function LibraryView({ locale }: { locale: LanguageMode }): React.JSX.Element {
   const text = uiText[locale]
+  const [root, setRoot] = useState<string | null>(null)
+  const [series, setSeries] = useState<LibrarySeries[]>([])
+  const [selected, setSelected] = useState<LibrarySeries | null>(null)
+  const [volumes, setVolumes] = useState<LibraryVolume[]>([])
+  const [loading, setLoading] = useState(false)
+
+  const loadSeries = React.useCallback(async (target: string) => {
+    setLoading(true)
+    try {
+      setSeries(await window.api.library.scan(target))
+    } catch (err) {
+      toast.error(`${err}`)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  // 初始化：读取已保存的库根目录并扫描
+  useEffect(() => {
+    let active = true
+    window.api?.library?.getSavedRoot().then((saved) => {
+      if (!active || !saved) return
+      setRoot(saved)
+      loadSeries(saved)
+    })
+    return () => {
+      active = false
+    }
+  }, [loadSeries])
+
+  const chooseFolder = async (): Promise<void> => {
+    if (!window.api?.library) {
+      toast.error('漫画库接口未就绪，请重启 npm run dev')
+      return
+    }
+    try {
+      const picked = await window.api.library.pickFolder()
+      if (!picked) return
+      setRoot(picked)
+      setSelected(null)
+      setVolumes([])
+      await loadSeries(picked)
+    } catch (err) {
+      toast.error(`${err}`)
+    }
+  }
+
+  const rescan = async (): Promise<void> => {
+    if (root) await loadSeries(root)
+  }
+
+  const openSeries = async (item: LibrarySeries): Promise<void> => {
+    setSelected(item)
+    setLoading(true)
+    try {
+      setVolumes(await window.api.library.listVolumes(item.path))
+    } catch (err) {
+      toast.error(`${err}`)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const backToSeries = (): void => {
+    setSelected(null)
+    setVolumes([])
+  }
+
+  // 未选择库：空状态
+  if (!root) {
+    return (
+      <div className="flex flex-1 items-center justify-center bg-background p-6">
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <FolderOpen />
+            </EmptyMedia>
+            <EmptyTitle>{text.library.emptyTitle}</EmptyTitle>
+            <EmptyDescription>{text.library.emptyDescription}</EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <Button onClick={chooseFolder}>
+              <FolderOpen className="size-4" />
+              {text.library.chooseFolder}
+            </Button>
+          </EmptyContent>
+        </Empty>
+      </div>
+    )
+  }
+
+  const showVolumes = selected !== null
 
   return (
-    <main className="mx-auto flex w-full max-w-7xl flex-col gap-5 p-4 lg:p-6">
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {libraryStats.map((item) => (
-          <Card key={item.label} className="gap-4 rounded-lg py-4 shadow-none">
-            <CardHeader className="px-4">
-              <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                <item.icon className="size-4" />
-                {item.label}
-              </CardTitle>
-              <CardAction>
-                <BadgeCheck className="size-4 text-emerald-600" />
-              </CardAction>
-            </CardHeader>
-            <CardContent className="px-4">
-              <div className="text-2xl font-semibold tracking-normal">{item.value}</div>
-              <p className="mt-1 text-xs text-muted-foreground">{item.note}</p>
-            </CardContent>
-          </Card>
-        ))}
-      </section>
+    <div className="flex min-h-0 flex-1 flex-col bg-background">
+      {/* 子工具栏：面包屑 + 操作 */}
+      <div className="flex h-12 shrink-0 items-center justify-between gap-2 border-b px-4">
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              {showVolumes ? (
+                <BreadcrumbLink asChild>
+                  <button type="button" onClick={backToSeries}>
+                    {text.library.rootCrumb}
+                  </button>
+                </BreadcrumbLink>
+              ) : (
+                <BreadcrumbPage>{text.library.rootCrumb}</BreadcrumbPage>
+              )}
+            </BreadcrumbItem>
+            {showVolumes && selected ? (
+              <>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                  <BreadcrumbPage className="max-w-[40ch] truncate">
+                    {selected.title}
+                  </BreadcrumbPage>
+                </BreadcrumbItem>
+              </>
+            ) : null}
+          </BreadcrumbList>
+        </Breadcrumb>
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="sm" onClick={rescan} disabled={loading}>
+            <RefreshCw className={`size-4 ${loading ? 'animate-spin' : ''}`} />
+            {text.library.rescan}
+          </Button>
+          <Button variant="outline" size="sm" onClick={chooseFolder}>
+            <FolderOpen className="size-4" />
+            {text.library.changeFolder}
+          </Button>
+        </div>
+      </div>
 
-      <section className="grid min-h-[520px] gap-5 xl:grid-cols-[1fr_320px]">
-        <Card className="min-w-0 gap-0 rounded-lg py-0 shadow-none">
-          <CardHeader className="border-b px-4 py-4">
-            <div className="min-w-0">
-              <CardTitle className="text-base">{text.library.localComics}</CardTitle>
-              <CardDescription>{text.library.localComicsDescription}</CardDescription>
-            </div>
-            <CardAction className="hidden items-center gap-1 sm:flex">
-              <Button variant="ghost" size="icon-sm" aria-label={text.library.gridView}>
-                <Grid2X2 />
-              </Button>
-              <Button variant="secondary" size="icon-sm" aria-label={text.library.listView}>
-                <List />
-              </Button>
-            </CardAction>
-          </CardHeader>
-          <CardContent className="flex min-h-0 flex-col gap-4 p-4">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-              <Tabs defaultValue="all" className="min-w-0">
-                <TabsList className="w-full sm:w-fit">
-                  <TabsTrigger value="all">{text.library.all}</TabsTrigger>
-                  <TabsTrigger value="recent">{text.library.recent}</TabsTrigger>
-                  <TabsTrigger value="todo">{text.library.todo}</TabsTrigger>
-                  <TabsTrigger value="kindle">Kindle</TabsTrigger>
-                </TabsList>
-              </Tabs>
-              <div className="flex items-center gap-2 md:hidden">
-                <div className="flex min-w-0 flex-1 items-center gap-2 rounded-md border px-3">
-                  <Search className="size-4 shrink-0 text-muted-foreground" />
-                  <Input
-                    aria-label={text.library.mobileSearch}
-                    className="h-9 border-0 px-0 shadow-none focus-visible:ring-0"
-                    placeholder={text.library.mobileSearch}
-                  />
+      <ScrollArea className="min-h-0 flex-1">
+        <div className="p-4 lg:p-6">
+          {loading ? (
+            <div className={LIBRARY_GRID}>
+              {Array.from({ length: 12 }).map((_, i) => (
+                <div key={i} className="flex flex-col gap-2">
+                  <Skeleton className="aspect-[3/4] w-full rounded-lg" />
+                  <Skeleton className="h-4 w-4/5" />
+                  <Skeleton className="h-3 w-2/5" />
                 </div>
+              ))}
+            </div>
+          ) : showVolumes ? (
+            volumes.length === 0 ? (
+              <p className="py-16 text-center text-sm text-muted-foreground">
+                {text.library.noVolumes}
+              </p>
+            ) : (
+              <div className={LIBRARY_GRID}>
+                {volumes.map((vol) => (
+                  <button key={vol.id} type="button" className="group flex flex-col gap-2 text-left">
+                    <AspectRatio
+                      ratio={3 / 4}
+                      className="overflow-hidden rounded-lg border bg-muted"
+                    >
+                      <CoverImage src={vol.coverUrl} alt={vol.title} />
+                    </AspectRatio>
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-medium" title={vol.title}>
+                        {vol.title}
+                      </div>
+                      <div className="truncate text-xs text-muted-foreground">
+                        {vol.kind === 'file'
+                          ? text.library.fileVolume
+                          : text.library.pageUnit(vol.pageCount)}
+                      </div>
+                    </div>
+                  </button>
+                ))}
               </div>
+            )
+          ) : series.length === 0 ? (
+            <p className="py-16 text-center text-sm text-muted-foreground">
+              {text.library.noSeries}
+            </p>
+          ) : (
+            <div className={LIBRARY_GRID}>
+              {series.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => openSeries(item)}
+                  className="group flex flex-col gap-2 text-left"
+                >
+                  <div className="group relative">
+                    <AspectRatio
+                      ratio={3 / 4}
+                      className="overflow-hidden rounded-lg border bg-muted"
+                    >
+                      <CoverImage src={item.coverUrl} alt={item.title} />
+                    </AspectRatio>
+                    <Badge
+                      variant="secondary"
+                      className="absolute top-1.5 right-1.5 bg-background/85 backdrop-blur"
+                    >
+                      {text.library.volumeUnit(item.volumeCount)}
+                    </Badge>
+                  </div>
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-medium" title={item.title}>
+                      {item.title}
+                    </div>
+                    <div className="truncate text-xs text-muted-foreground">
+                      {item.author ?? text.library.unknownAuthor}
+                    </div>
+                  </div>
+                </button>
+              ))}
             </div>
-
-            <div className="overflow-hidden rounded-lg border">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/40 hover:bg-muted/40">
-                    <TableHead className="w-[42%] px-4">{text.library.title}</TableHead>
-                    <TableHead>{text.library.format}</TableHead>
-                    <TableHead className="hidden md:table-cell">{text.library.pages}</TableHead>
-                    <TableHead>{text.library.status}</TableHead>
-                    <TableHead className="hidden text-right md:table-cell">
-                      {text.library.updated}
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {comics.map((comic) => (
-                    <TableRow key={comic.title}>
-                      <TableCell className="px-4">
-                        <div className="min-w-0">
-                          <div className="truncate font-medium">{comic.title}</div>
-                          <div className="truncate text-xs text-muted-foreground">
-                            {comic.author}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="rounded-md border bg-muted/40 px-2 py-1 text-xs">
-                          {comic.format}
-                        </span>
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">{comic.pages}</TableCell>
-                      <TableCell>
-                        <StatusLabel locale={locale} status={comic.status} />
-                      </TableCell>
-                      <TableCell className="hidden text-right text-muted-foreground md:table-cell">
-                        {comic.updatedAt}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-
-        <aside className="hidden min-w-0 xl:block" />
-      </section>
-    </main>
+          )}
+        </div>
+      </ScrollArea>
+    </div>
   )
 }
 
@@ -8369,33 +8457,6 @@ function AppSidebar({
       </SidebarFooter>
     </Sidebar>
   )
-}
-
-function StatusLabel({
-  locale,
-  status
-}: {
-  locale: LanguageMode
-  status: keyof (typeof uiText)['zh']['sidebar']['statuses']
-}): React.JSX.Element {
-  const text = uiText[locale]
-  const tone =
-    status === '已入库'
-      ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300'
-      : status === '待转换'
-        ? 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900/60 dark:bg-sky-950/40 dark:text-sky-300'
-        : 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-300'
-
-  return (
-    <span className={`rounded-md border px-2 py-1 text-xs ${tone}`}>
-      {text.sidebar.statuses[status]}
-    </span>
-  )
-}
-
-// 防止未使用变量引发的 TypeScript 编译错误
-if (false as boolean) {
-  console.log(LibraryView)
 }
 
 export default App

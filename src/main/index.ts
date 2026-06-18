@@ -2,6 +2,10 @@ import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import { registerComicScheme, setupLibrary } from './library'
+
+// 自定义 comic:// 协议必须在 app ready 之前注册
+registerComicScheme()
 
 function createWindow(): void {
   // Create the browser window.
@@ -52,6 +56,9 @@ app.whenReady().then(() => {
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
+
+  // 漫画库数据层：comic:// 协议 + 扫描/选择目录 IPC
+  setupLibrary()
 
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
