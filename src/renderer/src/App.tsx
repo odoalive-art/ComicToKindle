@@ -1062,11 +1062,9 @@ function LibraryView({ locale }: { locale: LanguageMode }): React.JSX.Element {
               <div className={LIBRARY_GRID}>
                 {volumes.map((vol) => (
                   <button key={vol.id} type="button" className="group flex flex-col gap-2 text-left">
-                    <AspectRatio
-                      ratio={3 / 4}
-                      className="overflow-hidden rounded-lg border bg-muted"
-                    >
+                    <AspectRatio ratio={3 / 4} className="overflow-hidden rounded-lg bg-muted">
                       <CoverImage src={vol.coverUrl} alt={vol.title} />
+                      <div className="pointer-events-none absolute inset-0 rounded-lg border border-foreground/10" />
                     </AspectRatio>
                     <div className="min-w-0">
                       <div className="truncate text-sm font-medium" title={vol.title}>
@@ -1096,11 +1094,9 @@ function LibraryView({ locale }: { locale: LanguageMode }): React.JSX.Element {
                   className="group flex flex-col gap-2 text-left"
                 >
                   <div className="group relative">
-                    <AspectRatio
-                      ratio={3 / 4}
-                      className="overflow-hidden rounded-lg border bg-muted"
-                    >
+                    <AspectRatio ratio={3 / 4} className="overflow-hidden rounded-lg bg-muted">
                       <CoverImage src={item.coverUrl} alt={item.title} />
+                      <div className="pointer-events-none absolute inset-0 rounded-lg border border-foreground/10" />
                     </AspectRatio>
                     <Badge
                       variant="secondary"
