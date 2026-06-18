@@ -2,11 +2,22 @@
 
 ## 快照
 
-日期：2026-06-16
+日期：2026-06-19
 
-ComicToKindle 处于桌面应用基础阶段。已完成自定义交通灯窗口控件、侧边栏高度统一、收起状态切换按钮迁移、侧边栏左右间距修复、交通灯 icon 悬浮作用域修复，以及移除内容区 GitHub 链接。
+ComicToKindle 已从基础阶段进入**真实漫画库浏览 + 阅读器**阶段。本阶段（2026-06-18/19）落地：漫画库数据层（comic:// 协议、目录扫描、库根目录持久化）、「所有漫画」两级浏览（部 → 卷册）、卷册阅读器（单页/双页、左右方向、续读、切换 toast），以及侧边栏开合动效优化、库视图顶栏合并、封面内描边等 UI 细节。
 
 ## 已完成
+
+### 2026-06-18/19 阶段（漫画库浏览 + 阅读器）
+
+- 漫画库数据层 `src/main/library.ts`：注册 `comic://` 协议（库根越权校验）；扫描部（`[作者] 标题`）/ 卷册，自然排序、封面首图、递归页数；IPC `library:pickFolder/getSavedRoot/scan/listVolumes/listPages`；库根目录持久化到 `userData/settings.json`。
+- preload 暴露 `window.api.library.*` 并补全类型（`LibrarySeries`/`LibraryVolume`）。
+- 「所有漫画」视图：空状态选目录、部封面网格、卷册封面网格、面包屑、骨架屏；替换原 mock LibraryView 并清理其专用 mock 数据。
+- 卷册阅读器 `VolumeReader`：单页/双页、左右阅读方向（RTL 左右排布与翻页反转）、记住每卷续读、相邻页预加载、键盘 + 左右半区点击导航、切换 toast 反馈；卷册卡片显示续读进度条。
+- `index.html` CSP 放行 `comic:`；`.gitignore` 加 `*.tsbuildinfo`。
+- UI 细节：侧边栏开合动效改 `ease-out` + 时长对齐 + 标签淡出 + 消除纵向跳动；库视图合并顶栏（消除双标题栏）；封面改内描边。
+
+### 早期阶段（基础搭建）
 
 - 初始化 Electron + Vite + React + TypeScript 应用。
 - 安装 npm 依赖。
@@ -41,16 +52,16 @@ ComicToKindle 处于桌面应用基础阶段。已完成自定义交通灯窗口
 
 `设计组件` 和 `基础规范` 都是开发期提效页面，不是终端用户产品功能。
 
-真实产品能力仍未实现：本地扫描、元数据存储、转换流水线、图像处理、EPUB 生成、Kindle 投递和任务队列。
+本地漫画扫描与浏览、卷册阅读器已实现；仍未实现：元数据存储/索引、转换流水线、图像处理、EPUB 生成、Kindle 投递和任务队列。
 
 Codex、Claude Code、Antigravity 接力开发前应先读 `docs/agent-collaboration.md`。
 
 ## 下一步建议
 
-1. 为导入、转换、投递和任务队列定义真实工作流。
-2. 设计本地数据模型，再实现漫画扫描。
-3. 明确转换流程由 Electron main、worker 还是独立服务模块执行。
-4. 在实现任何本地文件访问或凭据相关能力前，重新评估 Electron sandbox 和 IPC 边界。
+1. 转换投递（App 核心）：多选卷册 → 转 Kindle 格式（EPUB/MOBI）→ 邮箱/USB 投递。
+2. 视情况引入漫画元数据库/索引，替代每次实时扫描。
+3. 阅读器可继续增强：双页「封面单独成页」、缩放/适配宽度、沉浸模式、Home/End 跳首末页。
+4. 明确转换流程由 Electron main、worker 还是独立服务模块执行；实现凭据相关能力前重新评估 sandbox 与 IPC 边界。
 
 ## 验证命令
 

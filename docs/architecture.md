@@ -1,10 +1,10 @@
 # 架构说明
 
-本文描述 2026-06-16 时点的应用基础架构。
+本文描述 2026-06-19 时点的应用架构。
 
 ## 当前范围
 
-ComicToKindle 目前是一个桌面应用工作台基础，用于后续承载本地漫画库、Kindle 转换流程和投递工具。
+ComicToKindle 目前是一个桌面应用工作台，已实现真实的本地漫画库浏览与卷册阅读器；Kindle 转换流程和投递工具尚未实现。
 
 已实现：
 
@@ -15,7 +15,8 @@ ComicToKindle 目前是一个桌面应用工作台基础，用于后续承载本
 - shadcn/ui 组件体系
 - 构建和打包脚本
 - `src/renderer/src/App.tsx` 中的侧边栏工作台壳
-- 使用静态数据的漫画库占位工作区
+- **真实漫画库浏览**：扫描本地目录，按「部 / 卷册」两级展示（详见「漫画库数据层」）
+- **卷册阅读器**：单页 / 双页、左右阅读方向、记住每卷续读进度
 - 顶栏应用级深浅模式切换
 - 顶栏中英切换
 - 自定义交通灯窗口控件（通过 IPC 接管关闭/最小化/最大化）
@@ -24,12 +25,12 @@ ComicToKindle 目前是一个桌面应用工作台基础，用于后续承载本
 
 未实现：
 
-- 漫画文件扫描
-- 元数据持久化
-- 转换流水线
+- 元数据持久化（数据库 / 索引；当前每次进入实时扫描）
+- 转换流水线（CBZ/CBR/图片文件夹 → Kindle 友好 EPUB）
 - 图像处理或 AI 放大
 - Kindle 投递
 - Send to Kindle 网页嵌入
+- 任务队列
 
 ## 运行层
 
@@ -38,14 +39,52 @@ Electron main process
   src/main/index.ts
   负责 BrowserWindow 创建、应用生命周期、外部链接打开行为和 main-process IPC。
   处理自定义交通灯的 window-close / window-minimize / window-maximize IPC 事件。
+  app ready 前调用 registerComicScheme()，ready 后调用 setupLibrary()。
+
+  src/main/library.ts
+  漫画库数据层：comic:// 协议、目录扫描、库根目录持久化。
 
 Preload process
   src/preload/index.ts
-  将安全的 Electron API 桥接给 renderer。
+  将安全的 Electron API 桥接给 renderer，暴露 window.api.library.*。
+  类型定义在 src/preload/index.d.ts（LibrarySeries / LibraryVolume / LibraryAPI）。
 
 Renderer process
   src/renderer/src/
   负责 React UI、Tailwind 样式和 shadcn/ui 组件。
+```
+
+## 漫画库数据层
+
+漫画库的文件系统访问全部在 main 进程，renderer 通过 preload 暴露的 `window.api.library.*` 调用，不直接用 Node API。
+
+**目录约定**（识别两级结构）：
+
+```txt
+库根目录 / 部(文件夹) / 卷册(文件夹或单文件) / [单话子文件夹] / 图片
+```
+
+- **部（series）**= 顶层文件夹，命名通常为 `[作者] 标题`，解析出作者与标题。
+- **卷册（volume）**= 第二层；文件夹封面取首图、递归统计页数，遇到「单话」子文件夹会下钻取图；预留 `kind: 'folder' | 'file'` 给将来的 cbz/pdf 单文件卷册。
+- 文件名一律按**自然排序**（`2.jpg` 在 `10.jpg` 前）。
+
+**IPC 频道**（`ipcMain.handle` ↔ `ipcRenderer.invoke`）：
+
+```txt
+library:pickFolder    系统目录选择器，选中后写入 settings.json 并返回路径
+library:getSavedRoot  读取已保存的库根目录（不存在/失效则返回 null）
+library:scan          扫描库根 → LibrarySeries[]（含封面 URL、卷数）
+library:listVolumes   扫描某部 → LibraryVolume[]（含封面 URL、页数、kind）
+library:listPages     按阅读顺序递归收集一卷所有页 → comic:// URL[]
+```
+
+**comic:// 协议**：`registerComicScheme()` 在 app ready 前注册为 privileged scheme，`setupLibrary()` 内 `protocol.handle('comic', …)` 服务图片。URL 形如 `comic://img/?p=<encodeURIComponent(绝对路径)>`；返回前做**越权校验**——必须是图片扩展名且位于当前库根目录内，否则 403。`src/renderer/index.html` 的 CSP `img-src` 已放行 `comic:`。
+
+**数据模型**（`src/preload/index.d.ts` 为单一事实来源）：
+
+```txt
+LibrarySeries  id, path, name, title, author, volumeCount, coverUrl
+LibraryVolume  id, path, name, title, kind('folder'|'file'), pageCount, coverUrl
 ```
 
 ## Renderer 工作区
@@ -53,8 +92,11 @@ Renderer process
 当前 renderer 是本地桌面工作台，还不是完整产品 UI。
 
 ```txt
-漫画库
-  未来本地漫画库的静态占位视图。
+漫画库（所有漫画）
+  真实本地漫画库浏览。LibraryView 自带合并顶栏（侧栏开关 + 面包屑 + 操作）。
+  未设库 → 空状态选目录；一级部封面网格 → 点进二级卷册封面网格。
+  点卷册进入 VolumeReader（单页/双页、左右方向、续读、相邻页预加载）。
+  封面经 comic:// 加载，内描边样式，卷册卡片显示续读进度条。
 
 设计组件
   开发期 shadcn/ui 组件索引和本地文档镜像。
@@ -142,8 +184,8 @@ renderer alias：
 下一阶段实现应保持 UI 与系统能力分层：
 
 ```txt
-漫画库领域
-  扫描本地目录，读取压缩包和图片文件夹，存储元数据。
+漫画库领域（浏览/阅读已实现，元数据存储待做）
+  扫描本地目录、图片文件夹已实现；压缩包读取与元数据存储待做。
 
 转换领域
   规范化页面，处理图像，生成 Kindle 友好的 EPUB。
@@ -159,16 +201,20 @@ Electron main 或专门的服务模块应负责本地文件系统和进程执行
 
 ## 存储
 
-目前没有存储层。添加持久化时，需要同步记录：
+当前没有数据库 / 漫画索引（每次进入实时扫描目录）。已有的持久化：
 
-- 存储引擎
-- 数据库或文件位置
-- 迁移策略
-- 数据模型
-- 备份和重置行为
+- **库根目录**：main 进程写入 `app.getPath('userData')/settings.json` 的 `libraryRoot` 字段。
+- **renderer localStorage 键**：
+  - `comic-to-kindle-theme` 深浅模式
+  - `comic-to-kindle-language` 中英语言
+  - `comic-to-kindle-reading-direction` 阅读方向（ltr/rtl）
+  - `comic-to-kindle-reading-mode` 阅读模式（single/double）
+  - `comic-to-kindle-reading-progress` 每卷续读进度（{ 卷路径: 页索引 } 的 JSON）
+
+后续若引入漫画元数据库 / 索引，需要在本节补充存储引擎、位置、迁移策略、数据模型与重置行为。
 
 ## 安全说明
 
-当前 Electron scaffold 的 BrowserWindow 设置了 `sandbox: false`。在实现本地文件访问、Send to Kindle 嵌入或凭据存储之前，需要重新评估。
-
-外部链接通过 `shell.openExternal` 打开，并且应用窗口会拒绝 new-window 导航。
+- BrowserWindow 设置了 `sandbox: false`。本地文件访问已落地（漫画库），但全部走 main 进程 + preload IPC，renderer 不直接用 Node API；后续实现 Send to Kindle 嵌入或凭据存储前需重新评估。
+- `comic://` 协议服务图片时做越权校验：只允许图片扩展名且路径位于当前库根目录内，否则返回 403。
+- 外部链接通过 `shell.openExternal` 打开，应用窗口拒绝 new-window 导航。

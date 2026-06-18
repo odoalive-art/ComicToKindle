@@ -1,8 +1,8 @@
 # ComicToKindle
 
-ComicToKindle 是一个 Electron 桌面应用基础项目，用于后续实现本地漫画库、面向 Kindle 的转换流程和投递工具。
+ComicToKindle 是一个 Electron 桌面应用，用于本地漫画库管理、面向 Kindle 的转换流程和投递工具。
 
-当前项目包含可运行的应用壳、漫画库占位工作区，以及开发期用于搭建界面的设计辅助工作区。漫画扫描、图像处理、EPUB 生成和 Kindle 投递等产品工作流尚未实现。
+当前已实现：可运行的应用壳、真实的本地漫画库浏览（按「部 / 卷册」两级展示）和卷册阅读器（单页/双页、左右阅读方向、记住续读进度），以及开发期用于搭建界面的设计辅助工作区。图像处理、EPUB 生成和 Kindle 投递等转换/投递工作流尚未实现。
 
 ## 技术栈
 
@@ -101,16 +101,19 @@ alias 配置：
 src/renderer/src/components/ui/
 ```
 
-当前生成组件包括 accordion、button、card、dialog、input、progress、scroll-area、separator、sheet、sidebar、skeleton、sonner、table、tabs 和 tooltip。
+已生成组件以 `src/renderer/src/components/ui/` 目录实际文件为准（当前约 55 个，含部分自定义组件）。
 
 ## 当前状态
 
-截至 2026-06-11：
+截至 2026-06-19：
 
 - Electron + Vite + React + TypeScript 应用可以成功构建。
 - Tailwind CSS 和 shadcn/ui 已配置。
-- renderer 已有侧边栏应用壳和漫画库占位工作区。
+- 真实本地漫画库浏览：通过 main 进程扫描目录、`comic://` 协议加载封面，按「部 / 卷册」两级展示；库根目录持久化。
+- 卷册阅读器：单页/双页、左右阅读方向、记住每卷续读进度。
 - 顶栏提供应用级深浅模式切换和中英切换，切换会影响整个 renderer。
 - 开发期工作区包含 shadcn 组件选型页和基础规范页；基础规范页读取 `src/renderer/src/data/design-tokens.ts`。
 - shadcn 本地组件文档镜像目前包含完整组件索引，并已补全 A 到 I 范围内组件文档；这些镜像文档支持中文阅读和英文原文切换，复制示例名时仍复制英文源值。
-- 尚未实现真实漫画库、转换器、图像放大、EPUB 生成或 Kindle 投递功能。
+- 尚未实现：漫画元数据存储/索引、转换器、图像放大、EPUB 生成、Kindle 投递、任务队列。
+
+详细架构（漫画库数据层、IPC、数据模型、存储键）见 `docs/architecture.md`。

@@ -41,7 +41,10 @@ npm run dev
 - 侧边栏包含 `漫画库`、`设计组件`、`基础规范` 等工作区。
 - 顶栏深浅模式按钮可以切换整个 renderer 的主题。
 - 顶栏中英切换按钮可以切换应用壳、开发期页面和 shadcn 镜像文档阅读语言。
+- `所有漫画` 视图首次进入显示空状态，点「选择漫画库文件夹」选目录后显示部封面网格；点进某部看卷册，点卷册进入阅读器（单页/双页、左右方向、续读）。库根目录会被记住。
 - `设计组件` 中的示例复制按钮仍复制英文示例名，例如 `button-with-icon`。
+
+注意：改动 `src/main/**` 或 `src/preload/**` 后，需重启 `npm run dev`（main/preload 不走 renderer HMR）；否则新增的 IPC handler 不会生效。
 
 使用 `Ctrl+C` 停止 dev 进程。
 
@@ -82,6 +85,12 @@ git status --short
 当前没有应用专属环境变量。
 
 如果后续新增转换器路径、Kindle 邮箱设置、Send to Kindle 自动化开关或模型位置，需要同步更新本文和 `AGENTS.md`。
+
+## 本地状态与重置
+
+- **库根目录**：`app.getPath('userData')/settings.json` 的 `libraryRoot`（macOS 通常在 `~/Library/Application Support/comic-to-kindle/`）。删除该文件或在应用内「切换文件夹」可重选库。
+- **renderer 偏好（localStorage）**：`comic-to-kindle-theme`、`comic-to-kindle-language`、`comic-to-kindle-reading-direction`、`comic-to-kindle-reading-mode`、`comic-to-kindle-reading-progress`（每卷续读进度）。清掉对应键即可重置。
+- 漫画库本身无数据库/索引，每次进入实时扫描目录。
 
 ## 已知工具链说明
 

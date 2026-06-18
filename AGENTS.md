@@ -2,7 +2,7 @@
 
 ## 项目状态
 
-ComicToKindle 是一个桌面应用项目，用于后续实现本地漫画库、Kindle 转换流程和投递工具。仓库当前处于基础阶段：Electron、Vite、React、TypeScript、Tailwind CSS 和 shadcn/ui 已安装并验证，产品工作流尚未实现。
+ComicToKindle 是一个桌面应用项目，用于本地漫画库管理、Kindle 转换流程和投递工具。已实现：应用壳、真实本地漫画库浏览（部 / 卷册两级）和卷册阅读器。尚未实现：元数据存储/索引、转换流水线、图像处理、Kindle 投递、任务队列。漫画库数据层（comic:// 协议、IPC、数据模型、存储键）详见 `docs/architecture.md`。
 
 当前仓库路径：
 
@@ -60,12 +60,7 @@ alias：
 src/renderer/src/components/ui/
 ```
 
-当前已生成组件：
-
-```txt
-accordion, button, card, dialog, input, progress, scroll-area, separator,
-sheet, sidebar, skeleton, sonner, table, tabs, tooltip
-```
+已生成组件以 `src/renderer/src/components/ui/` 目录实际文件为准（当前约 55 个，含部分自定义如 `traffic-lights`）；完整清单见记忆 `project-ui-system`。
 
 `src/renderer/src/hooks/use-mobile.ts` 和 `src/renderer/src/lib/utils.ts` 属于 shadcn setup 的一部分。
 
@@ -83,7 +78,7 @@ sheet, sidebar, skeleton, sonner, table, tabs, tooltip
 归档
 ```
 
-当前只有 `漫画库`、`设计组件` 和 `基础规范` 有实际本地 UI。漫画库内容是占位数据，不是真实扫描器或持久化层。
+当前只有 `漫画库`、`设计组件` 和 `基础规范` 有实际本地 UI。`漫画库` 已是真实功能：扫描本地目录、按「部 / 卷册」两级浏览，点卷册进入阅读器（单页/双页、左右方向、续读）。漫画库的文件访问全部走 main 进程 + preload（`window.api.library.*`），数据层细节见 `docs/architecture.md` 的「漫画库数据层」。`导入收件箱 / 转换队列 / 投递记录 / 归档` 仍是导航占位。
 
 顶栏有应用级深浅模式切换按钮，会在 `document.documentElement` 上切换 `.dark` class，并把选择保存到 `localStorage` 的 `comic-to-kindle-theme`。
 
@@ -111,14 +106,16 @@ src/renderer/src/data/design-tokens.ts
 
 ## 当前产品边界
 
+已实现：本地漫画目录扫描与「部 / 卷册」浏览、卷册阅读器、库根目录持久化（`userData/settings.json`）。
+
 应用尚未实现：
 
-- 本地漫画扫描或元数据存储
-- CBZ、CBR、图片文件夹、EPUB 或 PDF 转换逻辑
+- 漫画元数据存储 / 索引（当前每次进入实时扫描，无数据库）
+- CBZ、CBR、EPUB 或 PDF 等压缩/单文件卷册的读取与转换逻辑（仅支持图片文件夹）
 - 图像增强或 AI 放大
 - Send to Kindle 网页嵌入
 - Kindle 邮箱投递
-- 任务队列、持久化或设置
+- 任务队列
 
 除非代码已经实现，否则不要把这些写成现有功能。
 
