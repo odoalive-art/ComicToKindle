@@ -1140,22 +1140,12 @@ function AppHeader({
   selectedComponentSlug
 }: AppHeaderProps): React.JSX.Element {
   const text = uiText[languageMode]
-  const { state } = useSidebar()
 
   return (
     <header
       className="flex h-12 shrink-0 items-center gap-2 border-b bg-background px-4"
       style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
     >
-      {state === 'expanded' && (
-        <>
-          <SidebarTrigger
-            className="-ml-1"
-            style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-          />
-          <Separator orientation="vertical" className="mr-2 !h-3 opacity-50" />
-        </>
-      )}
       <div className="flex items-center gap-1.5">
         <span className="text-sm font-semibold text-foreground">{text.nav[activeNavItemId]}</span>
       </div>
@@ -1737,7 +1727,7 @@ function ConvertActivityPopover({
         <TooltipTrigger asChild>
           <PopoverTrigger asChild>
             <Button
-              variant="outline"
+              variant="ghost"
               size="icon"
               className="relative"
               style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
@@ -1929,7 +1919,6 @@ function LibraryView({
   onOpenArchive: () => void
 }): React.JSX.Element {
   const text = uiText[locale]
-  const { state: sidebarState } = useSidebar()
   const [root, setRoot] = useState<string | null>(null)
   const [series, setSeries] = useState<LibrarySeries[]>([])
   const [selected, setSelected] = useState<LibrarySeries | null>(null)
@@ -2079,15 +2068,6 @@ function LibraryView({
         className="flex h-12 shrink-0 items-center gap-2 border-b bg-background px-4"
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
       >
-        {sidebarState === 'expanded' && (
-          <>
-            <SidebarTrigger
-              className="-ml-1"
-              style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-            />
-            <Separator orientation="vertical" className="mr-2 !h-3 opacity-50" />
-          </>
-        )}
         {selectMode ? (
           <span
             className="min-w-0 flex-1 truncate text-sm font-medium"
@@ -2183,7 +2163,7 @@ function LibraryView({
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="outline" size="icon" onClick={chooseFolder}>
+                    <Button variant="ghost" size="icon" onClick={chooseFolder}>
                       <FolderOpen className="size-4" />
                       <span className="sr-only">{text.library.changeFolder}</span>
                     </Button>
@@ -10615,14 +10595,13 @@ function AppSidebar({
         }`}
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
       >
-        {state === 'expanded' ? (
-          <TrafficLights />
-        ) : (
-          <SidebarTrigger
-            className="size-7"
-            style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-          />
-        )}
+        {state === 'expanded' ? <TrafficLights /> : null}
+        <SidebarTrigger
+          className={`size-8 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground ${
+            state === 'expanded' ? 'ml-auto -mr-2' : ''
+          }`}
+          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+        />
       </div>
       <SidebarContent
         className={`transition-[margin] duration-200 ease-out ${
