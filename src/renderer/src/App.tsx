@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import {
   Archive,
@@ -56,7 +56,11 @@ import {
   RefreshCw,
   BookUp,
   FileDown,
-  Trash2
+  Trash2,
+  ListChecks,
+  RotateCcw,
+  X,
+  Layers
 } from 'lucide-react'
 
 import {
@@ -415,6 +419,22 @@ const uiText = {
       failed: (title: string) => `转换失败：${title}`,
       progress: (pct: number) => `转换中 ${pct}%`
     },
+    activity: {
+      trigger: '转换活动',
+      title: '转换活动',
+      active: '进行中',
+      completed: '最近完成',
+      queued: '排队中',
+      converting: '转换中',
+      failed: '失败',
+      empty: '暂无转换活动。在漫画库里点卷册的「转换为 Kindle」即可开始。',
+      retry: '重试',
+      dismiss: '移除',
+      viewAll: '查看全部归档',
+      convertSeries: '转换整部',
+      enqueued: (n: number) => `已加入 ${n} 卷到转换队列`,
+      nothingToQueue: '这一部都已转换或在队列中'
+    },
     archiveView: {
       title: '归档',
       description: '已转换的 Kindle 产物，可在 Finder 中查看、导出副本或删除。',
@@ -618,6 +638,22 @@ const uiText = {
       done: (title: string) => `Converted: ${title}`,
       failed: (title: string) => `Conversion failed: ${title}`,
       progress: (pct: number) => `Converting ${pct}%`
+    },
+    activity: {
+      trigger: 'Conversion activity',
+      title: 'Conversion activity',
+      active: 'In progress',
+      completed: 'Recently completed',
+      queued: 'Queued',
+      converting: 'Converting',
+      failed: 'Failed',
+      empty: 'No conversion activity yet. Hit “Convert for Kindle” on a volume to start.',
+      retry: 'Retry',
+      dismiss: 'Dismiss',
+      viewAll: 'View full archive',
+      convertSeries: 'Convert series',
+      enqueued: (n: number) => `Queued ${n} volume${n === 1 ? '' : 's'} for conversion`,
+      nothingToQueue: 'All volumes already converted or queued'
     },
     archiveView: {
       title: 'Archive',
@@ -935,6 +971,8 @@ function App(): React.JSX.Element {
   const [selectedComponentSlug, setSelectedComponentSlug] = useState('button')
   const [themeMode, setThemeMode] = useState<ThemeMode>(getInitialThemeMode)
   const [languageMode, setLanguageMode] = useState<LanguageMode>(getInitialLanguageMode)
+  // 转换活动队列上提到 App 层，切换视图时不中断
+  const convertActivity = useConvertActivity(languageMode)
   const activeNavItem = primaryNav.find((item) => item.id === activeView) ?? primaryNav[0]
   const isComponentView = activeView === 'design-components'
   const isFoundationView = activeView === 'foundation-standards'
@@ -1020,7 +1058,11 @@ function App(): React.JSX.Element {
         <SidebarInset className="flex min-w-0 flex-col overflow-hidden">
           {activeView === 'library' ? (
             // 库视图自带合并后的顶栏（标题/面包屑 + 操作），不再叠加 AppHeader
-            <LibraryView locale={languageMode} />
+            <LibraryView
+              locale={languageMode}
+              activity={convertActivity}
+              onOpenArchive={() => setActiveView('archive')}
+            />
           ) : (
             <>
               <AppHeader
@@ -1196,6 +1238,154 @@ function loadConvertOptions(): ConvertOptionsState {
     /* 解析失败回退默认 */
   }
   return { ...DEFAULT_CONVERT_OPTIONS }
+}
+
+// ---------- 转换活动（队列）：上提到 App 层，跨视图保活 ----------
+type ConvertJobStatus = 'queued' | 'converting' | 'failed'
+interface ConvertJob {
+  id: string
+  sourceVolumePath: string
+  seriesPathName: string // 部文件夹名，IPC 用作 seriesName / 输出目录名
+  seriesTitle: string
+  volumeTitle: string
+  author: string | null
+  status: ConvertJobStatus
+  percent: number
+  error?: string
+}
+interface ConvertEnqueueInput {
+  sourceVolumePath: string
+  seriesPathName: string
+  seriesTitle: string
+  volumeTitle: string
+  author: string | null
+}
+interface ConvertActivity {
+  jobs: ConvertJob[]
+  artifacts: Artifact[]
+  activeCount: number
+  convertedPaths: Set<string>
+  jobByPath: Map<string, ConvertJob>
+  enqueue: (input: ConvertEnqueueInput) => void
+  retry: (id: string) => void
+  dismiss: (id: string) => void
+  refreshArtifacts: () => Promise<void>
+}
+
+function useConvertActivity(locale: LanguageMode): ConvertActivity {
+  const text = uiText[locale]
+  const [jobs, setJobs] = useState<ConvertJob[]>([])
+  const [artifacts, setArtifacts] = useState<Artifact[]>([])
+  const runningRef = useRef(false)
+
+  const refreshArtifacts = React.useCallback(async () => {
+    try {
+      setArtifacts(await window.api.artifacts.list())
+    } catch {
+      /* 清单读取失败时静默 */
+    }
+  }, [])
+
+  useEffect(() => {
+    refreshArtifacts()
+  }, [refreshArtifacts])
+
+  // 进度订阅：更新对应 converting 任务的百分比
+  useEffect(() => {
+    return window.api.convert.onProgress(({ sourceVolumePath, percent }) => {
+      setJobs((prev) =>
+        prev.map((j) =>
+          j.sourceVolumePath === sourceVolumePath && j.status === 'converting'
+            ? { ...j, percent }
+            : j
+        )
+      )
+    })
+  }, [])
+
+  // 顺序处理队列：空闲且有排队任务时启动下一个
+  useEffect(() => {
+    if (runningRef.current) return
+    const next = jobs.find((j) => j.status === 'queued')
+    if (!next) return
+    runningRef.current = true
+    setJobs((prev) =>
+      prev.map((j) => (j.id === next.id ? { ...j, status: 'converting', percent: 0 } : j))
+    )
+    window.api.convert
+      .volume({
+        sourceVolumePath: next.sourceVolumePath,
+        seriesName: next.seriesPathName,
+        volumeTitle: next.volumeTitle,
+        author: next.author,
+        options: loadConvertOptions()
+      })
+      .then(async () => {
+        await refreshArtifacts()
+        setJobs((prev) => prev.filter((j) => j.id !== next.id))
+        toast.success(text.convert.done(next.volumeTitle))
+      })
+      .catch((err) => {
+        setJobs((prev) =>
+          prev.map((j) => (j.id === next.id ? { ...j, status: 'failed', error: `${err}` } : j))
+        )
+        toast.error(`${text.convert.failed(next.volumeTitle)} — ${err}`)
+      })
+      .finally(() => {
+        runningRef.current = false
+      })
+  }, [jobs, refreshArtifacts, text])
+
+  const enqueue = React.useCallback((input: ConvertEnqueueInput) => {
+    setJobs((prev) => {
+      if (prev.some((j) => j.sourceVolumePath === input.sourceVolumePath)) return prev
+      return [
+        ...prev,
+        {
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          status: 'queued',
+          percent: 0,
+          ...input
+        }
+      ]
+    })
+  }, [])
+
+  const retry = React.useCallback((id: string) => {
+    setJobs((prev) =>
+      prev.map((j) => (j.id === id ? { ...j, status: 'queued', percent: 0, error: undefined } : j))
+    )
+  }, [])
+
+  const dismiss = React.useCallback((id: string) => {
+    setJobs((prev) => prev.filter((j) => j.id !== id))
+  }, [])
+
+  const convertedPaths = useMemo(
+    () => new Set(artifacts.map((a) => a.sourceVolumePath)),
+    [artifacts]
+  )
+  const jobByPath = useMemo(() => {
+    const m = new Map<string, ConvertJob>()
+    jobs.forEach((j) => m.set(j.sourceVolumePath, j))
+    return m
+  }, [jobs])
+  const activeCount = useMemo(
+    () => jobs.filter((j) => j.status === 'queued' || j.status === 'converting').length,
+    [jobs]
+  )
+
+  return {
+    jobs,
+    artifacts,
+    activeCount,
+    convertedPaths,
+    jobByPath,
+    enqueue,
+    retry,
+    dismiss,
+    refreshArtifacts
+  }
 }
 
 function getInitialDirection(): ReadingDirection {
@@ -1451,7 +1641,226 @@ function VolumeReader({
   )
 }
 
-function LibraryView({ locale }: { locale: LanguageMode }): React.JSX.Element {
+function ConvertActivityPopover({
+  activity,
+  locale,
+  onOpenArchive
+}: {
+  activity: ConvertActivity
+  locale: LanguageMode
+  onOpenArchive: () => void
+}): React.JSX.Element {
+  const text = uiText[locale]
+  const t = text.activity
+  const ta = text.archiveView
+  const [open, setOpen] = useState(false)
+  const [delivering, setDelivering] = useState<Set<string>>(new Set())
+
+  const deliver = async (a: Artifact): Promise<void> => {
+    setDelivering((p) => new Set(p).add(a.id))
+    const toastId = toast.loading(`${ta.deliver} · ${a.volumeTitle}`)
+    try {
+      const res = await window.api.deliver.send(a.id)
+      if (res.success) toast.success(ta.delivered(a.volumeTitle), { id: toastId })
+      else
+        toast.error(
+          `${ta.deliverFailed(a.volumeTitle)} — ${deliveryErrorMsg(text.delivery, res)}`,
+          {
+            id: toastId
+          }
+        )
+      await activity.refreshArtifacts()
+    } catch (err) {
+      toast.error(`${ta.deliverFailed(a.volumeTitle)} — ${err}`, { id: toastId })
+    } finally {
+      setDelivering((p) => {
+        const n = new Set(p)
+        n.delete(a.id)
+        return n
+      })
+    }
+  }
+  const removeArtifact = async (id: string): Promise<void> => {
+    await window.api.artifacts.remove(id)
+    await activity.refreshArtifacts()
+  }
+
+  const active = activity.jobs
+  const completed = activity.artifacts.slice(0, 8)
+  const hasAny = active.length > 0 || activity.artifacts.length > 0
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+        >
+          {activity.activeCount > 0 ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <ListChecks className="size-4" />
+          )}
+          {t.trigger}
+          {activity.activeCount > 0 ? (
+            <span className="ml-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] leading-none text-primary-foreground">
+              {activity.activeCount}
+            </span>
+          ) : null}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-96 p-0">
+        <div className="border-b px-3 py-2 text-sm font-medium">{t.title}</div>
+        {!hasAny ? (
+          <p className="px-3 py-8 text-center text-sm text-muted-foreground">{t.empty}</p>
+        ) : (
+          <ScrollArea className="max-h-[60vh]">
+            <div className="p-2">
+              {active.length > 0 ? (
+                <>
+                  <div className="px-1 py-1 text-xs font-medium text-muted-foreground">
+                    {t.active}
+                  </div>
+                  {active.map((j) => (
+                    <div key={j.id} className="rounded-md px-2 py-2 hover:bg-muted/50">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="truncate text-sm" title={j.volumeTitle}>
+                          {j.volumeTitle}
+                        </span>
+                        {j.status === 'failed' ? (
+                          <span className="flex shrink-0 gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="size-6"
+                              title={t.retry}
+                              onClick={() => activity.retry(j.id)}
+                            >
+                              <RotateCcw className="size-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="size-6"
+                              title={t.dismiss}
+                              onClick={() => activity.dismiss(j.id)}
+                            >
+                              <X className="size-3.5" />
+                            </Button>
+                          </span>
+                        ) : (
+                          <span className="shrink-0 text-xs text-muted-foreground">
+                            {j.status === 'converting' ? `${Math.max(0, j.percent)}%` : t.queued}
+                          </span>
+                        )}
+                      </div>
+                      <div className="truncate text-xs text-muted-foreground">{j.seriesTitle}</div>
+                      {j.status === 'converting' ? (
+                        <div className="mt-1 h-1 overflow-hidden rounded bg-muted">
+                          <div
+                            className="h-full bg-primary transition-[width]"
+                            style={{ width: `${Math.max(0, j.percent)}%` }}
+                          />
+                        </div>
+                      ) : null}
+                      {j.status === 'failed' ? (
+                        <div className="mt-0.5 truncate text-xs text-destructive" title={j.error}>
+                          {t.failed}
+                        </div>
+                      ) : null}
+                    </div>
+                  ))}
+                </>
+              ) : null}
+              {completed.length > 0 ? (
+                <>
+                  <div className="px-1 pt-2 pb-1 text-xs font-medium text-muted-foreground">
+                    {t.completed}
+                  </div>
+                  {completed.map((a) => (
+                    <div
+                      key={a.id}
+                      className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted/50"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm" title={a.volumeTitle}>
+                          {a.volumeTitle}
+                        </div>
+                        <div className="truncate text-xs text-muted-foreground">
+                          {a.status === 'delivered'
+                            ? ta.statusDelivered
+                            : formatBytes(a.outputs.reduce((s, o) => s + o.sizeBytes, 0))}
+                        </div>
+                      </div>
+                      <div className="flex shrink-0 items-center">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-7"
+                          title={ta.deliver}
+                          disabled={delivering.has(a.id)}
+                          onClick={() => deliver(a)}
+                        >
+                          {delivering.has(a.id) ? (
+                            <Loader2 className="size-3.5 animate-spin" />
+                          ) : (
+                            <Send className="size-3.5" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-7"
+                          title={ta.reveal}
+                          onClick={() => window.api.artifacts.reveal(a.id)}
+                        >
+                          <FolderOpen className="size-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-7 text-destructive hover:text-destructive"
+                          title={ta.remove}
+                          onClick={() => removeArtifact(a.id)}
+                        >
+                          <Trash2 className="size-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </>
+              ) : null}
+            </div>
+          </ScrollArea>
+        )}
+        <div className="border-t p-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-center"
+            onClick={() => {
+              setOpen(false)
+              onOpenArchive()
+            }}
+          >
+            {t.viewAll}
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+function LibraryView({
+  locale,
+  activity,
+  onOpenArchive
+}: {
+  locale: LanguageMode
+  activity: ConvertActivity
+  onOpenArchive: () => void
+}): React.JSX.Element {
   const text = uiText[locale]
   const { state: sidebarState } = useSidebar()
   const [root, setRoot] = useState<string | null>(null)
@@ -1460,54 +1869,37 @@ function LibraryView({ locale }: { locale: LanguageMode }): React.JSX.Element {
   const [volumes, setVolumes] = useState<LibraryVolume[]>([])
   const [readingVolume, setReadingVolume] = useState<LibraryVolume | null>(null)
   const [loading, setLoading] = useState(false)
-  // 已转换产物：源卷路径集合（用于卡片角标） + 转换进度
-  const [convertedPaths, setConvertedPaths] = useState<Set<string>>(new Set())
-  const [convertProgress, setConvertProgress] = useState<Record<string, number>>({})
+  // 转换活动（队列 + 产物 + 进度）由 App 层 hook 提供，跨视图保活
+  const { convertedPaths, jobByPath, enqueue } = activity
 
-  const refreshConverted = React.useCallback(async () => {
-    try {
-      const list = await window.api.artifacts.list()
-      setConvertedPaths(new Set(list.map((a) => a.sourceVolumePath)))
-    } catch {
-      /* 清单读取失败时静默，不阻塞浏览 */
-    }
-  }, [])
-
-  useEffect(() => {
-    refreshConverted()
-  }, [refreshConverted])
-
-  // 订阅 main 进程转换进度
-  useEffect(() => {
-    return window.api.convert.onProgress(({ sourceVolumePath, percent }) => {
-      setConvertProgress((prev) => ({ ...prev, [sourceVolumePath]: percent }))
-    })
-  }, [])
-
-  const convertVolume = async (vol: LibraryVolume): Promise<void> => {
+  const enqueueVolume = (vol: LibraryVolume): void => {
     if (!selected) return
-    if (convertProgress[vol.path] != null && convertProgress[vol.path] < 100) return
-    setConvertProgress((prev) => ({ ...prev, [vol.path]: 0 }))
-    const toastId = toast.loading(text.convert.start(vol.title))
-    try {
-      await window.api.convert.volume({
-        sourceVolumePath: vol.path,
-        seriesName: selected.name,
-        volumeTitle: vol.title,
-        author: selected.author,
-        options: loadConvertOptions()
-      })
-      toast.success(text.convert.done(vol.title), { id: toastId })
-      await refreshConverted()
-    } catch (err) {
-      toast.error(`${text.convert.failed(vol.title)} — ${err}`, { id: toastId })
-    } finally {
-      setConvertProgress((prev) => {
-        const next = { ...prev }
-        delete next[vol.path]
-        return next
-      })
+    enqueue({
+      sourceVolumePath: vol.path,
+      seriesPathName: selected.name,
+      seriesTitle: selected.title,
+      volumeTitle: vol.title,
+      author: selected.author
+    })
+  }
+
+  const convertSeries = (): void => {
+    if (!selected) return
+    const pending = volumes.filter((v) => !convertedPaths.has(v.path) && !jobByPath.has(v.path))
+    if (pending.length === 0) {
+      toast.info(text.activity.nothingToQueue)
+      return
     }
+    pending.forEach((vol) =>
+      enqueue({
+        sourceVolumePath: vol.path,
+        seriesPathName: selected.name,
+        seriesTitle: selected.title,
+        volumeTitle: vol.title,
+        author: selected.author
+      })
+    )
+    toast.success(text.activity.enqueued(pending.length))
   }
 
   const loadSeries = React.useCallback(async (target: string) => {
@@ -1629,6 +2021,17 @@ function LibraryView({ locale }: { locale: LanguageMode }): React.JSX.Element {
             className="ml-auto flex items-center gap-1"
             style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
           >
+            {showVolumes ? (
+              <Button variant="ghost" size="sm" onClick={convertSeries}>
+                <Layers className="size-4" />
+                {text.activity.convertSeries}
+              </Button>
+            ) : null}
+            <ConvertActivityPopover
+              activity={activity}
+              locale={locale}
+              onOpenArchive={onOpenArchive}
+            />
             <Button variant="ghost" size="sm" onClick={rescan} disabled={loading}>
               <RefreshCw className={`size-4 ${loading ? 'animate-spin' : ''}`} />
               {text.library.rescan}
@@ -1681,8 +2084,7 @@ function LibraryView({ locale }: { locale: LanguageMode }): React.JSX.Element {
                 <div className={LIBRARY_GRID}>
                   {volumes.map((vol) => {
                     const isConverted = convertedPaths.has(vol.path)
-                    const pct = convertProgress[vol.path]
-                    const isConverting = pct != null
+                    const job = jobByPath.get(vol.path)
                     return (
                       <div key={vol.id} className="group flex flex-col gap-2 text-left">
                         <div className="relative">
@@ -1713,7 +2115,7 @@ function LibraryView({ locale }: { locale: LanguageMode }): React.JSX.Element {
                             </AspectRatio>
                           </button>
                           {/* 已转换角标 */}
-                          {isConverted && !isConverting ? (
+                          {isConverted && !job ? (
                             <Badge
                               variant="secondary"
                               className="pointer-events-none absolute top-1.5 left-1.5 gap-1 bg-background/85 backdrop-blur"
@@ -1722,15 +2124,23 @@ function LibraryView({ locale }: { locale: LanguageMode }): React.JSX.Element {
                               {text.convert.converted}
                             </Badge>
                           ) : null}
-                          {/* 转换按钮（hover 显示）/ 进度 */}
+                          {/* 转换按钮（hover 显示）/ 队列状态 */}
                           <div className="absolute top-1.5 right-1.5">
-                            {isConverting ? (
+                            {job ? (
                               <Badge
                                 variant="secondary"
                                 className="pointer-events-none gap-1 bg-background/85 backdrop-blur"
                               >
-                                <Loader2 className="size-3 animate-spin" />
-                                {text.convert.progress(Math.max(0, pct))}
+                                {job.status === 'converting' ? (
+                                  <>
+                                    <Loader2 className="size-3 animate-spin" />
+                                    {text.convert.progress(Math.max(0, job.percent))}
+                                  </>
+                                ) : job.status === 'queued' ? (
+                                  text.activity.queued
+                                ) : (
+                                  <span className="text-destructive">{text.activity.failed}</span>
+                                )}
                               </Badge>
                             ) : (
                               <Button
@@ -1739,7 +2149,7 @@ function LibraryView({ locale }: { locale: LanguageMode }): React.JSX.Element {
                                 className="h-7 gap-1 bg-background/85 px-2 opacity-0 backdrop-blur transition-opacity group-hover:opacity-100"
                                 onClick={(e) => {
                                   e.stopPropagation()
-                                  convertVolume(vol)
+                                  enqueueVolume(vol)
                                 }}
                               >
                                 <BookUp className="size-3.5" />
