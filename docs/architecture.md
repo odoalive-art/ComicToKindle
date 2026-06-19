@@ -30,7 +30,6 @@ ComicToKindle 目前是一个桌面应用工作台，已打通核心闭环:**本
 
 - 元数据持久化（数据库 / 索引；漫画库当前每次进入实时扫描）
 - 压缩包卷册读取（CBZ/CBR/PDF；转换目前只吃图片目录）
-- 转换选项 UI（设备档位、灰度、双页拆分等当前用默认值，未暴露）
 - 图像处理或 AI 放大
 - 本地 AZW3 导出（原型曾用 Calibre，已移除；无线投递发 EPUB）
 - 自动投递（转换完成即发；当前只支持归档手动投递）
@@ -115,6 +114,7 @@ LibraryVolume  id, path, name, title, kind('folder'|'file'), pageCount, coverUrl
 - `archiver` 8 的 `ZipArchive` 打包，`mimetype` 必须第一个且 `store`（不压缩）。
 - 设备档位（`PROFILE_RES`）：pw3/pw5/pw6/**ko3**/oasis/scribe/original；**默认 pw6/ko3 = 1264×1680**。
 - 入参是「按阅读顺序的图片绝对路径列表」，由 `library.collectVolumeImagePaths` 提供，因此支持嵌套单话子文件夹。
+- 转换选项（设备档位/方向/灰度/双页/质量/分卷上限）由 renderer「转换设置」页存 `localStorage`，转换时作为 `options` 传入；main 用 `DEFAULTS` 兜底合并。引擎参数与 renderer 默认值需保持一致。
 - 原型里的 Calibre/AZW3 已移除（无线投递发 EPUB，亚马逊云端自转）。
 
 **产物清单 `src/main/artifacts.ts`**：
@@ -174,6 +174,10 @@ deliver:send        发送某 artifact 的全部 EPUB → 置 status；未配置
 归档（ArchiveView）
   列出 artifacts.json 中的转换产物（卷名/部/文件数/页数/大小/时间/状态）。
   每条操作：投递到 Kindle / 在 Finder 中显示 / 导出副本 / 删除。
+
+转换设置（ConvertSettingsView）
+  设备档位 / 阅读方向 / 灰度 / 双页拆分 / 图片质量 / 单卷上限表单。
+  存 localStorage（comic-to-kindle-convert-options），转换时读取并传入。
 
 设备与邮箱（DeliverySettingsView）
   SMTP host/port/user/password + Kindle 邮箱表单，保存 + 测试连接。
@@ -295,6 +299,7 @@ Electron main 或专门的服务模块应负责本地文件系统和进程执行
   - `comic-to-kindle-reading-direction` 阅读方向（ltr/rtl）
   - `comic-to-kindle-reading-mode` 阅读模式（single/double）
   - `comic-to-kindle-reading-progress` 每卷续读进度（{ 卷路径: 页索引 } 的 JSON）
+  - `comic-to-kindle-convert-options` 转换选项（设备档位/方向/灰度/双页/质量/分卷上限）
 
 后续若引入漫画元数据库 / 索引，需要在本节补充存储引擎、位置、迁移策略、数据模型与重置行为。
 

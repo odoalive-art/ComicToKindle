@@ -342,6 +342,7 @@ type NavItem = {
 type ViewId =
   | 'library'
   | 'add-library'
+  | 'convert-settings'
   | 'web-push'
   | 'devices-emails'
   | 'system-doctor'
@@ -361,6 +362,7 @@ const uiText = {
     nav: {
       library: '所有漫画',
       'add-library': '添加资源库',
+      'convert-settings': '转换设置',
       'web-push': '网页推送',
       'devices-emails': '设备与邮箱',
       'system-doctor': '系统环境医生',
@@ -432,6 +434,33 @@ const uiText = {
       delivered: (title: string) => `已投递：${title}`,
       deliverFailed: (title: string) => `投递失败：${title}`,
       notConfigured: '尚未配置投递，请先到「设备与邮箱」填写 SMTP 和 Kindle 邮箱。'
+    },
+    convertSettings: {
+      title: '转换设置',
+      description: '调整转换为 Kindle EPUB 时的默认参数。保存后对之后的每次转换生效。',
+      deviceProfile: '设备档位',
+      deviceProfileNote: '决定页面缩放的目标分辨率，按你的 Kindle 机型选择。',
+      profiles: {
+        pw6: 'Paperwhite 6 / Oasis（1264×1680）',
+        ko3: 'Kindle Oasis 3（1264×1680）',
+        pw5: 'Paperwhite 5（1236×1648）',
+        pw3: 'Paperwhite 3（1072×1448）',
+        scribe: 'Scribe（1860×2480）',
+        original: '保持原始分辨率'
+      },
+      mangaMode: '日漫方向（从右往左）',
+      mangaModeNote: '关闭则按从左往右翻页（适合美式/条漫）。',
+      grayscale: '灰度化',
+      grayscaleNote: '转为黑白可显著减小体积；封面页始终保留彩色。',
+      splitDoublePages: '拆分双页',
+      splitDoublePagesNote: '把横向跨页切成左右两页，单页阅读更清晰。',
+      imageQuality: '图片质量',
+      imageQualityNote: '越高越清晰、体积越大（45–100）。',
+      maxVolumeSize: '单卷体积上限（MB）',
+      maxVolumeSizeNote: '超过则自动拆成多个 EPUB；邮箱投递通常限制 ~50MB。',
+      save: '保存',
+      saved: '已保存转换设置',
+      reset: '恢复默认'
     },
     delivery: {
       title: '设备与邮箱',
@@ -535,6 +564,7 @@ const uiText = {
     nav: {
       library: 'All Manga',
       'add-library': 'Add Library',
+      'convert-settings': 'Conversion',
       'web-push': 'Web Push',
       'devices-emails': 'Devices & Emails',
       'system-doctor': 'System Doctor',
@@ -609,6 +639,36 @@ const uiText = {
       deliverFailed: (title: string) => `Send failed: ${title}`,
       notConfigured:
         'Delivery not configured. Set up SMTP and your Kindle email in Devices & Emails first.'
+    },
+    convertSettings: {
+      title: 'Conversion',
+      description:
+        'Adjust the default parameters used when converting to Kindle EPUB. Saved settings apply to every conversion afterwards.',
+      deviceProfile: 'Device profile',
+      deviceProfileNote: 'Target resolution for page scaling — pick your Kindle model.',
+      profiles: {
+        pw6: 'Paperwhite 6 / Oasis (1264×1680)',
+        ko3: 'Kindle Oasis 3 (1264×1680)',
+        pw5: 'Paperwhite 5 (1236×1648)',
+        pw3: 'Paperwhite 3 (1072×1448)',
+        scribe: 'Scribe (1860×2480)',
+        original: 'Keep original resolution'
+      },
+      mangaMode: 'Manga direction (right to left)',
+      mangaModeNote: 'Turn off for left-to-right paging (Western comics / webtoons).',
+      grayscale: 'Grayscale',
+      grayscaleNote: 'Black & white greatly reduces size; the cover stays in color.',
+      splitDoublePages: 'Split double pages',
+      splitDoublePagesNote:
+        'Cut wide spreads into left/right pages for clearer single-page reading.',
+      imageQuality: 'Image quality',
+      imageQualityNote: 'Higher is sharper but larger (45–100).',
+      maxVolumeSize: 'Max volume size (MB)',
+      maxVolumeSizeNote:
+        'Auto-split into multiple EPUBs above this; email delivery usually caps ~50MB.',
+      save: 'Save',
+      saved: 'Conversion settings saved',
+      reset: 'Reset to defaults'
     },
     delivery: {
       title: 'Devices & Emails',
@@ -749,6 +809,7 @@ const sidebarGroups: SidebarGroupConfig[] = [
     titleKey: 'groupKindleSend',
     items: [
       { id: 'archive', icon: Archive },
+      { id: 'convert-settings', icon: Settings },
       { id: 'web-push', icon: Globe },
       { id: 'devices-emails', icon: Mail },
       { id: 'system-doctor', icon: Stethoscope },
@@ -995,6 +1056,8 @@ function App(): React.JSX.Element {
                 <ArchiveView locale={languageMode} />
               ) : activeView === 'devices-emails' ? (
                 <DeliverySettingsView locale={languageMode} />
+              ) : activeView === 'convert-settings' ? (
+                <ConvertSettingsView locale={languageMode} />
               ) : (
                 <div className="flex-1 bg-background" />
               )}
@@ -1104,6 +1167,36 @@ type ReadingMode = 'single' | 'double'
 const READING_DIR_KEY = 'comic-to-kindle-reading-direction'
 const READING_MODE_KEY = 'comic-to-kindle-reading-mode'
 const READING_PROGRESS_KEY = 'comic-to-kindle-reading-progress'
+
+// 转换选项（非敏感，存 localStorage）。字段与 main 的 convert.ts DEFAULTS 保持一致。
+const CONVERT_OPTIONS_KEY = 'comic-to-kindle-convert-options'
+type DeviceProfileOpt = 'pw6' | 'ko3' | 'pw5' | 'pw3' | 'scribe' | 'original'
+const PROFILE_ORDER: DeviceProfileOpt[] = ['pw6', 'ko3', 'pw5', 'pw3', 'scribe', 'original']
+interface ConvertOptionsState {
+  deviceProfile: DeviceProfileOpt
+  mangaMode: boolean
+  grayscale: boolean
+  splitDoublePages: boolean
+  imageQuality: number
+  maxVolumeSize: number
+}
+const DEFAULT_CONVERT_OPTIONS: ConvertOptionsState = {
+  deviceProfile: 'pw6',
+  mangaMode: true,
+  grayscale: true,
+  splitDoublePages: true,
+  imageQuality: 85,
+  maxVolumeSize: 45
+}
+function loadConvertOptions(): ConvertOptionsState {
+  try {
+    const raw = window.localStorage.getItem(CONVERT_OPTIONS_KEY)
+    if (raw) return { ...DEFAULT_CONVERT_OPTIONS, ...JSON.parse(raw) }
+  } catch {
+    /* 解析失败回退默认 */
+  }
+  return { ...DEFAULT_CONVERT_OPTIONS }
+}
 
 function getInitialDirection(): ReadingDirection {
   return window.localStorage.getItem(READING_DIR_KEY) === 'rtl' ? 'rtl' : 'ltr'
@@ -1401,7 +1494,8 @@ function LibraryView({ locale }: { locale: LanguageMode }): React.JSX.Element {
         sourceVolumePath: vol.path,
         seriesName: selected.name,
         volumeTitle: vol.title,
-        author: selected.author
+        author: selected.author,
+        options: loadConvertOptions()
       })
       toast.success(text.convert.done(vol.title), { id: toastId })
       await refreshConverted()
@@ -1716,6 +1810,133 @@ function LibraryView({ locale }: { locale: LanguageMode }): React.JSX.Element {
         </ScrollArea>
       )}
     </div>
+  )
+}
+
+function ConvertSettingsView({ locale }: { locale: LanguageMode }): React.JSX.Element {
+  const text = uiText[locale]
+  const t = text.convertSettings
+  const [opts, setOpts] = useState<ConvertOptionsState>(loadConvertOptions)
+
+  const set = <K extends keyof ConvertOptionsState>(key: K, value: ConvertOptionsState[K]): void =>
+    setOpts((prev) => ({ ...prev, [key]: value }))
+
+  const save = (): void => {
+    window.localStorage.setItem(CONVERT_OPTIONS_KEY, JSON.stringify(opts))
+    toast.success(t.saved)
+  }
+  const reset = (): void => setOpts({ ...DEFAULT_CONVERT_OPTIONS })
+
+  const SwitchRow = ({
+    label,
+    note,
+    checked,
+    onChange
+  }: {
+    label: string
+    note: string
+    checked: boolean
+    onChange: (v: boolean) => void
+  }): React.JSX.Element => (
+    <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
+      <div className="min-w-0">
+        <div className="text-sm font-medium">{label}</div>
+        <div className="text-xs text-muted-foreground">{note}</div>
+      </div>
+      <Switch checked={checked} onCheckedChange={onChange} />
+    </div>
+  )
+
+  return (
+    <ScrollArea className="min-h-0 flex-1">
+      <div className="mx-auto w-full max-w-xl p-4 lg:p-6">
+        <p className="mb-5 text-sm text-muted-foreground">{t.description}</p>
+        <div className="space-y-4">
+          {/* 设备档位 */}
+          <div className="space-y-1.5">
+            <Label>{t.deviceProfile}</Label>
+            <Select
+              value={opts.deviceProfile}
+              onValueChange={(v) => set('deviceProfile', v as DeviceProfileOpt)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PROFILE_ORDER.map((p) => (
+                  <SelectItem key={p} value={p}>
+                    {t.profiles[p]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">{t.deviceProfileNote}</p>
+          </div>
+
+          {/* 开关组 */}
+          <SwitchRow
+            label={t.mangaMode}
+            note={t.mangaModeNote}
+            checked={opts.mangaMode}
+            onChange={(v) => set('mangaMode', v)}
+          />
+          <SwitchRow
+            label={t.grayscale}
+            note={t.grayscaleNote}
+            checked={opts.grayscale}
+            onChange={(v) => set('grayscale', v)}
+          />
+          <SwitchRow
+            label={t.splitDoublePages}
+            note={t.splitDoublePagesNote}
+            checked={opts.splitDoublePages}
+            onChange={(v) => set('splitDoublePages', v)}
+          />
+
+          {/* 图片质量 */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label>{t.imageQuality}</Label>
+              <span className="text-sm tabular-nums text-muted-foreground">
+                {opts.imageQuality}
+              </span>
+            </div>
+            <Slider
+              min={45}
+              max={100}
+              step={1}
+              value={[opts.imageQuality]}
+              onValueChange={([v]) => set('imageQuality', v)}
+            />
+            <p className="text-xs text-muted-foreground">{t.imageQualityNote}</p>
+          </div>
+
+          {/* 单卷上限 */}
+          <div className="space-y-1.5">
+            <Label htmlFor="max-vol">{t.maxVolumeSize}</Label>
+            <Input
+              id="max-vol"
+              inputMode="numeric"
+              value={String(opts.maxVolumeSize)}
+              onChange={(e) => {
+                const n = Number(e.target.value.replace(/[^0-9]/g, ''))
+                set('maxVolumeSize', n > 0 ? n : 1)
+              }}
+              className="w-32"
+            />
+            <p className="text-xs text-muted-foreground">{t.maxVolumeSizeNote}</p>
+          </div>
+
+          <div className="flex items-center gap-2 pt-1">
+            <Button onClick={save}>{t.save}</Button>
+            <Button variant="outline" onClick={reset}>
+              <RefreshCw className="size-4" />
+              {t.reset}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </ScrollArea>
   )
 }
 
