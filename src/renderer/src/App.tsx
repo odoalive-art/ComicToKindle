@@ -60,7 +60,7 @@ import {
   ListChecks,
   RotateCcw,
   X,
-  Layers
+  CheckSquare
 } from 'lucide-react'
 
 import {
@@ -433,9 +433,14 @@ const uiText = {
       cancel: '取消',
       clearAll: '清空',
       viewAll: '查看全部归档',
-      convertSeries: '转换整部',
       enqueued: (n: number) => `已加入 ${n} 卷到转换队列`,
-      nothingToQueue: '这一部都已转换或在队列中'
+      nothingToQueue: '没有可加入队列的卷',
+      select: '选择',
+      selectExit: '退出选择',
+      selectedCount: (n: number) => `已选 ${n} 本`,
+      selectAll: '全选',
+      selectNone: '取消全选',
+      convertSelected: (n: number) => `转换所选（${n}）`
     },
     archiveView: {
       title: '归档',
@@ -655,9 +660,14 @@ const uiText = {
       cancel: 'Cancel',
       clearAll: 'Clear all',
       viewAll: 'View full archive',
-      convertSeries: 'Convert series',
       enqueued: (n: number) => `Queued ${n} volume${n === 1 ? '' : 's'} for conversion`,
-      nothingToQueue: 'All volumes already converted or queued'
+      nothingToQueue: 'Nothing to queue',
+      select: 'Select',
+      selectExit: 'Exit selection',
+      selectedCount: (n: number) => `${n} selected`,
+      selectAll: 'Select all',
+      selectNone: 'Deselect all',
+      convertSelected: (n: number) => `Convert selected (${n})`
     },
     archiveView: {
       title: 'Archive',
@@ -1723,25 +1733,31 @@ function ConvertActivityPopover({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-        >
-          {activity.activeCount > 0 ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <ListChecks className="size-4" />
-          )}
-          {t.trigger}
-          {activity.activeCount > 0 ? (
-            <span className="ml-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] leading-none text-primary-foreground">
-              {activity.activeCount}
-            </span>
-          ) : null}
-        </Button>
-      </PopoverTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              className="relative"
+              style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+            >
+              {activity.activeCount > 0 ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <ListChecks className="size-4" />
+              )}
+              {activity.activeCount > 0 ? (
+                <span className="absolute -top-1 -right-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] leading-none text-primary-foreground">
+                  {activity.activeCount}
+                </span>
+              ) : null}
+              <span className="sr-only">{t.trigger}</span>
+            </Button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent>{t.trigger}</TooltipContent>
+      </Tooltip>
       <PopoverContent align="end" className="w-96 p-0">
         <div className="flex items-center justify-between border-b px-3 py-2">
           <span className="text-sm font-medium">{t.title}</span>
@@ -1920,6 +1936,9 @@ function LibraryView({
   const [volumes, setVolumes] = useState<LibraryVolume[]>([])
   const [readingVolume, setReadingVolume] = useState<LibraryVolume | null>(null)
   const [loading, setLoading] = useState(false)
+  // 多选模式：先勾选若干卷再批量转换（替代「转换整部」入口）
+  const [selectMode, setSelectMode] = useState(false)
+  const [selectedVols, setSelectedVols] = useState<Set<string>>(new Set())
   // 转换活动（队列 + 产物 + 进度）由 App 层 hook 提供，跨视图保活
   const { convertedPaths, jobByPath, enqueue } = activity
 
@@ -1934,14 +1953,29 @@ function LibraryView({
     })
   }
 
-  const convertSeries = (): void => {
-    if (!selected) return
-    const pending = volumes.filter((v) => !convertedPaths.has(v.path) && !jobByPath.has(v.path))
-    if (pending.length === 0) {
-      toast.info(text.activity.nothingToQueue)
-      return
-    }
-    pending.forEach((vol) =>
+  const exitSelect = (): void => {
+    setSelectMode(false)
+    setSelectedVols(new Set())
+  }
+
+  const toggleVol = (path: string): void => {
+    setSelectedVols((prev) => {
+      const next = new Set(prev)
+      if (next.has(path)) next.delete(path)
+      else next.add(path)
+      return next
+    })
+  }
+
+  const allSelected = volumes.length > 0 && selectedVols.size === volumes.length
+  const toggleAll = (): void => {
+    setSelectedVols(allSelected ? new Set() : new Set(volumes.map((v) => v.path)))
+  }
+
+  const convertSelected = (): void => {
+    if (!selected || selectedVols.size === 0) return
+    const picked = volumes.filter((v) => selectedVols.has(v.path))
+    picked.forEach((vol) =>
       enqueue({
         sourceVolumePath: vol.path,
         seriesPathName: selected.name,
@@ -1950,7 +1984,8 @@ function LibraryView({
         author: selected.author
       })
     )
-    toast.success(text.activity.enqueued(pending.length))
+    toast.success(text.activity.enqueued(picked.length))
+    exitSelect()
   }
 
   const loadSeries = React.useCallback(async (target: string) => {
@@ -1999,6 +2034,7 @@ function LibraryView({
   }
 
   const openSeries = async (item: LibrarySeries): Promise<void> => {
+    exitSelect()
     setSelected(item)
     setLoading(true)
     try {
@@ -2011,9 +2047,20 @@ function LibraryView({
   }
 
   const backToSeries = (): void => {
+    exitSelect()
     setSelected(null)
     setVolumes([])
   }
+
+  // 多选模式下按 ESC 退出
+  useEffect(() => {
+    if (!selectMode) return
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') exitSelect()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [selectMode])
 
   // 阅读某一卷：接管整个内容区
   if (readingVolume) {
@@ -2025,6 +2072,7 @@ function LibraryView({
   const showVolumes = selected !== null
 
   return (
+    <TooltipProvider delayDuration={300}>
     <div className="flex min-h-0 flex-1 flex-col bg-background">
       {/* 合并后的顶栏：侧栏开关 + 标题/面包屑 + 操作 */}
       <header
@@ -2040,57 +2088,110 @@ function LibraryView({
             <Separator orientation="vertical" className="mr-2 !h-3 opacity-50" />
           </>
         )}
-        <Breadcrumb style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              {showVolumes ? (
-                <BreadcrumbLink asChild>
-                  <button type="button" onClick={backToSeries}>
-                    {text.nav.library}
-                  </button>
-                </BreadcrumbLink>
-              ) : (
-                <BreadcrumbPage className="font-semibold text-foreground">
-                  {text.nav.library}
-                </BreadcrumbPage>
-              )}
-            </BreadcrumbItem>
-            {showVolumes && selected ? (
-              <>
-                <BreadcrumbSeparator />
-                <BreadcrumbItem>
-                  <BreadcrumbPage className="max-w-[40ch] truncate font-semibold text-foreground">
-                    {selected.title}
-                  </BreadcrumbPage>
-                </BreadcrumbItem>
-              </>
-            ) : null}
-          </BreadcrumbList>
-        </Breadcrumb>
-        {root ? (
-          <div
-            className="ml-auto flex items-center gap-1"
+        {selectMode ? (
+          <span
+            className="min-w-0 flex-1 truncate text-sm font-medium"
             style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
           >
-            {showVolumes ? (
-              <Button variant="ghost" size="sm" onClick={convertSeries}>
-                <Layers className="size-4" />
-                {text.activity.convertSeries}
-              </Button>
-            ) : null}
-            <ConvertActivityPopover
-              activity={activity}
-              locale={locale}
-              onOpenArchive={onOpenArchive}
-            />
-            <Button variant="ghost" size="sm" onClick={rescan} disabled={loading}>
-              <RefreshCw className={`size-4 ${loading ? 'animate-spin' : ''}`} />
-              {text.library.rescan}
-            </Button>
-            <Button variant="outline" size="sm" onClick={chooseFolder}>
-              <FolderOpen className="size-4" />
-              {text.library.changeFolder}
-            </Button>
+            {text.activity.selectedCount(selectedVols.size)}
+          </span>
+        ) : (
+          <Breadcrumb
+            className="min-w-0 flex-1"
+            style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+          >
+            <BreadcrumbList className="flex-nowrap">
+              <BreadcrumbItem className="shrink-0">
+                {showVolumes ? (
+                  <BreadcrumbLink asChild>
+                    <button type="button" onClick={backToSeries}>
+                      {text.nav.library}
+                    </button>
+                  </BreadcrumbLink>
+                ) : (
+                  <BreadcrumbPage className="font-semibold text-foreground">
+                    {text.nav.library}
+                  </BreadcrumbPage>
+                )}
+              </BreadcrumbItem>
+              {showVolumes && selected ? (
+                <>
+                  <BreadcrumbSeparator className="shrink-0" />
+                  <BreadcrumbItem className="min-w-0">
+                    <BreadcrumbPage
+                      className="truncate font-semibold text-foreground"
+                      title={selected.title}
+                    >
+                      {selected.title}
+                    </BreadcrumbPage>
+                  </BreadcrumbItem>
+                </>
+              ) : null}
+            </BreadcrumbList>
+          </Breadcrumb>
+        )}
+        {root ? (
+          <div
+            className="ml-2 flex shrink-0 items-center gap-1"
+            style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+          >
+            {selectMode ? (
+              <>
+                <Button variant="ghost" size="sm" onClick={toggleAll}>
+                  {allSelected ? text.activity.selectNone : text.activity.selectAll}
+                </Button>
+                <Button size="sm" disabled={selectedVols.size === 0} onClick={convertSelected}>
+                  <BookUp className="size-4" />
+                  {text.activity.convertSelected(selectedVols.size)}
+                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" onClick={exitSelect}>
+                      <X className="size-4" />
+                      <span className="sr-only">{text.activity.selectExit}</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{text.activity.selectExit}</TooltipContent>
+                </Tooltip>
+              </>
+            ) : (
+              <>
+                {showVolumes ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" onClick={() => setSelectMode(true)}>
+                        <CheckSquare className="size-4" />
+                        <span className="sr-only">{text.activity.select}</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{text.activity.select}</TooltipContent>
+                  </Tooltip>
+                ) : null}
+                <ConvertActivityPopover
+                  activity={activity}
+                  locale={locale}
+                  onOpenArchive={onOpenArchive}
+                />
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" onClick={rescan} disabled={loading}>
+                      <RefreshCw className={`size-4 ${loading ? 'animate-spin' : ''}`} />
+                      <span className="sr-only">{text.library.rescan}</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{text.library.rescan}</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="outline" size="icon" onClick={chooseFolder}>
+                      <FolderOpen className="size-4" />
+                      <span className="sr-only">{text.library.changeFolder}</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{text.library.changeFolder}</TooltipContent>
+                </Tooltip>
+              </>
+            )}
           </div>
         ) : null}
       </header>
@@ -2136,17 +2237,26 @@ function LibraryView({
                   {volumes.map((vol) => {
                     const isConverted = convertedPaths.has(vol.path)
                     const job = jobByPath.get(vol.path)
+                    const picked = selectedVols.has(vol.path)
                     return (
                       <div key={vol.id} className="group flex flex-col gap-2 text-left">
                         <div className="relative">
                           <button
                             type="button"
-                            onClick={() => setReadingVolume(vol)}
+                            onClick={() =>
+                              selectMode ? toggleVol(vol.path) : setReadingVolume(vol)
+                            }
                             className="block w-full text-left"
                           >
                             <AspectRatio
                               ratio={3 / 4}
-                              className="overflow-hidden rounded-lg bg-muted"
+                              className={`overflow-hidden rounded-lg bg-muted transition-all ${
+                                selectMode
+                                  ? picked
+                                    ? 'ring-2 ring-primary'
+                                    : 'brightness-[0.7] dark:brightness-[0.82]'
+                                  : ''
+                              }`}
                             >
                               <CoverImage src={vol.coverUrl} alt={vol.title} />
                               <div className="pointer-events-none absolute inset-0 rounded-lg border border-foreground/10" />
@@ -2165,22 +2275,35 @@ function LibraryView({
                               })()}
                             </AspectRatio>
                           </button>
-                          {/* 已转换角标 */}
+                          {/* 已转换角标：小封面下用图标圆点，避免文字撑破封面 */}
                           {isConverted && !job ? (
-                            <Badge
-                              variant="secondary"
-                              className="pointer-events-none absolute top-1.5 left-1.5 gap-1 bg-background/85 backdrop-blur"
-                            >
-                              <CheckCircle2 className="size-3 text-emerald-500" />
-                              {text.convert.converted}
-                            </Badge>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge
+                                  variant="secondary"
+                                  className="absolute top-1.5 left-1.5 size-6 justify-center rounded-full bg-background/85 p-0 backdrop-blur"
+                                >
+                                  <CheckCircle2 className="size-3.5 text-emerald-500" />
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent>{text.convert.converted}</TooltipContent>
+                            </Tooltip>
                           ) : null}
-                          {/* 转换按钮（hover 显示）/ 队列状态 */}
-                          <div className="absolute top-1.5 right-1.5">
-                            {job ? (
+                          {/* 选择模式：右上角复选框 */}
+                          {selectMode ? (
+                            <div className="pointer-events-none absolute top-1.5 right-1.5">
+                              <Checkbox
+                                checked={picked}
+                                className="size-6 border-2 bg-background/85 backdrop-blur data-[state=checked]:bg-primary"
+                              />
+                            </div>
+                          ) : (
+                            /* 转换按钮（hover 显示）/ 队列状态 */
+                            <div className="absolute top-1.5 right-1.5 flex max-w-[calc(100%-0.75rem)] justify-end">
+                              {job ? (
                               <Badge
                                 variant="secondary"
-                                className="pointer-events-none gap-1 bg-background/85 backdrop-blur"
+                                className="pointer-events-none max-w-full gap-1 truncate bg-background/85 backdrop-blur"
                               >
                                 {job.status === 'converting' ? (
                                   <>
@@ -2194,20 +2317,26 @@ function LibraryView({
                                 )}
                               </Badge>
                             ) : (
-                              <Button
-                                variant="secondary"
-                                size="sm"
-                                className="h-7 gap-1 bg-background/85 px-2 opacity-0 backdrop-blur transition-opacity group-hover:opacity-100"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  enqueueVolume(vol)
-                                }}
-                              >
-                                <BookUp className="size-3.5" />
-                                {text.convert.action}
-                              </Button>
-                            )}
-                          </div>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="secondary"
+                                    size="icon"
+                                    className="size-7 bg-background/85 opacity-0 backdrop-blur transition-opacity group-hover:opacity-100"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      enqueueVolume(vol)
+                                    }}
+                                  >
+                                    <BookUp className="size-3.5" />
+                                    <span className="sr-only">{text.convert.action}</span>
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>{text.convert.action}</TooltipContent>
+                              </Tooltip>
+                              )}
+                            </div>
+                          )}
                         </div>
                         <div className="min-w-0">
                           <div className="truncate text-sm font-medium" title={vol.title}>
@@ -2250,7 +2379,7 @@ function LibraryView({
                       </AspectRatio>
                       <Badge
                         variant="secondary"
-                        className="absolute top-1.5 right-1.5 bg-background/85 backdrop-blur"
+                        className="absolute top-1.5 right-1.5 max-w-[calc(100%-0.75rem)] truncate bg-background/85 backdrop-blur"
                       >
                         {text.library.volumeUnit(item.volumeCount)}
                       </Badge>
@@ -2271,6 +2400,7 @@ function LibraryView({
         </ScrollArea>
       )}
     </div>
+    </TooltipProvider>
   )
 }
 
