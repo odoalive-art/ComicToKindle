@@ -213,6 +213,14 @@ async function listPages(volumePath: string): Promise<string[]> {
   return pages.map(toComicUrl)
 }
 
+/**
+ * 按阅读顺序收集一卷的所有图片**绝对路径**（不含 comic:// 包装）。
+ * 供转换流水线使用，能正确处理「单话子文件夹」的嵌套结构。
+ */
+export async function collectVolumeImagePaths(volumePath: string): Promise<string[]> {
+  return collectPages(volumePath)
+}
+
 // ---------- comic:// 协议 ----------
 /** 必须在 app ready 之前调用 */
 export function registerComicScheme(): void {

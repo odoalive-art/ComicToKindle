@@ -28,8 +28,108 @@ export interface LibraryAPI {
   listPages: (volumePath: string) => Promise<string[]>
 }
 
+export type DeviceProfile = 'pw3' | 'pw5' | 'pw6' | 'ko3' | 'oasis' | 'scribe' | 'original'
+
+export interface ConvertOptions {
+  deviceProfile?: DeviceProfile
+  mangaMode?: boolean
+  grayscale?: boolean
+  splitDoublePages?: boolean
+  imageQuality?: number
+  maxVolumeSize?: number
+  backgroundColor?: string
+  concurrency?: number
+}
+
+export interface ConvertOutput {
+  path: string
+  fileName: string
+  sizeBytes: number
+  volTitle: string
+}
+
+export type ArtifactStatus = 'ready' | 'delivered' | 'failed'
+
+export interface Artifact {
+  id: string
+  sourceVolumePath: string
+  seriesName: string
+  volumeTitle: string
+  author: string | null
+  outputs: ConvertOutput[]
+  format: 'epub'
+  pageCount: number
+  createdAt: string
+  status: ArtifactStatus
+}
+
+export interface ConvertRequest {
+  sourceVolumePath: string
+  seriesName: string
+  volumeTitle: string
+  author?: string | null
+  options?: ConvertOptions
+}
+
+export interface ConvertProgress {
+  sourceVolumePath: string
+  percent: number
+  message: string
+}
+
+export interface ConvertAPI {
+  volume: (req: ConvertRequest) => Promise<Artifact>
+  onProgress: (cb: (payload: ConvertProgress) => void) => () => void
+}
+
+export interface ArtifactsAPI {
+  list: () => Promise<Artifact[]>
+  reveal: (id: string) => Promise<void>
+  export: (id: string) => Promise<boolean>
+  remove: (id: string) => Promise<void>
+}
+
+export interface DeliveryConfigInput {
+  host: string
+  port: number
+  user: string
+  kindleEmail: string
+  password?: string
+}
+
+export interface DeliveryConfigPublic {
+  host: string
+  port: number
+  user: string
+  kindleEmail: string
+  hasPassword: boolean
+}
+
+export interface DeliveryResult {
+  success: boolean
+  /** 稳定错误码，由 renderer 按语言翻译：missing-fields | auth-failed | connection-failed | not-configured | not-found | unknown */
+  code?: string
+  /** 原始错误细节（如 SMTP 服务器返回的英文），unknown 时供展示 */
+  detail?: string
+}
+
+export interface DeliverAPI {
+  getConfig: () => Promise<DeliveryConfigPublic>
+  saveConfig: (cfg: DeliveryConfigInput) => Promise<void>
+  testSMTP: (cfg: {
+    host: string
+    port: number
+    user: string
+    password?: string
+  }) => Promise<DeliveryResult>
+  send: (artifactId: string) => Promise<DeliveryResult>
+}
+
 export interface CustomAPI {
   library: LibraryAPI
+  convert: ConvertAPI
+  artifacts: ArtifactsAPI
+  deliver: DeliverAPI
 }
 
 declare global {

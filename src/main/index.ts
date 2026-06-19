@@ -3,6 +3,8 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { registerComicScheme, setupLibrary } from './library'
+import { setupArtifacts } from './artifacts'
+import { setupDelivery } from './deliver'
 
 // 自定义 comic:// 协议必须在 app ready 之前注册
 registerComicScheme()
@@ -59,6 +61,12 @@ app.whenReady().then(() => {
 
   // 漫画库数据层：comic:// 协议 + 扫描/选择目录 IPC
   setupLibrary()
+
+  // 转换产物清单 + 转换 IPC
+  setupArtifacts()
+
+  // Kindle 投递：SMTP 配置 + 发送 IPC
+  setupDelivery()
 
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))

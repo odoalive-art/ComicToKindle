@@ -53,7 +53,10 @@ import {
   Stethoscope,
   FolderPlus,
   ImageOff,
-  RefreshCw
+  RefreshCw,
+  BookUp,
+  FileDown,
+  Trash2
 } from 'lucide-react'
 
 import {
@@ -89,15 +92,17 @@ import {
   InputGroupButton,
   InputGroupInput,
   InputGroupText,
-  InputGroupTextarea,
+  InputGroupTextarea
 } from '@/components/ui/input-group'
+import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from '@/components/ui/input-otp'
 import {
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSeparator,
-  InputOTPSlot,
-} from '@/components/ui/input-otp'
-import { Item, ItemActions, ItemContent, ItemDescription, ItemMedia, ItemTitle } from '@/components/ui/item'
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemMedia,
+  ItemTitle
+} from '@/components/ui/item'
 import { Kbd } from '@/components/ui/kbd'
 import { Label } from '@/components/ui/label'
 import {
@@ -113,7 +118,7 @@ import {
   MenubarShortcut,
   MenubarSub,
   MenubarSubTrigger,
-  MenubarSubContent,
+  MenubarSubContent
 } from '@/components/ui/menubar'
 import { NativeSelect } from '@/components/ui/native-select'
 import {
@@ -122,7 +127,7 @@ import {
   NavigationMenuItem,
   NavigationMenuLink,
   NavigationMenuList,
-  NavigationMenuTrigger,
+  NavigationMenuTrigger
 } from '@/components/ui/navigation-menu'
 import {
   Pagination,
@@ -130,17 +135,30 @@ import {
   PaginationItem,
   PaginationPrevious,
   PaginationLink,
-  PaginationNext,
+  PaginationNext
 } from '@/components/ui/pagination'
 import { Progress } from '@/components/ui/progress'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
 import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
 import { Toaster } from '@/components/ui/sonner'
 import { Spinner } from '@/components/ui/spinner'
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger
+} from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Slider } from '@/components/ui/slider'
 import { Switch } from '@/components/ui/switch'
@@ -180,12 +198,27 @@ import {
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Calendar } from '@/components/ui/calendar'
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel'
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious
+} from '@/components/ui/carousel'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle, DrawerTrigger } from '@/components/ui/drawer'
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger
+} from '@/components/ui/drawer'
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -199,9 +232,16 @@ import {
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
-  DropdownMenuTrigger,
+  DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
-import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle
+} from '@/components/ui/empty'
 import {
   Field,
   FieldDescription,
@@ -209,9 +249,18 @@ import {
   FieldLabel,
   FieldLegend,
   FieldSeparator,
-  FieldSet,
+  FieldSet
 } from '@/components/ui/field'
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator, CommandShortcut } from '@/components/ui/command'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+  CommandShortcut
+} from '@/components/ui/command'
 import {
   ContextMenu,
   ContextMenuCheckboxItem,
@@ -225,7 +274,7 @@ import {
   ContextMenuSub,
   ContextMenuSubContent,
   ContextMenuSubTrigger,
-  ContextMenuTrigger,
+  ContextMenuTrigger
 } from '@/components/ui/context-menu'
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -239,10 +288,17 @@ import {
   AlertDialogHeader,
   AlertDialogMedia,
   AlertDialogTitle,
-  AlertDialogTrigger,
+  AlertDialogTrigger
 } from '@/components/ui/alert-dialog'
 import { AspectRatio } from '@/components/ui/aspect-ratio'
-import { Avatar, AvatarBadge, AvatarFallback, AvatarGroup, AvatarGroupCount, AvatarImage } from '@/components/ui/avatar'
+import {
+  Avatar,
+  AvatarBadge,
+  AvatarFallback,
+  AvatarGroup,
+  AvatarGroupCount,
+  AvatarImage
+} from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import {
   Breadcrumb,
@@ -251,7 +307,7 @@ import {
   BreadcrumbLink,
   BreadcrumbList,
   BreadcrumbPage,
-  BreadcrumbSeparator,
+  BreadcrumbSeparator
 } from '@/components/ui/breadcrumb'
 import { ButtonGroup, ButtonGroupSeparator } from '@/components/ui/button-group'
 import {
@@ -262,7 +318,7 @@ import {
   ComboboxInput,
   ComboboxItem,
   ComboboxLabel,
-  ComboboxList,
+  ComboboxList
 } from '@/components/ui/combobox'
 import { Area, AreaChart, CartesianGrid, XAxis } from 'recharts'
 import { designTokens } from '@/data/design-tokens'
@@ -347,6 +403,63 @@ const uiText = {
       fileVolume: '单文件',
       volumeUnit: (n: number) => `${n} 卷`,
       pageUnit: (n: number) => `${n} 页`
+    },
+    convert: {
+      action: '转换为 Kindle',
+      converted: '已转换',
+      converting: '转换中…',
+      start: (title: string) => `开始转换：${title}`,
+      done: (title: string) => `转换完成：${title}`,
+      failed: (title: string) => `转换失败：${title}`,
+      progress: (pct: number) => `转换中 ${pct}%`
+    },
+    archiveView: {
+      title: '归档',
+      description: '已转换的 Kindle 产物，可在 Finder 中查看、导出副本或删除。',
+      empty: '还没有任何转换产物。在漫画库里选择一卷开始转换。',
+      reveal: '在 Finder 中显示',
+      export: '导出副本',
+      remove: '删除',
+      removed: '已删除产物',
+      exported: '已导出副本',
+      statusReady: '待投递',
+      statusDelivered: '已投递',
+      statusFailed: '失败',
+      volumeFiles: (n: number) => `${n} 个文件`,
+      pages: (n: number) => `${n} 页`,
+      deliver: '投递到 Kindle',
+      delivering: '投递中…',
+      delivered: (title: string) => `已投递：${title}`,
+      deliverFailed: (title: string) => `投递失败：${title}`,
+      notConfigured: '尚未配置投递，请先到「设备与邮箱」填写 SMTP 和 Kindle 邮箱。'
+    },
+    delivery: {
+      title: '设备与邮箱',
+      description: '配置 SMTP 发件服务器和 Kindle 推送邮箱，用于把转换产物发送到 Kindle。',
+      smtpHost: 'SMTP 主机',
+      smtpHostPlaceholder: 'smtp.example.com',
+      smtpPort: '端口',
+      smtpUser: '发件邮箱 / 账号',
+      smtpPass: '密码 / 授权码',
+      smtpPassSaved: '已保存（留空则不修改）',
+      smtpPassPlaceholder: '应用专用密码或授权码',
+      kindleEmail: 'Kindle 推送邮箱',
+      kindleEmailPlaceholder: 'your_kindle@kindle.com',
+      save: '保存',
+      saved: '已保存配置',
+      test: '测试连接',
+      testing: '测试中…',
+      testSuccess: 'SMTP 连接成功！',
+      note: '提示：多数邮箱需用「应用专用密码 / 授权码」而非登录密码；并把发件邮箱加入亚马逊「已认可的发件人」白名单。密码经系统钥匙串加密存储，不会明文落盘。',
+      errors: {
+        'missing-fields': '请先填写 SMTP 主机、账号和密码。',
+        'auth-failed':
+          '登录失败：账号或密码不正确。QQ / 163 / Gmail 等邮箱需在邮箱设置里开启 SMTP 服务，并使用「授权码 / 应用专用密码」，而不是登录密码。',
+        'connection-failed': '无法连接 SMTP 服务器，请检查主机和端口是否正确。',
+        'not-configured': '尚未配置投递，请先在「设备与邮箱」填写 SMTP 和 Kindle 邮箱。',
+        'not-found': '找不到该产物。',
+        unknown: '操作失败'
+      } as Record<string, string>
     },
     reader: {
       back: '返回',
@@ -467,6 +580,65 @@ const uiText = {
       volumeUnit: (n: number) => `${n} vol${n === 1 ? '' : 's'}`,
       pageUnit: (n: number) => `${n} page${n === 1 ? '' : 's'}`
     },
+    convert: {
+      action: 'Convert for Kindle',
+      converted: 'Converted',
+      converting: 'Converting…',
+      start: (title: string) => `Converting: ${title}`,
+      done: (title: string) => `Converted: ${title}`,
+      failed: (title: string) => `Conversion failed: ${title}`,
+      progress: (pct: number) => `Converting ${pct}%`
+    },
+    archiveView: {
+      title: 'Archive',
+      description: 'Converted Kindle artifacts. Reveal in Finder, export a copy, or delete.',
+      empty: 'No converted artifacts yet. Pick a volume in the library to start converting.',
+      reveal: 'Reveal in Finder',
+      export: 'Export copy',
+      remove: 'Delete',
+      removed: 'Artifact deleted',
+      exported: 'Copy exported',
+      statusReady: 'Ready',
+      statusDelivered: 'Delivered',
+      statusFailed: 'Failed',
+      volumeFiles: (n: number) => `${n} file${n === 1 ? '' : 's'}`,
+      pages: (n: number) => `${n} page${n === 1 ? '' : 's'}`,
+      deliver: 'Send to Kindle',
+      delivering: 'Sending…',
+      delivered: (title: string) => `Sent: ${title}`,
+      deliverFailed: (title: string) => `Send failed: ${title}`,
+      notConfigured:
+        'Delivery not configured. Set up SMTP and your Kindle email in Devices & Emails first.'
+    },
+    delivery: {
+      title: 'Devices & Emails',
+      description: 'Configure your SMTP server and Kindle email to send converted files to Kindle.',
+      smtpHost: 'SMTP host',
+      smtpHostPlaceholder: 'smtp.example.com',
+      smtpPort: 'Port',
+      smtpUser: 'Sender email / username',
+      smtpPass: 'Password / app token',
+      smtpPassSaved: 'Saved (leave blank to keep)',
+      smtpPassPlaceholder: 'App-specific password or token',
+      kindleEmail: 'Kindle email',
+      kindleEmailPlaceholder: 'your_kindle@kindle.com',
+      save: 'Save',
+      saved: 'Configuration saved',
+      test: 'Test connection',
+      testing: 'Testing…',
+      testSuccess: 'SMTP connection succeeded!',
+      note: 'Tip: most providers require an app-specific password / token rather than your login password, and you must add the sender address to Amazon’s approved sender list. The password is encrypted via the system keychain and never stored in plaintext.',
+      errors: {
+        'missing-fields': 'Please fill in SMTP host, username, and password first.',
+        'auth-failed':
+          'Login failed: incorrect username or password. Providers like QQ / 163 / Gmail require enabling SMTP and using an app-specific password / token rather than your login password.',
+        'connection-failed': 'Cannot reach the SMTP server. Check the host and port.',
+        'not-configured':
+          'Delivery not configured. Set up SMTP and your Kindle email in Devices & Emails first.',
+        'not-found': 'Artifact not found.',
+        unknown: 'Operation failed'
+      } as Record<string, string>
+    },
     reader: {
       back: 'Back',
       pageOf: (cur: number, total: number) => `${cur} / ${total}`,
@@ -576,6 +748,7 @@ const sidebarGroups: SidebarGroupConfig[] = [
   {
     titleKey: 'groupKindleSend',
     items: [
+      { id: 'archive', icon: Archive },
       { id: 'web-push', icon: Globe },
       { id: 'devices-emails', icon: Mail },
       { id: 'system-doctor', icon: Stethoscope },
@@ -590,7 +763,6 @@ const sidebarGroups: SidebarGroupConfig[] = [
     ]
   }
 ]
-
 
 function getInitialThemeMode(): ThemeMode {
   if (typeof window === 'undefined') {
@@ -819,6 +991,10 @@ function App(): React.JSX.Element {
                 <ScrollArea className="min-h-0 flex-1">
                   <FoundationStandardsView locale={languageMode} />
                 </ScrollArea>
+              ) : activeView === 'archive' ? (
+                <ArchiveView locale={languageMode} />
+              ) : activeView === 'devices-emails' ? (
+                <DeliverySettingsView locale={languageMode} />
               ) : (
                 <div className="flex-1 bg-background" />
               )}
@@ -862,9 +1038,7 @@ function AppHeader({
         </>
       )}
       <div className="flex items-center gap-1.5">
-        <span className="text-sm font-semibold text-foreground">
-          {text.nav[activeNavItemId]}
-        </span>
+        <span className="text-sm font-semibold text-foreground">{text.nav[activeNavItemId]}</span>
       </div>
 
       {isComponentView ? (
@@ -897,6 +1071,7 @@ function AppHeader({
 // 来自 preload 的 window.api.library 返回类型（单一事实来源：src/preload/index.d.ts）
 type LibrarySeries = Awaited<ReturnType<Window['api']['library']['scan']>>[number]
 type LibraryVolume = Awaited<ReturnType<Window['api']['library']['listVolumes']>>[number]
+type Artifact = Awaited<ReturnType<Window['api']['artifacts']['list']>>[number]
 
 function CoverImage({ src, alt }: { src: string | null; alt: string }): React.JSX.Element {
   const [failed, setFailed] = useState(false)
@@ -1148,9 +1323,7 @@ function VolumeReader({
 
           {/* 预加载相邻页 */}
           {Array.from({ length: 6 }, (_, k) => index - 2 + k)
-            .filter(
-              (i) => i >= 0 && i < total && i !== index && !(isDouble && i === index + 1)
-            )
+            .filter((i) => i >= 0 && i < total && i !== index && !(isDouble && i === index + 1))
             .map((i) => (
               <img key={`pre-${i}`} src={pages[i]} alt="" aria-hidden className="hidden" />
             ))}
@@ -1194,6 +1367,54 @@ function LibraryView({ locale }: { locale: LanguageMode }): React.JSX.Element {
   const [volumes, setVolumes] = useState<LibraryVolume[]>([])
   const [readingVolume, setReadingVolume] = useState<LibraryVolume | null>(null)
   const [loading, setLoading] = useState(false)
+  // 已转换产物：源卷路径集合（用于卡片角标） + 转换进度
+  const [convertedPaths, setConvertedPaths] = useState<Set<string>>(new Set())
+  const [convertProgress, setConvertProgress] = useState<Record<string, number>>({})
+
+  const refreshConverted = React.useCallback(async () => {
+    try {
+      const list = await window.api.artifacts.list()
+      setConvertedPaths(new Set(list.map((a) => a.sourceVolumePath)))
+    } catch {
+      /* 清单读取失败时静默，不阻塞浏览 */
+    }
+  }, [])
+
+  useEffect(() => {
+    refreshConverted()
+  }, [refreshConverted])
+
+  // 订阅 main 进程转换进度
+  useEffect(() => {
+    return window.api.convert.onProgress(({ sourceVolumePath, percent }) => {
+      setConvertProgress((prev) => ({ ...prev, [sourceVolumePath]: percent }))
+    })
+  }, [])
+
+  const convertVolume = async (vol: LibraryVolume): Promise<void> => {
+    if (!selected) return
+    if (convertProgress[vol.path] != null && convertProgress[vol.path] < 100) return
+    setConvertProgress((prev) => ({ ...prev, [vol.path]: 0 }))
+    const toastId = toast.loading(text.convert.start(vol.title))
+    try {
+      await window.api.convert.volume({
+        sourceVolumePath: vol.path,
+        seriesName: selected.name,
+        volumeTitle: vol.title,
+        author: selected.author
+      })
+      toast.success(text.convert.done(vol.title), { id: toastId })
+      await refreshConverted()
+    } catch (err) {
+      toast.error(`${text.convert.failed(vol.title)} — ${err}`, { id: toastId })
+    } finally {
+      setConvertProgress((prev) => {
+        const next = { ...prev }
+        delete next[vol.path]
+        return next
+      })
+    }
+  }
 
   const loadSeries = React.useCallback(async (target: string) => {
     setLoading(true)
@@ -1260,11 +1481,7 @@ function LibraryView({ locale }: { locale: LanguageMode }): React.JSX.Element {
   // 阅读某一卷：接管整个内容区
   if (readingVolume) {
     return (
-      <VolumeReader
-        volume={readingVolume}
-        locale={locale}
-        onClose={() => setReadingVolume(null)}
-      />
+      <VolumeReader volume={readingVolume} locale={locale} onClose={() => setReadingVolume(null)} />
     )
   }
 
@@ -1351,105 +1568,473 @@ function LibraryView({ locale }: { locale: LanguageMode }): React.JSX.Element {
       ) : (
         <ScrollArea className="min-h-0 flex-1">
           <div className="p-4 lg:p-6">
-          {loading ? (
-            <div className={LIBRARY_GRID}>
-              {Array.from({ length: 12 }).map((_, i) => (
-                <div key={i} className="flex flex-col gap-2">
-                  <Skeleton className="aspect-[3/4] w-full rounded-lg" />
-                  <Skeleton className="h-4 w-4/5" />
-                  <Skeleton className="h-3 w-2/5" />
+            {loading ? (
+              <div className={LIBRARY_GRID}>
+                {Array.from({ length: 12 }).map((_, i) => (
+                  <div key={i} className="flex flex-col gap-2">
+                    <Skeleton className="aspect-[3/4] w-full rounded-lg" />
+                    <Skeleton className="h-4 w-4/5" />
+                    <Skeleton className="h-3 w-2/5" />
+                  </div>
+                ))}
+              </div>
+            ) : showVolumes ? (
+              volumes.length === 0 ? (
+                <p className="py-16 text-center text-sm text-muted-foreground">
+                  {text.library.noVolumes}
+                </p>
+              ) : (
+                <div className={LIBRARY_GRID}>
+                  {volumes.map((vol) => {
+                    const isConverted = convertedPaths.has(vol.path)
+                    const pct = convertProgress[vol.path]
+                    const isConverting = pct != null
+                    return (
+                      <div key={vol.id} className="group flex flex-col gap-2 text-left">
+                        <div className="relative">
+                          <button
+                            type="button"
+                            onClick={() => setReadingVolume(vol)}
+                            className="block w-full text-left"
+                          >
+                            <AspectRatio
+                              ratio={3 / 4}
+                              className="overflow-hidden rounded-lg bg-muted"
+                            >
+                              <CoverImage src={vol.coverUrl} alt={vol.title} />
+                              <div className="pointer-events-none absolute inset-0 rounded-lg border border-foreground/10" />
+                              {(() => {
+                                const prog = getProgress(vol.path)
+                                if (prog <= 0 || vol.pageCount <= 0) return null
+                                const readPct = Math.min(100, ((prog + 1) / vol.pageCount) * 100)
+                                return (
+                                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1 bg-black/30">
+                                    <div
+                                      className="h-full bg-primary"
+                                      style={{ width: `${readPct}%` }}
+                                    />
+                                  </div>
+                                )
+                              })()}
+                            </AspectRatio>
+                          </button>
+                          {/* 已转换角标 */}
+                          {isConverted && !isConverting ? (
+                            <Badge
+                              variant="secondary"
+                              className="pointer-events-none absolute top-1.5 left-1.5 gap-1 bg-background/85 backdrop-blur"
+                            >
+                              <CheckCircle2 className="size-3 text-emerald-500" />
+                              {text.convert.converted}
+                            </Badge>
+                          ) : null}
+                          {/* 转换按钮（hover 显示）/ 进度 */}
+                          <div className="absolute top-1.5 right-1.5">
+                            {isConverting ? (
+                              <Badge
+                                variant="secondary"
+                                className="pointer-events-none gap-1 bg-background/85 backdrop-blur"
+                              >
+                                <Loader2 className="size-3 animate-spin" />
+                                {text.convert.progress(Math.max(0, pct))}
+                              </Badge>
+                            ) : (
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                className="h-7 gap-1 bg-background/85 px-2 opacity-0 backdrop-blur transition-opacity group-hover:opacity-100"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  convertVolume(vol)
+                                }}
+                              >
+                                <BookUp className="size-3.5" />
+                                {text.convert.action}
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                        <div className="min-w-0">
+                          <div className="truncate text-sm font-medium" title={vol.title}>
+                            {vol.title}
+                          </div>
+                          <div className="truncate text-xs text-muted-foreground">
+                            {(() => {
+                              const prog = getProgress(vol.path)
+                              if (prog > 0 && vol.pageCount > 0) {
+                                return `${text.reader.resume} · ${text.reader.pageOf(prog + 1, vol.pageCount)}`
+                              }
+                              return vol.kind === 'file'
+                                ? text.library.fileVolume
+                                : text.library.pageUnit(vol.pageCount)
+                            })()}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
-              ))}
-            </div>
-          ) : showVolumes ? (
-            volumes.length === 0 ? (
+              )
+            ) : series.length === 0 ? (
               <p className="py-16 text-center text-sm text-muted-foreground">
-                {text.library.noVolumes}
+                {text.library.noSeries}
               </p>
             ) : (
               <div className={LIBRARY_GRID}>
-                {volumes.map((vol) => (
+                {series.map((item) => (
                   <button
-                    key={vol.id}
+                    key={item.id}
                     type="button"
-                    onClick={() => setReadingVolume(vol)}
+                    onClick={() => openSeries(item)}
                     className="group flex flex-col gap-2 text-left"
                   >
-                    <AspectRatio ratio={3 / 4} className="overflow-hidden rounded-lg bg-muted">
-                      <CoverImage src={vol.coverUrl} alt={vol.title} />
-                      <div className="pointer-events-none absolute inset-0 rounded-lg border border-foreground/10" />
-                      {(() => {
-                        const prog = getProgress(vol.path)
-                        if (prog <= 0 || vol.pageCount <= 0) return null
-                        const pct = Math.min(100, ((prog + 1) / vol.pageCount) * 100)
-                        return (
-                          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1 bg-black/30">
-                            <div className="h-full bg-primary" style={{ width: `${pct}%` }} />
-                          </div>
-                        )
-                      })()}
-                    </AspectRatio>
+                    <div className="group relative">
+                      <AspectRatio ratio={3 / 4} className="overflow-hidden rounded-lg bg-muted">
+                        <CoverImage src={item.coverUrl} alt={item.title} />
+                        <div className="pointer-events-none absolute inset-0 rounded-lg border border-foreground/10" />
+                      </AspectRatio>
+                      <Badge
+                        variant="secondary"
+                        className="absolute top-1.5 right-1.5 bg-background/85 backdrop-blur"
+                      >
+                        {text.library.volumeUnit(item.volumeCount)}
+                      </Badge>
+                    </div>
                     <div className="min-w-0">
-                      <div className="truncate text-sm font-medium" title={vol.title}>
-                        {vol.title}
+                      <div className="truncate text-sm font-medium" title={item.title}>
+                        {item.title}
                       </div>
                       <div className="truncate text-xs text-muted-foreground">
-                        {(() => {
-                          const prog = getProgress(vol.path)
-                          if (prog > 0 && vol.pageCount > 0) {
-                            return `${text.reader.resume} · ${text.reader.pageOf(prog + 1, vol.pageCount)}`
-                          }
-                          return vol.kind === 'file'
-                            ? text.library.fileVolume
-                            : text.library.pageUnit(vol.pageCount)
-                        })()}
+                        {item.author ?? text.library.unknownAuthor}
                       </div>
                     </div>
                   </button>
                 ))}
               </div>
-            )
-          ) : series.length === 0 ? (
-            <p className="py-16 text-center text-sm text-muted-foreground">
-              {text.library.noSeries}
-            </p>
-          ) : (
-            <div className={LIBRARY_GRID}>
-              {series.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => openSeries(item)}
-                  className="group flex flex-col gap-2 text-left"
-                >
-                  <div className="group relative">
-                    <AspectRatio ratio={3 / 4} className="overflow-hidden rounded-lg bg-muted">
-                      <CoverImage src={item.coverUrl} alt={item.title} />
-                      <div className="pointer-events-none absolute inset-0 rounded-lg border border-foreground/10" />
-                    </AspectRatio>
-                    <Badge
-                      variant="secondary"
-                      className="absolute top-1.5 right-1.5 bg-background/85 backdrop-blur"
-                    >
-                      {text.library.volumeUnit(item.volumeCount)}
-                    </Badge>
-                  </div>
-                  <div className="min-w-0">
-                    <div className="truncate text-sm font-medium" title={item.title}>
-                      {item.title}
-                    </div>
-                    <div className="truncate text-xs text-muted-foreground">
-                      {item.author ?? text.library.unknownAuthor}
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
+            )}
           </div>
         </ScrollArea>
       )}
     </div>
+  )
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes <= 0) return '0 B'
+  const units = ['B', 'KB', 'MB', 'GB']
+  const i = Math.min(units.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)))
+  return `${(bytes / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1)} ${units[i]}`
+}
+
+// 把 main 返回的投递错误码翻译成当前语言文案；unknown 时附带服务器原始细节
+function deliveryErrorMsg(
+  d: { errors: Record<string, string> },
+  res: { code?: string; detail?: string }
+): string {
+  const errors = d.errors
+  const known = res.code ? errors[res.code] : undefined
+  if (known) return res.code === 'unknown' && res.detail ? `${known}：${res.detail}` : known
+  return res.detail ? `${errors.unknown}：${res.detail}` : errors.unknown
+}
+
+function DeliverySettingsView({ locale }: { locale: LanguageMode }): React.JSX.Element {
+  const text = uiText[locale]
+  const t = text.delivery
+  const [host, setHost] = useState('')
+  const [port, setPort] = useState('465')
+  const [user, setUser] = useState('')
+  const [password, setPassword] = useState('')
+  const [kindleEmail, setKindleEmail] = useState('')
+  const [hasPassword, setHasPassword] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [testing, setTesting] = useState(false)
+
+  useEffect(() => {
+    window.api.deliver.getConfig().then((cfg) => {
+      setHost(cfg.host)
+      setPort(String(cfg.port))
+      setUser(cfg.user)
+      setKindleEmail(cfg.kindleEmail)
+      setHasPassword(cfg.hasPassword)
+    })
+  }, [])
+
+  const save = async (): Promise<void> => {
+    setSaving(true)
+    try {
+      await window.api.deliver.saveConfig({
+        host: host.trim(),
+        port: Number(port) || 465,
+        user: user.trim(),
+        kindleEmail: kindleEmail.trim(),
+        password: password || undefined
+      })
+      if (password) setHasPassword(true)
+      setPassword('')
+      toast.success(t.saved)
+    } catch (err) {
+      toast.error(`${err}`)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const test = async (): Promise<void> => {
+    setTesting(true)
+    try {
+      const res = await window.api.deliver.testSMTP({
+        host: host.trim(),
+        port: Number(port) || 465,
+        user: user.trim(),
+        password: password || undefined
+      })
+      if (res.success) toast.success(t.testSuccess)
+      else toast.error(deliveryErrorMsg(t, res))
+    } catch (err) {
+      toast.error(`${err}`)
+    } finally {
+      setTesting(false)
+    }
+  }
+
+  return (
+    <ScrollArea className="min-h-0 flex-1">
+      <div className="mx-auto w-full max-w-xl p-4 lg:p-6">
+        <p className="mb-5 text-sm text-muted-foreground">{t.description}</p>
+        <div className="space-y-4">
+          <div className="grid grid-cols-3 gap-3">
+            <div className="col-span-2 space-y-1.5">
+              <Label htmlFor="smtp-host">{t.smtpHost}</Label>
+              <Input
+                id="smtp-host"
+                value={host}
+                placeholder={t.smtpHostPlaceholder}
+                onChange={(e) => setHost(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="smtp-port">{t.smtpPort}</Label>
+              <Input
+                id="smtp-port"
+                value={port}
+                inputMode="numeric"
+                onChange={(e) => setPort(e.target.value.replace(/[^0-9]/g, ''))}
+              />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="smtp-user">{t.smtpUser}</Label>
+            <Input
+              id="smtp-user"
+              value={user}
+              autoComplete="off"
+              onChange={(e) => setUser(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="smtp-pass">{t.smtpPass}</Label>
+            <Input
+              id="smtp-pass"
+              type="password"
+              value={password}
+              autoComplete="new-password"
+              placeholder={hasPassword ? t.smtpPassSaved : t.smtpPassPlaceholder}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="kindle-email">{t.kindleEmail}</Label>
+            <Input
+              id="kindle-email"
+              value={kindleEmail}
+              placeholder={t.kindleEmailPlaceholder}
+              onChange={(e) => setKindleEmail(e.target.value)}
+            />
+          </div>
+          <div className="flex items-center gap-2 pt-1">
+            <Button onClick={save} disabled={saving}>
+              {saving ? <Loader2 className="size-4 animate-spin" /> : null}
+              {t.save}
+            </Button>
+            <Button variant="outline" onClick={test} disabled={testing}>
+              {testing ? <Loader2 className="size-4 animate-spin" /> : <Mail className="size-4" />}
+              {testing ? t.testing : t.test}
+            </Button>
+          </div>
+          <p className="pt-2 text-xs leading-relaxed text-muted-foreground">{t.note}</p>
+        </div>
+      </div>
+    </ScrollArea>
+  )
+}
+
+function ArchiveView({ locale }: { locale: LanguageMode }): React.JSX.Element {
+  const text = uiText[locale]
+  const t = text.archiveView
+  const [artifacts, setArtifacts] = useState<Artifact[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const load = React.useCallback(async () => {
+    setLoading(true)
+    try {
+      setArtifacts(await window.api.artifacts.list())
+    } catch (err) {
+      toast.error(`${err}`)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  const reveal = async (id: string): Promise<void> => {
+    await window.api.artifacts.reveal(id)
+  }
+  const exportCopy = async (id: string): Promise<void> => {
+    const ok = await window.api.artifacts.export(id)
+    if (ok) toast.success(t.exported)
+  }
+  const remove = async (id: string): Promise<void> => {
+    await window.api.artifacts.remove(id)
+    toast.success(t.removed)
+    await load()
+  }
+  const [delivering, setDelivering] = useState<Set<string>>(new Set())
+  const deliver = async (a: Artifact): Promise<void> => {
+    setDelivering((prev) => new Set(prev).add(a.id))
+    const toastId = toast.loading(`${t.deliver} · ${a.volumeTitle}`)
+    try {
+      const res = await window.api.deliver.send(a.id)
+      if (res.success) {
+        toast.success(t.delivered(a.volumeTitle), { id: toastId })
+      } else {
+        toast.error(`${t.deliverFailed(a.volumeTitle)} — ${deliveryErrorMsg(text.delivery, res)}`, {
+          id: toastId
+        })
+      }
+      await load()
+    } catch (err) {
+      toast.error(`${t.deliverFailed(a.volumeTitle)} — ${err}`, { id: toastId })
+    } finally {
+      setDelivering((prev) => {
+        const next = new Set(prev)
+        next.delete(a.id)
+        return next
+      })
+    }
+  }
+
+  const statusLabel = (status: Artifact['status']): string =>
+    status === 'delivered'
+      ? t.statusDelivered
+      : status === 'failed'
+        ? t.statusFailed
+        : t.statusReady
+  const statusIcon = (status: Artifact['status']): React.JSX.Element =>
+    status === 'delivered' ? (
+      <CheckCircle2 className="size-3 text-emerald-500" />
+    ) : status === 'failed' ? (
+      <AlertCircle className="size-3 text-destructive" />
+    ) : (
+      <Clock3 className="size-3 text-muted-foreground" />
+    )
+
+  return (
+    <ScrollArea className="min-h-0 flex-1">
+      <div className="mx-auto w-full max-w-4xl p-4 lg:p-6">
+        <p className="mb-4 text-sm text-muted-foreground">{t.description}</p>
+        {loading ? (
+          <div className="space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-20 w-full rounded-lg" />
+            ))}
+          </div>
+        ) : artifacts.length === 0 ? (
+          <div className="flex flex-1 items-center justify-center py-16">
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <Archive />
+                </EmptyMedia>
+                <EmptyTitle>{t.title}</EmptyTitle>
+                <EmptyDescription>{t.empty}</EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {artifacts.map((a) => {
+              const totalBytes = a.outputs.reduce((sum, o) => sum + o.sizeBytes, 0)
+              return (
+                <div
+                  key={a.id}
+                  className="flex items-center gap-4 rounded-lg border bg-card p-4 text-card-foreground"
+                >
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-muted">
+                    <FileText className="size-5 text-muted-foreground" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="truncate text-sm font-medium" title={a.volumeTitle}>
+                        {a.volumeTitle}
+                      </span>
+                      <Badge variant="secondary" className="shrink-0 gap-1">
+                        {statusIcon(a.status)}
+                        {statusLabel(a.status)}
+                      </Badge>
+                    </div>
+                    <div className="mt-0.5 truncate text-xs text-muted-foreground">
+                      {a.seriesName}
+                    </div>
+                    <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                      <span>{t.volumeFiles(a.outputs.length)}</span>
+                      <span>{t.pages(a.pageCount)}</span>
+                      <span>{formatBytes(totalBytes)}</span>
+                      <span>{new Date(a.createdAt).toLocaleString()}</span>
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => deliver(a)}
+                      disabled={delivering.has(a.id)}
+                    >
+                      {delivering.has(a.id) ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <Send className="size-4" />
+                      )}
+                      <span className="hidden lg:inline">
+                        {delivering.has(a.id) ? t.delivering : t.deliver}
+                      </span>
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => reveal(a.id)}>
+                      <FolderOpen className="size-4" />
+                      <span className="hidden lg:inline">{t.reveal}</span>
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => exportCopy(a.id)}>
+                      <FileDown className="size-4" />
+                      <span className="hidden lg:inline">{t.export}</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => remove(a.id)}
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    </ScrollArea>
   )
 }
 
@@ -2203,9 +2788,7 @@ function AlertPreview({
         <Alert variant="destructive" className="w-full max-w-xl">
           <AlertCircle className="size-4" />
           <AlertTitle>Error</AlertTitle>
-          <AlertDescription>
-            Your session has expired. Please log in again.
-          </AlertDescription>
+          <AlertDescription>Your session has expired. Please log in again.</AlertDescription>
         </Alert>
       </div>
     )
@@ -2217,11 +2800,11 @@ function AlertPreview({
         <Alert className="w-full max-w-xl">
           <Terminal className="size-4" />
           <AlertTitle>Heads up!</AlertTitle>
-          <AlertDescription>
-            You can add components to your app using the cli.
-          </AlertDescription>
+          <AlertDescription>You can add components to your app using the cli.</AlertDescription>
           <div className="mt-3 flex gap-2">
-            <Button variant="outline" size="sm">Learn more</Button>
+            <Button variant="outline" size="sm">
+              Learn more
+            </Button>
             <Button size="sm">Get started</Button>
           </div>
         </Alert>
@@ -2249,9 +2832,7 @@ function AlertPreview({
       <Alert className="w-full max-w-xl">
         <Terminal className="size-4" />
         <AlertTitle>Heads up!</AlertTitle>
-        <AlertDescription>
-          You can add components to your app using the cli.
-        </AlertDescription>
+        <AlertDescription>You can add components to your app using the cli.</AlertDescription>
       </Alert>
     </div>
   )
@@ -2271,14 +2852,14 @@ function AlertDialogPreview({
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
         <AlertDialog>
           <AlertDialogTrigger asChild>
-            <Button variant="outline" size="sm">Small dialog</Button>
+            <Button variant="outline" size="sm">
+              Small dialog
+            </Button>
           </AlertDialogTrigger>
           <AlertDialogContent size="sm">
             <AlertDialogHeader>
               <AlertDialogTitle>Delete file?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This action cannot be undone.
-              </AlertDialogDescription>
+              <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
@@ -2304,7 +2885,8 @@ function AlertDialogPreview({
               </AlertDialogMedia>
               <AlertDialogTitle>Delete account</AlertDialogTitle>
               <AlertDialogDescription>
-                This action cannot be undone. This will permanently delete your account and remove your data from our servers.
+                This action cannot be undone. This will permanently delete your account and remove
+                your data from our servers.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -2322,7 +2904,9 @@ function AlertDialogPreview({
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
         <AlertDialog>
           <AlertDialogTrigger asChild>
-            <Button variant="outline" size="sm">Small media</Button>
+            <Button variant="outline" size="sm">
+              Small media
+            </Button>
           </AlertDialogTrigger>
           <AlertDialogContent size="sm">
             <AlertDialogHeader>
@@ -2330,9 +2914,7 @@ function AlertDialogPreview({
                 <AlertCircle className="size-8 text-destructive" />
               </AlertDialogMedia>
               <AlertDialogTitle>Delete file?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This cannot be undone.
-              </AlertDialogDescription>
+              <AlertDialogDescription>This cannot be undone.</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
@@ -2355,7 +2937,8 @@ function AlertDialogPreview({
             <AlertDialogHeader>
               <AlertDialogTitle>Delete account</AlertDialogTitle>
               <AlertDialogDescription>
-                This action cannot be undone. This will permanently delete your account and remove your data from our servers.
+                This action cannot be undone. This will permanently delete your account and remove
+                your data from our servers.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -2379,7 +2962,8 @@ function AlertDialogPreview({
             <AlertDialogHeader>
               <AlertDialogTitle>هل أنت متأكد تمامًا؟</AlertDialogTitle>
               <AlertDialogDescription>
-                لا يمكن التراجع عن هذا الإجراء. سيؤدي هذا إلى حذف حسابك نهائيًا وإزالة بياناتك من خوادمنا.
+                لا يمكن التراجع عن هذا الإجراء. سيؤدي هذا إلى حذف حسابك نهائيًا وإزالة بياناتك من
+                خوادمنا.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -2403,8 +2987,8 @@ function AlertDialogPreview({
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete your account
-              and remove your data from our servers.
+              This action cannot be undone. This will permanently delete your account and remove
+              your data from our servers.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -2425,7 +3009,7 @@ function AspectRatioPreview({
   name: string
 }): React.JSX.Element {
   const dir = direction === 'rtl' ? 'rtl' : undefined
-  const containerClass = "w-full overflow-hidden rounded-xl border bg-muted/30 p-2 shadow-xs"
+  const containerClass = 'w-full overflow-hidden rounded-xl border bg-muted/30 p-2 shadow-xs'
 
   if (name === 'aspect-ratio-square') {
     return (
@@ -2535,11 +3119,17 @@ function AvatarPreview({
             <AvatarFallback>SC</AvatarFallback>
           </Avatar>
           <Avatar>
-            <AvatarImage src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop" alt="User A" />
+            <AvatarImage
+              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop"
+              alt="User A"
+            />
             <AvatarFallback>UA</AvatarFallback>
           </Avatar>
           <Avatar>
-            <AvatarImage src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop" alt="User B" />
+            <AvatarImage
+              src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop"
+              alt="User B"
+            />
             <AvatarFallback>UB</AvatarFallback>
           </Avatar>
           <Avatar>
@@ -2559,11 +3149,17 @@ function AvatarPreview({
             <AvatarFallback>SC</AvatarFallback>
           </Avatar>
           <Avatar>
-            <AvatarImage src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop" alt="User A" />
+            <AvatarImage
+              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop"
+              alt="User A"
+            />
             <AvatarFallback>UA</AvatarFallback>
           </Avatar>
           <Avatar>
-            <AvatarImage src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop" alt="User B" />
+            <AvatarImage
+              src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop"
+              alt="User B"
+            />
             <AvatarFallback>UB</AvatarFallback>
           </Avatar>
           <AvatarGroupCount>+42</AvatarGroupCount>
@@ -2581,7 +3177,10 @@ function AvatarPreview({
             <AvatarFallback>SC</AvatarFallback>
           </Avatar>
           <Avatar>
-            <AvatarImage src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop" alt="User A" />
+            <AvatarImage
+              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop"
+              alt="User A"
+            />
             <AvatarFallback>UA</AvatarFallback>
           </Avatar>
           <Avatar>
@@ -2645,7 +3244,10 @@ function AvatarPreview({
             <AvatarFallback>م</AvatarFallback>
           </Avatar>
           <Avatar>
-            <AvatarImage src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop" alt="مستخدمة" />
+            <AvatarImage
+              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop"
+              alt="مستخدمة"
+            />
             <AvatarFallback>م</AvatarFallback>
           </Avatar>
           <Avatar>
@@ -2670,7 +3272,10 @@ function AvatarPreview({
         </Avatar>
 
         <Avatar>
-          <AvatarImage src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop" alt="User" />
+          <AvatarImage
+            src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop"
+            alt="User"
+          />
           <AvatarFallback>UN</AvatarFallback>
         </Avatar>
       </div>
@@ -2990,16 +3595,24 @@ function ButtonGroupPreview({
     return (
       <div className="flex min-h-24 flex-col items-center justify-center gap-4 p-4" dir={dir}>
         <ButtonGroup>
-          <Button variant="outline" size="sm">Small</Button>
-          <Button variant="outline" size="sm">Small</Button>
+          <Button variant="outline" size="sm">
+            Small
+          </Button>
+          <Button variant="outline" size="sm">
+            Small
+          </Button>
         </ButtonGroup>
         <ButtonGroup>
           <Button variant="outline">Default</Button>
           <Button variant="outline">Default</Button>
         </ButtonGroup>
         <ButtonGroup>
-          <Button variant="outline" size="lg">Large</Button>
-          <Button variant="outline" size="lg">Large</Button>
+          <Button variant="outline" size="lg">
+            Large
+          </Button>
+          <Button variant="outline" size="lg">
+            Large
+          </Button>
         </ButtonGroup>
       </div>
     )
@@ -3048,8 +3661,13 @@ function ButtonGroupPreview({
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
         <ButtonGroup className="w-full max-w-sm">
-          <Input placeholder="Search..." className="flex-1 rounded-r-none border-r-0 shadow-none focus-visible:ring-0" />
-          <Button variant="outline" className="rounded-l-none">Search</Button>
+          <Input
+            placeholder="Search..."
+            className="flex-1 rounded-r-none border-r-0 shadow-none focus-visible:ring-0"
+          />
+          <Button variant="outline" className="rounded-l-none">
+            Search
+          </Button>
         </ButtonGroup>
       </div>
     )
@@ -3150,9 +3768,23 @@ function CalendarPreview({
     return (
       <div className="flex min-h-24 items-start justify-center gap-4 p-4" dir={dir}>
         <div className="flex flex-col gap-2">
-          <Button size="sm" variant="outline" onClick={() => setPresetDate(new Date())}>Today</Button>
-          <Button size="sm" variant="outline" onClick={() => setPresetDate(new Date(Date.now() + 86400000))}>Tomorrow</Button>
-          <Button size="sm" variant="outline" onClick={() => setPresetDate(new Date(Date.now() + 3 * 86400000))}>In 3 days</Button>
+          <Button size="sm" variant="outline" onClick={() => setPresetDate(new Date())}>
+            Today
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setPresetDate(new Date(Date.now() + 86400000))}
+          >
+            Tomorrow
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setPresetDate(new Date(Date.now() + 3 * 86400000))}
+          >
+            In 3 days
+          </Button>
         </div>
         <Calendar
           mode="single"
@@ -3168,7 +3800,7 @@ function CalendarPreview({
     const bookedDates = [
       new Date(new Date().getFullYear(), new Date().getMonth(), 5),
       new Date(new Date().getFullYear(), new Date().getMonth(), 12),
-      new Date(new Date().getFullYear(), new Date().getMonth(), 18),
+      new Date(new Date().getFullYear(), new Date().getMonth(), 18)
     ]
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
@@ -3209,13 +3841,7 @@ function CalendarPreview({
   )
 }
 
-function CardPreview({
-  direction,
-  name
-}: {
-  direction?: string
-  name: string
-}): React.JSX.Element {
+function CardPreview({ direction, name }: { direction?: string; name: string }): React.JSX.Element {
   const dir = direction === 'rtl' ? 'rtl' : undefined
 
   if (name === 'card-size') {
@@ -3297,9 +3923,7 @@ function CardPreview({
             <CardDescription>انشر مشروعك الجديد بنقرة واحدة.</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-sm text-muted-foreground">
-              معاينة محاكاة تعرض حالة المشروع.
-            </div>
+            <div className="text-sm text-muted-foreground">معاينة محاكاة تعرض حالة المشروع.</div>
           </CardContent>
           <CardFooter className="flex justify-between">
             <Button variant="outline">إلغاء</Button>
@@ -3347,7 +3971,11 @@ function CarouselPreview({
           <CarouselContent>
             {[1, 2, 3].map((n) => (
               <CarouselItem key={n}>
-                <Card><CardContent className="flex aspect-square items-center justify-center p-4 text-2xl font-semibold">{n}</CardContent></Card>
+                <Card>
+                  <CardContent className="flex aspect-square items-center justify-center p-4 text-2xl font-semibold">
+                    {n}
+                  </CardContent>
+                </Card>
               </CarouselItem>
             ))}
           </CarouselContent>
@@ -3358,7 +3986,11 @@ function CarouselPreview({
           <CarouselContent>
             {[1, 2, 3, 4].map((n) => (
               <CarouselItem key={n}>
-                <Card><CardContent className="flex aspect-video items-center justify-center p-6 text-3xl font-semibold">{n}</CardContent></Card>
+                <Card>
+                  <CardContent className="flex aspect-video items-center justify-center p-6 text-3xl font-semibold">
+                    {n}
+                  </CardContent>
+                </Card>
               </CarouselItem>
             ))}
           </CarouselContent>
@@ -3376,7 +4008,11 @@ function CarouselPreview({
           <CarouselContent className="-ml-4">
             {[1, 2, 3, 4].map((n) => (
               <CarouselItem key={n} className="pl-4">
-                <Card><CardContent className="flex aspect-square items-center justify-center p-6 text-4xl font-semibold">{n}</CardContent></Card>
+                <Card>
+                  <CardContent className="flex aspect-square items-center justify-center p-6 text-4xl font-semibold">
+                    {n}
+                  </CardContent>
+                </Card>
               </CarouselItem>
             ))}
           </CarouselContent>
@@ -3394,7 +4030,11 @@ function CarouselPreview({
           <CarouselContent className="h-[300px]">
             {[1, 2, 3].map((n) => (
               <CarouselItem key={n}>
-                <Card><CardContent className="flex items-center justify-center p-6 text-2xl font-semibold">{n}</CardContent></Card>
+                <Card>
+                  <CardContent className="flex items-center justify-center p-6 text-2xl font-semibold">
+                    {n}
+                  </CardContent>
+                </Card>
               </CarouselItem>
             ))}
           </CarouselContent>
@@ -3412,7 +4052,11 @@ function CarouselPreview({
           <CarouselContent>
             {['الأول', 'الثاني', 'الثالث'].map((label, i) => (
               <CarouselItem key={i}>
-                <Card><CardContent className="flex aspect-square items-center justify-center p-6 text-2xl font-semibold">{label}</CardContent></Card>
+                <Card>
+                  <CardContent className="flex aspect-square items-center justify-center p-6 text-2xl font-semibold">
+                    {label}
+                  </CardContent>
+                </Card>
               </CarouselItem>
             ))}
           </CarouselContent>
@@ -3446,11 +4090,7 @@ function CarouselPreview({
   )
 }
 
-function ChartPreview({
-  direction
-}: {
-  direction?: string
-}): React.JSX.Element {
+function ChartPreview({ direction }: { direction?: string }): React.JSX.Element {
   const dir = direction === 'rtl' ? 'rtl' : undefined
   const chartData = [
     { month: 'January', desktop: 186, mobile: 80 },
@@ -3530,8 +4170,12 @@ function CheckboxPreview({
         <div className="flex items-start space-x-2">
           <Checkbox id="terms2" />
           <div className="grid gap-1.5 leading-none">
-            <label htmlFor="terms2" className="text-sm font-medium leading-none">Accept terms and conditions</label>
-            <p className="text-xs text-muted-foreground">You agree to our Terms of Service and Privacy Policy.</p>
+            <label htmlFor="terms2" className="text-sm font-medium leading-none">
+              Accept terms and conditions
+            </label>
+            <p className="text-xs text-muted-foreground">
+              You agree to our Terms of Service and Privacy Policy.
+            </p>
           </div>
         </div>
       </div>
@@ -3543,11 +4187,15 @@ function CheckboxPreview({
       <div className="flex min-h-24 items-center justify-center gap-6 p-4" dir={dir}>
         <div className="flex items-center space-x-2">
           <Checkbox id="checked-disabled" checked disabled />
-          <label htmlFor="checked-disabled" className="text-sm font-medium text-muted-foreground">Checked & disabled</label>
+          <label htmlFor="checked-disabled" className="text-sm font-medium text-muted-foreground">
+            Checked & disabled
+          </label>
         </div>
         <div className="flex items-center space-x-2">
           <Checkbox id="unchecked-disabled" disabled />
-          <label htmlFor="unchecked-disabled" className="text-sm font-medium text-muted-foreground">Unchecked & disabled</label>
+          <label htmlFor="unchecked-disabled" className="text-sm font-medium text-muted-foreground">
+            Unchecked & disabled
+          </label>
         </div>
       </div>
     )
@@ -3559,7 +4207,7 @@ function CheckboxPreview({
       { id: 'recents', label: 'Recents' },
       { id: 'home', label: 'Home' },
       { id: 'applications', label: 'Applications' },
-      { id: 'desktop', label: 'Desktop' },
+      { id: 'desktop', label: 'Desktop' }
     ]
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
@@ -3574,7 +4222,9 @@ function CheckboxPreview({
                   else setCheckedItems(checkedItems.filter((i) => i !== item.id))
                 }}
               />
-              <label htmlFor={item.id} className="text-sm font-medium">{item.label}</label>
+              <label htmlFor={item.id} className="text-sm font-medium">
+                {item.label}
+              </label>
             </div>
           ))}
         </div>
@@ -3588,15 +4238,23 @@ function CheckboxPreview({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-12"><Checkbox aria-label="Select all" /></TableHead>
+              <TableHead className="w-12">
+                <Checkbox aria-label="Select all" />
+              </TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {[{ name: 'Design System', status: 'Active' }, { name: 'Components', status: 'Draft' }, { name: 'Tokens', status: 'Review' }].map((row) => (
+            {[
+              { name: 'Design System', status: 'Active' },
+              { name: 'Components', status: 'Draft' },
+              { name: 'Tokens', status: 'Review' }
+            ].map((row) => (
               <TableRow key={row.name}>
-                <TableCell><Checkbox aria-label={`Select ${row.name}`} /></TableCell>
+                <TableCell>
+                  <Checkbox aria-label={`Select ${row.name}`} />
+                </TableCell>
                 <TableCell className="font-medium">{row.name}</TableCell>
                 <TableCell>{row.status}</TableCell>
               </TableRow>
@@ -3612,7 +4270,9 @@ function CheckboxPreview({
       <div className="flex min-h-24 items-center justify-center p-4" dir="rtl">
         <div className="flex items-center space-x-2">
           <Checkbox id="terms-rtl" />
-          <label htmlFor="terms-rtl" className="text-sm font-medium">أوافق على الشروط والأحكام</label>
+          <label htmlFor="terms-rtl" className="text-sm font-medium">
+            أوافق على الشروط والأحكام
+          </label>
         </div>
       </div>
     )
@@ -3622,7 +4282,9 @@ function CheckboxPreview({
     <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
       <div className="flex items-center space-x-2">
         <Checkbox id="terms" />
-        <label htmlFor="terms" className="text-sm font-medium leading-none">Accept terms and conditions</label>
+        <label htmlFor="terms" className="text-sm font-medium leading-none">
+          Accept terms and conditions
+        </label>
       </div>
     </div>
   )
@@ -3642,13 +4304,18 @@ function CollapsiblePreview({
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
         <Card className="w-[350px]">
-          <CardHeader><CardTitle className="text-base">Appearance</CardTitle><CardDescription>Customize the look and feel.</CardDescription></CardHeader>
+          <CardHeader>
+            <CardTitle className="text-base">Appearance</CardTitle>
+            <CardDescription>Customize the look and feel.</CardDescription>
+          </CardHeader>
           <CardContent className="space-y-3">
             <Collapsible className="space-y-2">
               <div className="flex items-center justify-between">
                 <h4 className="text-sm font-semibold">Font</h4>
                 <CollapsibleTrigger asChild>
-                  <Button variant="ghost" size="icon-xs"><ChevronDown className="size-3.5" /></Button>
+                  <Button variant="ghost" size="icon-xs">
+                    <ChevronDown className="size-3.5" />
+                  </Button>
                 </CollapsibleTrigger>
               </div>
               <CollapsibleContent className="space-y-2 text-sm text-muted-foreground">
@@ -3660,7 +4327,9 @@ function CollapsiblePreview({
               <div className="flex items-center justify-between">
                 <h4 className="text-sm font-semibold">Theme</h4>
                 <CollapsibleTrigger asChild>
-                  <Button variant="ghost" size="icon-xs"><ChevronDown className="size-3.5" /></Button>
+                  <Button variant="ghost" size="icon-xs">
+                    <ChevronDown className="size-3.5" />
+                  </Button>
                 </CollapsibleTrigger>
               </div>
               <CollapsibleContent className="text-sm text-muted-foreground">
@@ -3713,7 +4382,9 @@ function CollapsiblePreview({
           <div className="flex items-center justify-between px-4">
             <h4 className="text-sm font-semibold">@peduarte أضاف 3 مكتبات</h4>
             <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="sm" className="w-9 p-0"><ChevronDown className="h-4 w-4" /></Button>
+              <Button variant="ghost" size="sm" className="w-9 p-0">
+                <ChevronDown className="h-4 w-4" />
+              </Button>
             </CollapsibleTrigger>
           </div>
           <div className="rounded-md border px-4 py-3 font-mono text-sm">@radix-ui/primitives</div>
@@ -3757,16 +4428,18 @@ function ComboboxPreview({
   const dir = direction === 'rtl' ? 'rtl' : undefined
 
   const frameworks = [
-    { value: "next.js", label: "Next.js" },
-    { value: "sveltekit", label: "SvelteKit" },
-    { value: "nuxt.js", label: "Nuxt.js" },
-    { value: "remix", label: "Remix" },
-    { value: "astro", label: "Astro" }
+    { value: 'next.js', label: 'Next.js' },
+    { value: 'sveltekit', label: 'SvelteKit' },
+    { value: 'nuxt.js', label: 'Nuxt.js' },
+    { value: 'remix', label: 'Remix' },
+    { value: 'astro', label: 'Astro' }
   ]
 
   function renderFrameworks() {
     return frameworks.map((fw) => (
-      <ComboboxItem key={fw.value} value={fw.value}>{fw.label}</ComboboxItem>
+      <ComboboxItem key={fw.value} value={fw.value}>
+        {fw.label}
+      </ComboboxItem>
     ))
   }
 
@@ -3817,7 +4490,9 @@ function ComboboxPreview({
                 <ComboboxGroup>
                   <ComboboxLabel>Frameworks</ComboboxLabel>
                   {frameworks.slice(0, 3).map((fw) => (
-                    <ComboboxItem key={fw.value} value={fw.value}>{fw.label}</ComboboxItem>
+                    <ComboboxItem key={fw.value} value={fw.value}>
+                      {fw.label}
+                    </ComboboxItem>
                   ))}
                 </ComboboxGroup>
                 <ComboboxGroup>
@@ -3841,9 +4516,7 @@ function ComboboxPreview({
           <Combobox>
             <ComboboxInput placeholder="Disabled combobox..." disabled />
             <ComboboxContent>
-              <ComboboxList>
-                {renderFrameworks()}
-              </ComboboxList>
+              <ComboboxList>{renderFrameworks()}</ComboboxList>
             </ComboboxContent>
           </Combobox>
         </div>
@@ -3993,7 +4666,20 @@ function CommandPreview({
           <CommandInput placeholder="Type a command or search..." />
           <CommandList className="max-h-[200px]">
             <CommandEmpty>No results found.</CommandEmpty>
-            {['Calendar','Search Emoji','Calculator','Profile','Billing','Settings','Notifications','Security','API Keys','Integrations','Teams','Billing Plans'].map((item) => (
+            {[
+              'Calendar',
+              'Search Emoji',
+              'Calculator',
+              'Profile',
+              'Billing',
+              'Settings',
+              'Notifications',
+              'Security',
+              'API Keys',
+              'Integrations',
+              'Teams',
+              'Billing Plans'
+            ].map((item) => (
               <CommandItem key={item}>{item}</CommandItem>
             ))}
           </CommandList>
@@ -4038,7 +4724,9 @@ function ContextMenuPreview({
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
         <ContextMenu>
-          <ContextMenuTrigger className="flex h-[150px] w-[300px] items-center justify-center rounded-md border border-dashed text-sm">Right click here</ContextMenuTrigger>
+          <ContextMenuTrigger className="flex h-[150px] w-[300px] items-center justify-center rounded-md border border-dashed text-sm">
+            Right click here
+          </ContextMenuTrigger>
           <ContextMenuContent className="w-64">
             <ContextMenuItem>Back</ContextMenuItem>
             <ContextMenuItem disabled>Forward</ContextMenuItem>
@@ -4064,7 +4752,9 @@ function ContextMenuPreview({
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
         <ContextMenu>
-          <ContextMenuTrigger className="flex h-[150px] w-[300px] items-center justify-center rounded-md border border-dashed text-sm">Right click here</ContextMenuTrigger>
+          <ContextMenuTrigger className="flex h-[150px] w-[300px] items-center justify-center rounded-md border border-dashed text-sm">
+            Right click here
+          </ContextMenuTrigger>
           <ContextMenuContent className="w-64">
             <ContextMenuItem>
               Back
@@ -4093,7 +4783,9 @@ function ContextMenuPreview({
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
         <ContextMenu>
-          <ContextMenuTrigger className="flex h-[150px] w-[300px] items-center justify-center rounded-md border border-dashed text-sm">Right click here</ContextMenuTrigger>
+          <ContextMenuTrigger className="flex h-[150px] w-[300px] items-center justify-center rounded-md border border-dashed text-sm">
+            Right click here
+          </ContextMenuTrigger>
           <ContextMenuContent className="w-64">
             <ContextMenuGroup>
               <ContextMenuItem>Back</ContextMenuItem>
@@ -4121,7 +4813,9 @@ function ContextMenuPreview({
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
         <ContextMenu>
-          <ContextMenuTrigger className="flex h-[150px] w-[300px] items-center justify-center rounded-md border border-dashed text-sm">Right click here</ContextMenuTrigger>
+          <ContextMenuTrigger className="flex h-[150px] w-[300px] items-center justify-center rounded-md border border-dashed text-sm">
+            Right click here
+          </ContextMenuTrigger>
           <ContextMenuContent className="w-64">
             <ContextMenuItem>
               <ArrowLeft />
@@ -4153,7 +4847,9 @@ function ContextMenuPreview({
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
         <ContextMenu>
-          <ContextMenuTrigger className="flex h-[150px] w-[300px] items-center justify-center rounded-md border border-dashed text-sm">Right click here</ContextMenuTrigger>
+          <ContextMenuTrigger className="flex h-[150px] w-[300px] items-center justify-center rounded-md border border-dashed text-sm">
+            Right click here
+          </ContextMenuTrigger>
           <ContextMenuContent className="w-64">
             <ContextMenuCheckboxItem checked={showFullPath} onCheckedChange={setShowFullPath}>
               Show Full Path
@@ -4194,7 +4890,9 @@ function ContextMenuPreview({
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
         <ContextMenu>
-          <ContextMenuTrigger className="flex h-[150px] w-[300px] items-center justify-center rounded-md border border-dashed text-sm">Right click here</ContextMenuTrigger>
+          <ContextMenuTrigger className="flex h-[150px] w-[300px] items-center justify-center rounded-md border border-dashed text-sm">
+            Right click here
+          </ContextMenuTrigger>
           <ContextMenuContent className="w-64">
             <ContextMenuItem>Edit</ContextMenuItem>
             <ContextMenuItem>Duplicate</ContextMenuItem>
@@ -4210,7 +4908,9 @@ function ContextMenuPreview({
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir="rtl">
         <ContextMenu>
-          <ContextMenuTrigger className="flex h-[150px] w-[300px] items-center justify-center rounded-md border border-dashed text-sm">انقر بزر الفأرة الأيمن هنا</ContextMenuTrigger>
+          <ContextMenuTrigger className="flex h-[150px] w-[300px] items-center justify-center rounded-md border border-dashed text-sm">
+            انقر بزر الفأرة الأيمن هنا
+          </ContextMenuTrigger>
           <ContextMenuContent className="w-64">
             <ContextMenuItem>
               رجوع
@@ -4246,26 +4946,23 @@ function ContextMenuPreview({
   )
 }
 
-function DataTablePreview({
-  direction
-}: {
-  direction?: string
-}): React.JSX.Element {
+function DataTablePreview({ direction }: { direction?: string }): React.JSX.Element {
   const dir = direction === 'rtl' ? 'rtl' : undefined
-  const [filterValue, setFilterValue] = useState("")
+  const [filterValue, setFilterValue] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
 
   const allData = [
-    { id: "INV001", status: "Paid", method: "Credit Card", amount: "$250.00" },
-    { id: "INV002", status: "Pending", method: "PayPal", amount: "$150.00" },
-    { id: "INV003", status: "Unpaid", method: "Bank Transfer", amount: "$350.00" },
-    { id: "INV004", status: "Paid", method: "Credit Card", amount: "$450.00" },
-    { id: "INV005", status: "Paid", method: "Apple Pay", amount: "$550.00" }
+    { id: 'INV001', status: 'Paid', method: 'Credit Card', amount: '$250.00' },
+    { id: 'INV002', status: 'Pending', method: 'PayPal', amount: '$150.00' },
+    { id: 'INV003', status: 'Unpaid', method: 'Bank Transfer', amount: '$350.00' },
+    { id: 'INV004', status: 'Paid', method: 'Credit Card', amount: '$450.00' },
+    { id: 'INV005', status: 'Paid', method: 'Apple Pay', amount: '$550.00' }
   ]
 
-  const filtered = allData.filter(item => 
-    item.id.toLowerCase().includes(filterValue.toLowerCase()) ||
-    item.method.toLowerCase().includes(filterValue.toLowerCase())
+  const filtered = allData.filter(
+    (item) =>
+      item.id.toLowerCase().includes(filterValue.toLowerCase()) ||
+      item.method.toLowerCase().includes(filterValue.toLowerCase())
   )
 
   const itemsPerPage = 3
@@ -4319,16 +5016,18 @@ function DataTablePreview({
         <Button
           variant="outline"
           size="sm"
-          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+          onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
           disabled={currentPage === 1}
         >
           Previous
         </Button>
-        <span className="text-xs text-muted-foreground">Page {currentPage} of {totalPages || 1}</span>
+        <span className="text-xs text-muted-foreground">
+          Page {currentPage} of {totalPages || 1}
+        </span>
         <Button
           variant="outline"
           size="sm"
-          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+          onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
           disabled={currentPage === totalPages || totalPages === 0}
         >
           Next
@@ -4351,7 +5050,7 @@ function DatePickerPreview({
   if (name === 'date-picker-range') {
     const [range, setRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
       from: new Date(),
-      to: new Date(Date.now() + 7 * 86400000),
+      to: new Date(Date.now() + 7 * 86400000)
     })
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
@@ -4359,7 +5058,8 @@ function DatePickerPreview({
           <PopoverTrigger asChild>
             <Button variant="outline" className="w-[300px] justify-start text-left font-normal">
               <CalendarIcon className="mr-2 h-4 w-4" />
-              {range.from ? range.from.toLocaleDateString() : 'Start'} — {range.to ? range.to.toLocaleDateString() : 'End'}
+              {range.from ? range.from.toLocaleDateString() : 'Start'} —{' '}
+              {range.to ? range.to.toLocaleDateString() : 'End'}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="start">
@@ -4382,7 +5082,12 @@ function DatePickerPreview({
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="start">
-            <Calendar mode="single" selected={birthDate} onSelect={setBirthDate} captionLayout="dropdown" />
+            <Calendar
+              mode="single"
+              selected={birthDate}
+              onSelect={setBirthDate}
+              captionLayout="dropdown"
+            />
           </PopoverContent>
         </Popover>
       </div>
@@ -4396,7 +5101,12 @@ function DatePickerPreview({
         <Popover>
           <PopoverTrigger asChild>
             <div className="relative w-[240px]">
-              <Input value={inputDate ? inputDate.toLocaleDateString() : ''} placeholder="Pick a date" readOnly className="cursor-pointer" />
+              <Input
+                value={inputDate ? inputDate.toLocaleDateString() : ''}
+                placeholder="Pick a date"
+                readOnly
+                className="cursor-pointer"
+              />
               <CalendarIcon className="absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
             </div>
           </PopoverTrigger>
@@ -4464,22 +5174,32 @@ function DatePickerPreview({
   )
 }
 
-function DirectionPreview({
-  direction
-}: {
-  direction?: string
-}): React.JSX.Element {
+function DirectionPreview({ direction }: { direction?: string }): React.JSX.Element {
   const dir = direction === 'rtl' ? 'rtl' : undefined
   const [localDir, setLocalDir] = useState<'ltr' | 'rtl'>('ltr')
 
   return (
     <div className="flex flex-col min-h-24 items-center justify-center gap-4 p-4" dir={dir}>
       <div className="flex gap-2">
-        <Button size="sm" variant={localDir === 'ltr' ? 'default' : 'outline'} onClick={() => setLocalDir('ltr')}>LTR</Button>
-        <Button size="sm" variant={localDir === 'rtl' ? 'default' : 'outline'} onClick={() => setLocalDir('rtl')}>RTL</Button>
+        <Button
+          size="sm"
+          variant={localDir === 'ltr' ? 'default' : 'outline'}
+          onClick={() => setLocalDir('ltr')}
+        >
+          LTR
+        </Button>
+        <Button
+          size="sm"
+          variant={localDir === 'rtl' ? 'default' : 'outline'}
+          onClick={() => setLocalDir('rtl')}
+        >
+          RTL
+        </Button>
       </div>
       <div className="rounded-md border p-4 w-64 text-sm" dir={localDir}>
-        {localDir === 'rtl' ? 'هذا النص مكتوب من اليمين إلى اليسار.' : 'This text is rendered from left to right.'}
+        {localDir === 'rtl'
+          ? 'هذا النص مكتوب من اليمين إلى اليسار.'
+          : 'This text is rendered from left to right.'}
       </div>
     </div>
   )
@@ -4509,12 +5229,17 @@ function DrawerPreview({
               </DrawerHeader>
               <div className="max-h-64 overflow-y-auto px-4 text-sm text-muted-foreground space-y-3">
                 {Array.from({ length: 8 }, (_, i) => (
-                  <p key={i}>Section {i + 1}: This is sample legal content that would scroll within the drawer. It demonstrates how long-form text flows inside a constrained container.</p>
+                  <p key={i}>
+                    Section {i + 1}: This is sample legal content that would scroll within the
+                    drawer. It demonstrates how long-form text flows inside a constrained container.
+                  </p>
                 ))}
               </div>
               <DrawerFooter>
                 <Button>Accept</Button>
-                <DrawerClose asChild><Button variant="outline">Decline</Button></DrawerClose>
+                <DrawerClose asChild>
+                  <Button variant="outline">Decline</Button>
+                </DrawerClose>
               </DrawerFooter>
             </div>
           </DrawerContent>
@@ -4530,7 +5255,11 @@ function DrawerPreview({
         {(['top', 'right', 'bottom', 'left'] as const).map((s) => (
           <Drawer key={s} direction={s}>
             <DrawerTrigger asChild>
-              <Button variant={side === s ? 'default' : 'outline'} size="sm" onClick={() => setSide(s)}>
+              <Button
+                variant={side === s ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSide(s)}
+              >
                 {s.charAt(0).toUpperCase() + s.slice(1)}
               </Button>
             </DrawerTrigger>
@@ -4539,8 +5268,14 @@ function DrawerPreview({
                 <DrawerHeader>
                   <DrawerTitle>{s.charAt(0).toUpperCase() + s.slice(1)} Drawer</DrawerTitle>
                 </DrawerHeader>
-                <div className="p-4 text-center text-sm text-muted-foreground">This drawer opens from the {s}.</div>
-                <DrawerFooter><DrawerClose asChild><Button variant="outline">Close</Button></DrawerClose></DrawerFooter>
+                <div className="p-4 text-center text-sm text-muted-foreground">
+                  This drawer opens from the {s}.
+                </div>
+                <DrawerFooter>
+                  <DrawerClose asChild>
+                    <Button variant="outline">Close</Button>
+                  </DrawerClose>
+                </DrawerFooter>
               </div>
             </DrawerContent>
           </Drawer>
@@ -4560,7 +5295,9 @@ function DrawerPreview({
             <div className="mx-auto w-full max-w-sm">
               <DrawerHeader>
                 <DrawerTitle>Edit profile</DrawerTitle>
-                <DrawerDescription>Make changes to your profile here. Click save when done.</DrawerDescription>
+                <DrawerDescription>
+                  Make changes to your profile here. Click save when done.
+                </DrawerDescription>
               </DrawerHeader>
               <div className="grid gap-3 px-4">
                 <Input placeholder="Name" defaultValue="John Doe" />
@@ -4568,7 +5305,9 @@ function DrawerPreview({
               </div>
               <DrawerFooter>
                 <Button>Save changes</Button>
-                <DrawerClose asChild><Button variant="outline">Cancel</Button></DrawerClose>
+                <DrawerClose asChild>
+                  <Button variant="outline">Cancel</Button>
+                </DrawerClose>
               </DrawerFooter>
             </div>
           </DrawerContent>
@@ -4593,7 +5332,9 @@ function DrawerPreview({
               <div className="p-4 pb-0 text-center text-sm">منطقة محتوى الدرج المنزلقة.</div>
               <DrawerFooter>
                 <Button>إرسال</Button>
-                <DrawerClose asChild><Button variant="outline">إلغاء</Button></DrawerClose>
+                <DrawerClose asChild>
+                  <Button variant="outline">إلغاء</Button>
+                </DrawerClose>
               </DrawerFooter>
             </div>
           </DrawerContent>
@@ -4643,7 +5384,9 @@ function DropdownMenuPreview({
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
         <DropdownMenu>
-          <DropdownMenuTrigger asChild><Button variant="outline">Open Menu</Button></DropdownMenuTrigger>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline">Open Menu</Button>
+          </DropdownMenuTrigger>
           <DropdownMenuContent className="w-56">
             <DropdownMenuItem>New Tab</DropdownMenuItem>
             <DropdownMenuSub>
@@ -4667,7 +5410,9 @@ function DropdownMenuPreview({
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
         <DropdownMenu>
-          <DropdownMenuTrigger asChild><Button variant="outline">Open Menu</Button></DropdownMenuTrigger>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline">Open Menu</Button>
+          </DropdownMenuTrigger>
           <DropdownMenuContent className="w-56">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuItem>
@@ -4693,14 +5438,24 @@ function DropdownMenuPreview({
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
         <DropdownMenu>
-          <DropdownMenuTrigger asChild><Button variant="outline">Open Menu</Button></DropdownMenuTrigger>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline">Open Menu</Button>
+          </DropdownMenuTrigger>
           <DropdownMenuContent className="w-56">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem><ArrowUpRight /> New Tab</DropdownMenuItem>
-            <DropdownMenuItem><Copy /> Copy Link</DropdownMenuItem>
-            <DropdownMenuItem><BookOpen /> Bookmarks</DropdownMenuItem>
+            <DropdownMenuItem>
+              <ArrowUpRight /> New Tab
+            </DropdownMenuItem>
+            <DropdownMenuItem>
+              <Copy /> Copy Link
+            </DropdownMenuItem>
+            <DropdownMenuItem>
+              <BookOpen /> Bookmarks
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem><Settings /> Settings</DropdownMenuItem>
+            <DropdownMenuItem>
+              <Settings /> Settings
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -4713,7 +5468,9 @@ function DropdownMenuPreview({
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
         <DropdownMenu>
-          <DropdownMenuTrigger asChild><Button variant="outline">View</Button></DropdownMenuTrigger>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline">View</Button>
+          </DropdownMenuTrigger>
           <DropdownMenuContent className="w-56">
             <DropdownMenuLabel>Appearance</DropdownMenuLabel>
             <DropdownMenuCheckboxItem checked={showBar} onCheckedChange={setShowBar}>
@@ -4733,7 +5490,9 @@ function DropdownMenuPreview({
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
         <DropdownMenu>
-          <DropdownMenuTrigger asChild><Button variant="outline">Panel: {position}</Button></DropdownMenuTrigger>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline">Panel: {position}</Button>
+          </DropdownMenuTrigger>
           <DropdownMenuContent className="w-56">
             <DropdownMenuLabel>Panel Position</DropdownMenuLabel>
             <DropdownMenuRadioGroup value={position} onValueChange={setPosition}>
@@ -4751,7 +5510,9 @@ function DropdownMenuPreview({
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
         <DropdownMenu>
-          <DropdownMenuTrigger asChild><Button variant="outline">Open Menu</Button></DropdownMenuTrigger>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline">Open Menu</Button>
+          </DropdownMenuTrigger>
           <DropdownMenuContent className="w-56">
             <DropdownMenuItem>Edit</DropdownMenuItem>
             <DropdownMenuItem>Duplicate</DropdownMenuItem>
@@ -4790,13 +5551,21 @@ function DropdownMenuPreview({
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
         <DropdownMenu>
-          <DropdownMenuTrigger asChild><Button variant="outline">Open Menu</Button></DropdownMenuTrigger>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline">Open Menu</Button>
+          </DropdownMenuTrigger>
           <DropdownMenuContent className="w-56">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem><ArrowUpRight /> New Tab <DropdownMenuShortcut>⌘T</DropdownMenuShortcut></DropdownMenuItem>
-            <DropdownMenuItem><Copy /> Copy Link</DropdownMenuItem>
+            <DropdownMenuItem>
+              <ArrowUpRight /> New Tab <DropdownMenuShortcut>⌘T</DropdownMenuShortcut>
+            </DropdownMenuItem>
+            <DropdownMenuItem>
+              <Copy /> Copy Link
+            </DropdownMenuItem>
             <DropdownMenuSub>
-              <DropdownMenuSubTrigger><Settings /> More</DropdownMenuSubTrigger>
+              <DropdownMenuSubTrigger>
+                <Settings /> More
+              </DropdownMenuSubTrigger>
               <DropdownMenuSubContent className="w-48">
                 <DropdownMenuItem>Save Page</DropdownMenuItem>
                 <DropdownMenuItem>Print…</DropdownMenuItem>
@@ -4814,7 +5583,9 @@ function DropdownMenuPreview({
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir="rtl">
         <DropdownMenu>
-          <DropdownMenuTrigger asChild><Button variant="outline">القائمة</Button></DropdownMenuTrigger>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline">القائمة</Button>
+          </DropdownMenuTrigger>
           <DropdownMenuContent className="w-56">
             <DropdownMenuLabel>حسابي</DropdownMenuLabel>
             <DropdownMenuSeparator />
@@ -4863,11 +5634,17 @@ function EmptyPreview({
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
         <Empty className="rounded-xl border">
           <EmptyHeader>
-            <EmptyMedia variant="icon"><HardDrive className="text-muted-foreground" /></EmptyMedia>
+            <EmptyMedia variant="icon">
+              <HardDrive className="text-muted-foreground" />
+            </EmptyMedia>
             <EmptyTitle>Cloud Storage Empty</EmptyTitle>
-            <EmptyDescription>Upload files to your cloud storage to access them anywhere.</EmptyDescription>
+            <EmptyDescription>
+              Upload files to your cloud storage to access them anywhere.
+            </EmptyDescription>
           </EmptyHeader>
-          <EmptyContent><Button>Upload Files</Button></EmptyContent>
+          <EmptyContent>
+            <Button>Upload Files</Button>
+          </EmptyContent>
         </Empty>
       </div>
     )
@@ -4878,11 +5655,17 @@ function EmptyPreview({
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
         <Empty className="rounded-xl bg-gradient-to-b from-sky-50 to-white dark:from-sky-950/20 dark:to-background">
           <EmptyHeader>
-            <EmptyMedia variant="icon"><Package className="text-muted-foreground" /></EmptyMedia>
+            <EmptyMedia variant="icon">
+              <Package className="text-muted-foreground" />
+            </EmptyMedia>
             <EmptyTitle>No releases yet</EmptyTitle>
-            <EmptyDescription>Create your first release to get started with your project.</EmptyDescription>
+            <EmptyDescription>
+              Create your first release to get started with your project.
+            </EmptyDescription>
           </EmptyHeader>
-          <EmptyContent><Button>Create Release</Button></EmptyContent>
+          <EmptyContent>
+            <Button>Create Release</Button>
+          </EmptyContent>
         </Empty>
       </div>
     )
@@ -4913,15 +5696,23 @@ function EmptyPreview({
           <EmptyHeader>
             <EmptyMedia>
               <AvatarGroup>
-                <Avatar><AvatarFallback>A</AvatarFallback></Avatar>
-                <Avatar><AvatarFallback>B</AvatarFallback></Avatar>
-                <Avatar><AvatarFallback>C</AvatarFallback></Avatar>
+                <Avatar>
+                  <AvatarFallback>A</AvatarFallback>
+                </Avatar>
+                <Avatar>
+                  <AvatarFallback>B</AvatarFallback>
+                </Avatar>
+                <Avatar>
+                  <AvatarFallback>C</AvatarFallback>
+                </Avatar>
               </AvatarGroup>
             </EmptyMedia>
             <EmptyTitle>No team members</EmptyTitle>
             <EmptyDescription>Invite team members to start collaborating.</EmptyDescription>
           </EmptyHeader>
-          <EmptyContent><Button>Invite Members</Button></EmptyContent>
+          <EmptyContent>
+            <Button>Invite Members</Button>
+          </EmptyContent>
         </Empty>
       </div>
     )
@@ -4932,9 +5723,13 @@ function EmptyPreview({
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
         <Empty>
           <EmptyHeader>
-            <EmptyMedia variant="icon"><Search className="text-muted-foreground" /></EmptyMedia>
+            <EmptyMedia variant="icon">
+              <Search className="text-muted-foreground" />
+            </EmptyMedia>
             <EmptyTitle>No results found</EmptyTitle>
-            <EmptyDescription>Try adjusting your search or filter to find what you are looking for.</EmptyDescription>
+            <EmptyDescription>
+              Try adjusting your search or filter to find what you are looking for.
+            </EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
             <div className="flex w-full max-w-xs gap-2">
@@ -4952,9 +5747,13 @@ function EmptyPreview({
       <div className="flex min-h-24 items-center justify-center p-4" dir="rtl">
         <Empty>
           <EmptyHeader>
-            <EmptyMedia variant="icon"><FolderOpen className="text-muted-foreground" /></EmptyMedia>
+            <EmptyMedia variant="icon">
+              <FolderOpen className="text-muted-foreground" />
+            </EmptyMedia>
             <EmptyTitle>لا توجد مشاريع بعد</EmptyTitle>
-            <EmptyDescription>لم تقم بإنشاء أي مشاريع بعد. ابدأ بإنشاء مشروعك الأول.</EmptyDescription>
+            <EmptyDescription>
+              لم تقم بإنشاء أي مشاريع بعد. ابدأ بإنشاء مشروعك الأول.
+            </EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
             <Button>إنشاء مشروع</Button>
@@ -4970,9 +5769,13 @@ function EmptyPreview({
     <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
       <Empty>
         <EmptyHeader>
-          <EmptyMedia variant="icon"><FolderOpen className="text-muted-foreground" /></EmptyMedia>
+          <EmptyMedia variant="icon">
+            <FolderOpen className="text-muted-foreground" />
+          </EmptyMedia>
           <EmptyTitle>No Projects Yet</EmptyTitle>
-          <EmptyDescription>You haven&apos;t created any projects yet. Get started by creating your first project.</EmptyDescription>
+          <EmptyDescription>
+            You haven&apos;t created any projects yet. Get started by creating your first project.
+          </EmptyDescription>
         </EmptyHeader>
         <EmptyContent>
           <Button>Create Project</Button>
@@ -5064,8 +5867,12 @@ function FieldPreview({
         <Field className="w-full max-w-md flex-row items-start gap-3 rounded-lg border p-4">
           <Checkbox id="terms-field" />
           <div className="grid gap-1.5 leading-none">
-            <FieldLabel htmlFor="terms-field" className="cursor-pointer">Accept terms and conditions</FieldLabel>
-            <FieldDescription>You agree to our Terms of Service and Privacy Policy.</FieldDescription>
+            <FieldLabel htmlFor="terms-field" className="cursor-pointer">
+              Accept terms and conditions
+            </FieldLabel>
+            <FieldDescription>
+              You agree to our Terms of Service and Privacy Policy.
+            </FieldDescription>
           </div>
         </Field>
       </div>
@@ -5090,7 +5897,7 @@ function FieldPreview({
     const [plan, setPlan] = useState('starter')
     const plans = [
       { id: 'starter', label: 'Starter', desc: 'For small teams', price: '$9/mo' },
-      { id: 'pro', label: 'Pro', desc: 'For growing teams', price: '$29/mo' },
+      { id: 'pro', label: 'Pro', desc: 'For growing teams', price: '$29/mo' }
     ]
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
@@ -5099,8 +5906,17 @@ function FieldPreview({
           <FieldDescription>Choose the plan that fits your needs.</FieldDescription>
           <div className="grid gap-3 sm:grid-cols-2">
             {plans.map((p) => (
-              <label key={p.id} className={`flex cursor-pointer flex-col gap-2 rounded-lg border p-4 transition-colors ${plan === p.id ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'}`}>
-                <input type="radio" name="plan" className="sr-only" checked={plan === p.id} onChange={() => setPlan(p.id)} />
+              <label
+                key={p.id}
+                className={`flex cursor-pointer flex-col gap-2 rounded-lg border p-4 transition-colors ${plan === p.id ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'}`}
+              >
+                <input
+                  type="radio"
+                  name="plan"
+                  className="sr-only"
+                  checked={plan === p.id}
+                  onChange={() => setPlan(p.id)}
+                />
                 <span className="text-sm font-medium">{p.label}</span>
                 <span className="text-xs text-muted-foreground">{p.desc}</span>
                 <span className="text-sm font-semibold">{p.price}</span>
@@ -5188,7 +6004,9 @@ function HoverCardPreview({
       <div className="flex min-h-40 items-center justify-center p-8" dir={dir}>
         <HoverCard openDelay={100} closeDelay={200}>
           <HoverCardTrigger asChild>
-            <Button variant="link" className="text-sm">Hover (100ms delay)</Button>
+            <Button variant="link" className="text-sm">
+              Hover (100ms delay)
+            </Button>
           </HoverCardTrigger>
           <HoverCardContent className="w-80">
             <div className="flex justify-between space-x-4">
@@ -5242,7 +6060,9 @@ function HoverCardPreview({
       <div className="flex min-h-40 items-center justify-center p-8" dir="rtl">
         <HoverCard>
           <HoverCardTrigger asChild>
-            <Button variant="link" className="text-sm font-medium">@nextjs</Button>
+            <Button variant="link" className="text-sm font-medium">
+              @nextjs
+            </Button>
           </HoverCardTrigger>
           <HoverCardContent className="w-80" dir="rtl">
             <div className="flex justify-between gap-4">
@@ -5268,7 +6088,9 @@ function HoverCardPreview({
     <div className="flex min-h-40 items-center justify-center p-8" dir={dir}>
       <HoverCard>
         <HoverCardTrigger asChild>
-          <Button variant="link" className="text-sm font-medium">@nextjs</Button>
+          <Button variant="link" className="text-sm font-medium">
+            @nextjs
+          </Button>
         </HoverCardTrigger>
         <HoverCardContent className="w-80">
           <div className="flex justify-between gap-4">
@@ -5326,7 +6148,9 @@ function InputPreview({
         <div className="w-full max-w-md space-y-2">
           <label className="text-sm font-medium">Username</label>
           <Input placeholder="shadcn" />
-          <p className="text-xs text-muted-foreground">Choose a unique username for your account.</p>
+          <p className="text-xs text-muted-foreground">
+            Choose a unique username for your account.
+          </p>
         </div>
       </div>
     )
@@ -5337,7 +6161,10 @@ function InputPreview({
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
         <div className="w-full max-w-md space-y-2">
           <label className="text-sm font-medium text-destructive">Email</label>
-          <Input defaultValue="invalid-email" className="border-destructive focus-visible:ring-destructive/20" />
+          <Input
+            defaultValue="invalid-email"
+            className="border-destructive focus-visible:ring-destructive/20"
+          />
           <p className="text-xs text-destructive">Please enter a valid email address.</p>
         </div>
       </div>
@@ -5349,7 +6176,10 @@ function InputPreview({
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
         <div className="w-full max-w-md space-y-2">
           <label className="text-sm font-medium">Picture</label>
-          <Input type="file" className="cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90" />
+          <Input
+            type="file"
+            className="cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+          />
         </div>
       </div>
     )
@@ -5359,7 +6189,9 @@ function InputPreview({
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
         <div className="w-full max-w-md space-y-2">
-          <label className="text-sm font-medium">Name <span className="text-destructive">*</span></label>
+          <label className="text-sm font-medium">
+            Name <span className="text-destructive">*</span>
+          </label>
           <Input placeholder="Your name" required />
           <p className="text-xs text-muted-foreground">This field is required.</p>
         </div>
@@ -5371,8 +6203,14 @@ function InputPreview({
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
         <div className="w-full max-w-md space-y-4">
-          <div className="space-y-2"><label className="text-sm font-medium">Email</label><Input placeholder="you@example.com" /></div>
-          <div className="space-y-2"><label className="text-sm font-medium">Password</label><Input type="password" placeholder="••••••••" /></div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Email</label>
+            <Input placeholder="you@example.com" />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Password</label>
+            <Input type="password" placeholder="••••••••" />
+          </div>
           <Button className="w-full">Sign In</Button>
         </div>
       </div>
@@ -5384,7 +6222,10 @@ function InputPreview({
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
         <div className="w-full max-w-md space-y-2">
           <label className="text-sm font-medium">Project Name</label>
-          <Input defaultValue="Untitled Project" className="border-none bg-transparent shadow-none px-0 focus-visible:ring-0 rounded-none border-b border-dashed border-muted-foreground/30 hover:border-muted-foreground focus-visible:border-solid focus-visible:border-primary" />
+          <Input
+            defaultValue="Untitled Project"
+            className="border-none bg-transparent shadow-none px-0 focus-visible:ring-0 rounded-none border-b border-dashed border-muted-foreground/30 hover:border-muted-foreground focus-visible:border-solid focus-visible:border-primary"
+          />
           <p className="text-xs text-muted-foreground">Click to edit the project name inline.</p>
         </div>
       </div>
@@ -5409,8 +6250,12 @@ function InputPreview({
         <label className="text-sm font-medium">API Key</label>
         <Input defaultValue="sk_live_xxxxxxxxxxxxxxxxxxxx" />
         <div className="flex items-center justify-between gap-3">
-          <p className="text-xs text-muted-foreground">Your API key is encrypted and stored securely.</p>
-          <Button size="sm" variant="outline">Copy</Button>
+          <p className="text-xs text-muted-foreground">
+            Your API key is encrypted and stored securely.
+          </p>
+          <Button size="sm" variant="outline">
+            Copy
+          </Button>
         </div>
       </div>
     </div>
@@ -5434,7 +6279,12 @@ function InputGroupPreview({
             <InputGroupTextarea className="min-h-28" defaultValue="Line 1, Column 1" />
             <div className="mt-3 flex items-center justify-between border-t pt-3 text-xs text-muted-foreground">
               <span>script.js</span>
-              <div className="flex items-center gap-2"><span>0/280</span><Button size="sm" variant="ghost">Run</Button></div>
+              <div className="flex items-center gap-2">
+                <span>0/280</span>
+                <Button size="sm" variant="ghost">
+                  Run
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -5462,7 +6312,9 @@ function InputGroupPreview({
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
         <div className="w-full max-w-lg">
           <InputGroup>
-            <InputGroupAddon><Search className="size-4 text-muted-foreground" /></InputGroupAddon>
+            <InputGroupAddon>
+              <Search className="size-4 text-muted-foreground" />
+            </InputGroupAddon>
             <InputGroupInput placeholder="Search..." />
           </InputGroup>
         </div>
@@ -5492,7 +6344,9 @@ function InputGroupPreview({
           <InputGroup>
             <InputGroupInput placeholder="Search documentation..." />
             <InputGroupAddon align="inline-end">
-              <InputGroupText><Kbd>⌘K</Kbd></InputGroupText>
+              <InputGroupText>
+                <Kbd>⌘K</Kbd>
+              </InputGroupText>
             </InputGroupAddon>
           </InputGroup>
         </div>
@@ -5505,7 +6359,9 @@ function InputGroupPreview({
       <div className="flex min-h-24 items-center justify-center p-4" dir="rtl">
         <div className="w-full max-w-lg">
           <InputGroup>
-            <InputGroupAddon><Search className="size-4 text-muted-foreground" /></InputGroupAddon>
+            <InputGroupAddon>
+              <Search className="size-4 text-muted-foreground" />
+            </InputGroupAddon>
             <InputGroupInput placeholder="بحث..." />
           </InputGroup>
         </div>
@@ -5542,14 +6398,20 @@ function InputOtpPreview({
       <div className="flex min-h-24 flex-col items-center justify-center gap-4 p-4" dir={dir}>
         <InputOTP maxLength={6} value={otp} onChange={setOtp}>
           <InputOTPGroup>
-            <InputOTPSlot index={0} /><InputOTPSlot index={1} /><InputOTPSlot index={2} />
+            <InputOTPSlot index={0} />
+            <InputOTPSlot index={1} />
+            <InputOTPSlot index={2} />
           </InputOTPGroup>
           <InputOTPSeparator />
           <InputOTPGroup>
-            <InputOTPSlot index={3} /><InputOTPSlot index={4} /><InputOTPSlot index={5} />
+            <InputOTPSlot index={3} />
+            <InputOTPSlot index={4} />
+            <InputOTPSlot index={5} />
           </InputOTPGroup>
         </InputOTP>
-        <Button size="sm" variant="ghost" onClick={() => setOtp('')}>Clear</Button>
+        <Button size="sm" variant="ghost" onClick={() => setOtp('')}>
+          Clear
+        </Button>
       </div>
     )
   }
@@ -5559,8 +6421,12 @@ function InputOtpPreview({
       <div className="flex min-h-24 flex-col items-center justify-center p-4" dir={dir}>
         <InputOTP maxLength={6} disabled>
           <InputOTPGroup>
-            <InputOTPSlot index={0} /><InputOTPSlot index={1} /><InputOTPSlot index={2} />
-            <InputOTPSlot index={3} /><InputOTPSlot index={4} /><InputOTPSlot index={5} />
+            <InputOTPSlot index={0} />
+            <InputOTPSlot index={1} />
+            <InputOTPSlot index={2} />
+            <InputOTPSlot index={3} />
+            <InputOTPSlot index={4} />
+            <InputOTPSlot index={5} />
           </InputOTPGroup>
         </InputOTP>
       </div>
@@ -5572,12 +6438,16 @@ function InputOtpPreview({
       <div className="flex min-h-24 flex-col items-center justify-center gap-4 p-4" dir={dir}>
         <InputOTP maxLength={6} value={otp} onChange={setOtp}>
           <InputOTPGroup>
-            <InputOTPSlot index={0} /><InputOTPSlot index={1} /><InputOTPSlot index={2} />
-            <InputOTPSlot index={3} /><InputOTPSlot index={4} /><InputOTPSlot index={5} />
+            <InputOTPSlot index={0} />
+            <InputOTPSlot index={1} />
+            <InputOTPSlot index={2} />
+            <InputOTPSlot index={3} />
+            <InputOTPSlot index={4} />
+            <InputOTPSlot index={5} />
           </InputOTPGroup>
         </InputOTP>
         <div className="text-sm text-muted-foreground">
-          {otp === "" ? "Enter your code." : `You entered: ${otp}`}
+          {otp === '' ? 'Enter your code.' : `You entered: ${otp}`}
         </div>
       </div>
     )
@@ -5588,13 +6458,15 @@ function InputOtpPreview({
       <div className="flex min-h-24 flex-col items-center justify-center gap-4 p-4" dir={dir}>
         <InputOTP maxLength={6} value={otp} onChange={setOtp}>
           <InputOTPGroup>
-            <InputOTPSlot index={0} aria-invalid /><InputOTPSlot index={1} aria-invalid /><InputOTPSlot index={2} aria-invalid />
-            <InputOTPSlot index={3} aria-invalid /><InputOTPSlot index={4} aria-invalid /><InputOTPSlot index={5} aria-invalid />
+            <InputOTPSlot index={0} aria-invalid />
+            <InputOTPSlot index={1} aria-invalid />
+            <InputOTPSlot index={2} aria-invalid />
+            <InputOTPSlot index={3} aria-invalid />
+            <InputOTPSlot index={4} aria-invalid />
+            <InputOTPSlot index={5} aria-invalid />
           </InputOTPGroup>
         </InputOTP>
-        <div className="text-sm text-destructive font-medium">
-          Invalid code. Please try again.
-        </div>
+        <div className="text-sm text-destructive font-medium">Invalid code. Please try again.</div>
       </div>
     )
   }
@@ -5604,7 +6476,10 @@ function InputOtpPreview({
       <div className="flex min-h-24 flex-col items-center justify-center p-4" dir={dir}>
         <InputOTP maxLength={4} value={otp} onChange={setOtp}>
           <InputOTPGroup>
-            <InputOTPSlot index={0} /><InputOTPSlot index={1} /><InputOTPSlot index={2} /><InputOTPSlot index={3} />
+            <InputOTPSlot index={0} />
+            <InputOTPSlot index={1} />
+            <InputOTPSlot index={2} />
+            <InputOTPSlot index={3} />
           </InputOTPGroup>
         </InputOTP>
       </div>
@@ -5617,15 +6492,23 @@ function InputOtpPreview({
         <div className="w-full max-w-sm space-y-4">
           <div className="text-center space-y-1">
             <h3 className="text-lg font-semibold">Verification Code</h3>
-            <p className="text-sm text-muted-foreground">Enter the 6-digit code sent to your phone.</p>
+            <p className="text-sm text-muted-foreground">
+              Enter the 6-digit code sent to your phone.
+            </p>
           </div>
           <InputOTP maxLength={6} value={otp} onChange={setOtp}>
             <InputOTPGroup>
-              <InputOTPSlot index={0} /><InputOTPSlot index={1} /><InputOTPSlot index={2} />
-              <InputOTPSlot index={3} /><InputOTPSlot index={4} /><InputOTPSlot index={5} />
+              <InputOTPSlot index={0} />
+              <InputOTPSlot index={1} />
+              <InputOTPSlot index={2} />
+              <InputOTPSlot index={3} />
+              <InputOTPSlot index={4} />
+              <InputOTPSlot index={5} />
             </InputOTPGroup>
           </InputOTP>
-          <Button className="w-full" disabled={otp.length < 6}>Verify</Button>
+          <Button className="w-full" disabled={otp.length < 6}>
+            Verify
+          </Button>
         </div>
       </div>
     )
@@ -5636,8 +6519,12 @@ function InputOtpPreview({
       <div className="flex min-h-24 flex-col items-center justify-center p-4" dir="rtl">
         <InputOTP maxLength={6} value={otp} onChange={setOtp}>
           <InputOTPGroup>
-            <InputOTPSlot index={0} /><InputOTPSlot index={1} /><InputOTPSlot index={2} />
-            <InputOTPSlot index={3} /><InputOTPSlot index={4} /><InputOTPSlot index={5} />
+            <InputOTPSlot index={0} />
+            <InputOTPSlot index={1} />
+            <InputOTPSlot index={2} />
+            <InputOTPSlot index={3} />
+            <InputOTPSlot index={4} />
+            <InputOTPSlot index={5} />
           </InputOTPGroup>
         </InputOTP>
       </div>
@@ -5648,37 +6535,46 @@ function InputOtpPreview({
     <div className="flex min-h-24 flex-col items-center justify-center gap-4 p-4" dir={dir}>
       <InputOTP maxLength={6} value={otp} onChange={setOtp}>
         <InputOTPGroup>
-          <InputOTPSlot index={0} /><InputOTPSlot index={1} /><InputOTPSlot index={2} />
-          <InputOTPSlot index={3} /><InputOTPSlot index={4} /><InputOTPSlot index={5} />
+          <InputOTPSlot index={0} />
+          <InputOTPSlot index={1} />
+          <InputOTPSlot index={2} />
+          <InputOTPSlot index={3} />
+          <InputOTPSlot index={4} />
+          <InputOTPSlot index={5} />
         </InputOTPGroup>
       </InputOTP>
       <div className="flex items-center gap-2">
-        <Button size="sm" variant="outline" onClick={() => setOtp('123456')}>Paste sample</Button>
-        <Button size="sm" variant="ghost" onClick={() => setOtp('')}>Clear</Button>
+        <Button size="sm" variant="outline" onClick={() => setOtp('123456')}>
+          Paste sample
+        </Button>
+        <Button size="sm" variant="ghost" onClick={() => setOtp('')}>
+          Clear
+        </Button>
       </div>
     </div>
   )
 }
 
-function ItemPreview({
-  direction,
-  name
-}: {
-  direction?: string
-  name: string
-}): React.JSX.Element {
+function ItemPreview({ direction, name }: { direction?: string; name: string }): React.JSX.Element {
   const dir = direction === 'rtl' ? 'rtl' : undefined
 
   if (name === 'item-actions') {
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
         <Item className="w-full max-w-2xl rounded-xl border">
-          <ItemMedia variant="icon"><Package className="text-muted-foreground" /></ItemMedia>
+          <ItemMedia variant="icon">
+            <Package className="text-muted-foreground" />
+          </ItemMedia>
           <ItemContent>
             <ItemTitle>Build artifacts ready</ItemTitle>
             <ItemDescription>Generated desktop bundles for macOS and Windows.</ItemDescription>
           </ItemContent>
-          <ItemActions><Button size="sm" variant="outline">Review</Button><Button size="sm">Publish</Button></ItemActions>
+          <ItemActions>
+            <Button size="sm" variant="outline">
+              Review
+            </Button>
+            <Button size="sm">Publish</Button>
+          </ItemActions>
         </Item>
       </div>
     )
@@ -5688,12 +6584,18 @@ function ItemPreview({
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
         <Item className="w-full max-w-2xl rounded-xl border">
-          <ItemMedia variant="icon"><CheckCircle2 className="text-emerald-600" /></ItemMedia>
+          <ItemMedia variant="icon">
+            <CheckCircle2 className="text-emerald-600" />
+          </ItemMedia>
           <ItemContent>
             <ItemTitle>Your profile has been verified.</ItemTitle>
             <ItemDescription>You can now publish assets and invite collaborators.</ItemDescription>
           </ItemContent>
-          <ItemActions><Button size="icon-sm" variant="ghost"><ChevronRight className="size-4" /></Button></ItemActions>
+          <ItemActions>
+            <Button size="icon-sm" variant="ghost">
+              <ChevronRight className="size-4" />
+            </Button>
+          </ItemActions>
         </Item>
       </div>
     )
@@ -5703,12 +6605,18 @@ function ItemPreview({
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
         <Item className="w-full max-w-2xl rounded-xl border">
-          <ItemMedia><Avatar><AvatarFallback>SH</AvatarFallback></Avatar></ItemMedia>
+          <ItemMedia>
+            <Avatar>
+              <AvatarFallback>SH</AvatarFallback>
+            </Avatar>
+          </ItemMedia>
           <ItemContent>
             <ItemTitle>shadcn</ItemTitle>
             <ItemDescription>Created the shadcn/ui design system.</ItemDescription>
           </ItemContent>
-          <ItemActions><Button size="sm">Follow</Button></ItemActions>
+          <ItemActions>
+            <Button size="sm">Follow</Button>
+          </ItemActions>
         </Item>
       </div>
     )
@@ -5719,13 +6627,19 @@ function ItemPreview({
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
         <Item className="w-full max-w-2xl rounded-xl border">
           <ItemMedia>
-            <img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=80&auto=format&fit=crop" className="size-10 rounded object-cover" alt="Thumb" />
+            <img
+              src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=80&auto=format&fit=crop"
+              className="size-10 rounded object-cover"
+              alt="Thumb"
+            />
           </ItemMedia>
           <ItemContent>
             <ItemTitle>Mountain Landscape</ItemTitle>
             <ItemDescription>Photograph captured at sunrise.</ItemDescription>
           </ItemContent>
-          <ItemActions><Button size="sm">View</Button></ItemActions>
+          <ItemActions>
+            <Button size="sm">View</Button>
+          </ItemActions>
         </Item>
       </div>
     )
@@ -5737,10 +6651,24 @@ function ItemPreview({
         <div className="w-full max-w-2xl rounded-xl border divide-y">
           {['Plan Upgrade', 'Security Alert', 'Payment Received'].map((title, i) => (
             <Item key={title} className="border-0 rounded-none">
-              <ItemMedia variant="icon">{i === 0 ? <ArrowUp className="text-emerald-600" /> : i === 1 ? <AlertCircle className="text-amber-600" /> : <BadgeCheck className="text-sky-600" />}</ItemMedia>
+              <ItemMedia variant="icon">
+                {i === 0 ? (
+                  <ArrowUp className="text-emerald-600" />
+                ) : i === 1 ? (
+                  <AlertCircle className="text-amber-600" />
+                ) : (
+                  <BadgeCheck className="text-sky-600" />
+                )}
+              </ItemMedia>
               <ItemContent>
                 <ItemTitle>{title}</ItemTitle>
-                <ItemDescription>{i === 0 ? 'Your plan will renew next month.' : i === 1 ? 'New login from San Francisco.' : 'Invoice #1234 has been paid.'}</ItemDescription>
+                <ItemDescription>
+                  {i === 0
+                    ? 'Your plan will renew next month.'
+                    : i === 1
+                      ? 'New login from San Francisco.'
+                      : 'Invoice #1234 has been paid.'}
+                </ItemDescription>
               </ItemContent>
             </Item>
           ))}
@@ -5753,14 +6681,20 @@ function ItemPreview({
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
         <Item className="w-full max-w-2xl rounded-xl border">
-          <ItemMedia variant="icon"><Settings className="text-muted-foreground" /></ItemMedia>
+          <ItemMedia variant="icon">
+            <Settings className="text-muted-foreground" />
+          </ItemMedia>
           <ItemContent>
             <ItemTitle>Project Settings</ItemTitle>
             <ItemDescription>Manage access, notifications, and integrations.</ItemDescription>
           </ItemContent>
           <ItemActions>
             <DropdownMenu>
-              <DropdownMenuTrigger asChild><Button size="icon-sm" variant="ghost"><MoreHorizontal className="size-4" /></Button></DropdownMenuTrigger>
+              <DropdownMenuTrigger asChild>
+                <Button size="icon-sm" variant="ghost">
+                  <MoreHorizontal className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem>Edit</DropdownMenuItem>
                 <DropdownMenuItem>Duplicate</DropdownMenuItem>
@@ -5778,12 +6712,16 @@ function ItemPreview({
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir="rtl">
         <Item className="w-full max-w-2xl rounded-xl border">
-          <ItemMedia variant="icon"><BadgeCheck className="text-emerald-600" /></ItemMedia>
+          <ItemMedia variant="icon">
+            <BadgeCheck className="text-emerald-600" />
+          </ItemMedia>
           <ItemContent>
             <ItemTitle>تم التحقق من الملف الشخصي</ItemTitle>
             <ItemDescription>يمكنك الآن نشر الأصول ودعوة المتعاونين.</ItemDescription>
           </ItemContent>
-          <ItemActions><Button size="sm">نشر</Button></ItemActions>
+          <ItemActions>
+            <Button size="sm">نشر</Button>
+          </ItemActions>
         </Item>
       </div>
     )
@@ -5792,24 +6730,22 @@ function ItemPreview({
   return (
     <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
       <Item className="w-full max-w-2xl rounded-xl border">
-        <ItemMedia variant="icon"><BadgeCheck className="text-muted-foreground" /></ItemMedia>
+        <ItemMedia variant="icon">
+          <BadgeCheck className="text-muted-foreground" />
+        </ItemMedia>
         <ItemContent>
           <ItemTitle>Basic Item</ItemTitle>
           <ItemDescription>A simple item with title and description.</ItemDescription>
         </ItemContent>
-        <ItemActions><Button size="sm">Action</Button></ItemActions>
+        <ItemActions>
+          <Button size="sm">Action</Button>
+        </ItemActions>
       </Item>
     </div>
   )
 }
 
-function KbdPreview({
-  direction,
-  name
-}: {
-  direction?: string
-  name: string
-}): React.JSX.Element {
+function KbdPreview({ direction, name }: { direction?: string; name: string }): React.JSX.Element {
   const dir = direction === 'rtl' ? 'rtl' : undefined
 
   if (name === 'kbd-group') {
@@ -5839,7 +6775,9 @@ function KbdPreview({
         <InputGroup>
           <InputGroupInput placeholder="Search..." />
           <InputGroupAddon align="inline-end">
-            <InputGroupText><Kbd>⌘K</Kbd></InputGroupText>
+            <InputGroupText>
+              <Kbd>⌘K</Kbd>
+            </InputGroupText>
           </InputGroupAddon>
         </InputGroup>
       </div>
@@ -5853,18 +6791,16 @@ function KbdPreview({
   )
 }
 
-function LabelPreview({
-  direction
-}: {
-  direction?: string
-  name: string
-}): React.JSX.Element {
+function LabelPreview({ direction }: { direction?: string; name: string }): React.JSX.Element {
   const dir = direction === 'rtl' ? 'rtl' : undefined
   return (
     <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
       <div className="flex items-center space-x-2">
         <Checkbox id="terms-label" />
-        <Label htmlFor="terms-label" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">
+        <Label
+          htmlFor="terms-label"
+          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+        >
           Accept terms and conditions
         </Label>
       </div>
@@ -5884,7 +6820,7 @@ function MenubarPreview({
   if (name === 'menubar-checkbox') {
     const [checkedState, setCheckedState] = useState({
       showShortcuts: true,
-      showFullUrls: false,
+      showFullUrls: false
     })
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
@@ -5942,8 +6878,12 @@ function MenubarPreview({
           <MenubarMenu>
             <MenubarTrigger>File</MenubarTrigger>
             <MenubarContent>
-              <MenubarItem>New Tab <MenubarShortcut>⌘T</MenubarShortcut></MenubarItem>
-              <MenubarItem>New Window <MenubarShortcut>⌘N</MenubarShortcut></MenubarItem>
+              <MenubarItem>
+                New Tab <MenubarShortcut>⌘T</MenubarShortcut>
+              </MenubarItem>
+              <MenubarItem>
+                New Window <MenubarShortcut>⌘N</MenubarShortcut>
+              </MenubarItem>
               <MenubarSeparator />
               <MenubarSub>
                 <MenubarSubTrigger>Share</MenubarSubTrigger>
@@ -5954,7 +6894,9 @@ function MenubarPreview({
                 </MenubarSubContent>
               </MenubarSub>
               <MenubarSeparator />
-              <MenubarItem>Print... <MenubarShortcut>⌘P</MenubarShortcut></MenubarItem>
+              <MenubarItem>
+                Print... <MenubarShortcut>⌘P</MenubarShortcut>
+              </MenubarItem>
             </MenubarContent>
           </MenubarMenu>
         </Menubar>
@@ -5967,16 +6909,31 @@ function MenubarPreview({
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
         <Menubar>
           <MenubarMenu>
-            <MenubarTrigger><FileText className="mr-2 size-4" />File</MenubarTrigger>
+            <MenubarTrigger>
+              <FileText className="mr-2 size-4" />
+              File
+            </MenubarTrigger>
             <MenubarContent>
-              <MenubarItem><Plus className="mr-2 size-4" />New <MenubarShortcut>⌘N</MenubarShortcut></MenubarItem>
-              <MenubarItem><FolderOpen className="mr-2 size-4" />Open... <MenubarShortcut>⌘O</MenubarShortcut></MenubarItem>
+              <MenubarItem>
+                <Plus className="mr-2 size-4" />
+                New <MenubarShortcut>⌘N</MenubarShortcut>
+              </MenubarItem>
+              <MenubarItem>
+                <FolderOpen className="mr-2 size-4" />
+                Open... <MenubarShortcut>⌘O</MenubarShortcut>
+              </MenubarItem>
             </MenubarContent>
           </MenubarMenu>
           <MenubarMenu>
-            <MenubarTrigger><Settings className="mr-2 size-4" />Edit</MenubarTrigger>
+            <MenubarTrigger>
+              <Settings className="mr-2 size-4" />
+              Edit
+            </MenubarTrigger>
             <MenubarContent>
-              <MenubarItem><Settings className="mr-2 size-4" />Preferences</MenubarItem>
+              <MenubarItem>
+                <Settings className="mr-2 size-4" />
+                Preferences
+              </MenubarItem>
             </MenubarContent>
           </MenubarMenu>
         </Menubar>
@@ -5987,8 +6944,21 @@ function MenubarPreview({
   return (
     <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
       <Menubar>
-        <MenubarMenu><MenubarTrigger>File</MenubarTrigger><MenubarContent><MenubarItem>New</MenubarItem><MenubarItem>Open</MenubarItem><MenubarItem>Save</MenubarItem></MenubarContent></MenubarMenu>
-        <MenubarMenu><MenubarTrigger>Edit</MenubarTrigger><MenubarContent><MenubarItem>Undo</MenubarItem><MenubarItem>Redo</MenubarItem></MenubarContent></MenubarMenu>
+        <MenubarMenu>
+          <MenubarTrigger>File</MenubarTrigger>
+          <MenubarContent>
+            <MenubarItem>New</MenubarItem>
+            <MenubarItem>Open</MenubarItem>
+            <MenubarItem>Save</MenubarItem>
+          </MenubarContent>
+        </MenubarMenu>
+        <MenubarMenu>
+          <MenubarTrigger>Edit</MenubarTrigger>
+          <MenubarContent>
+            <MenubarItem>Undo</MenubarItem>
+            <MenubarItem>Redo</MenubarItem>
+          </MenubarContent>
+        </MenubarMenu>
       </Menubar>
     </div>
   )
@@ -6007,7 +6977,9 @@ function NativeSelectPreview({
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
         <NativeSelect className="w-[200px]">
-          <option value="" disabled>Select a fruit</option>
+          <option value="" disabled>
+            Select a fruit
+          </option>
           <optgroup label="Citrus">
             <option value="orange">Orange</option>
             <option value="lemon">Lemon</option>
@@ -6045,7 +7017,9 @@ function NativeSelectPreview({
   return (
     <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
       <NativeSelect className="w-[200px]">
-        <option value="" disabled>Select an option</option>
+        <option value="" disabled>
+          Select an option
+        </option>
         <option value="1">Option 1</option>
         <option value="2">Option 2</option>
         <option value="3">Option 3</option>
@@ -6054,11 +7028,7 @@ function NativeSelectPreview({
   )
 }
 
-function NavigationMenuPreview({
-  direction
-}: {
-  direction?: string
-}): React.JSX.Element {
+function NavigationMenuPreview({ direction }: { direction?: string }): React.JSX.Element {
   const dir = direction === 'rtl' ? 'rtl' : undefined
   return (
     <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
@@ -6097,8 +7067,12 @@ function PaginationPreview({
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
         <Pagination>
           <PaginationContent>
-            <PaginationItem><PaginationPrevious href="#" /></PaginationItem>
-            <PaginationItem><PaginationNext href="#" /></PaginationItem>
+            <PaginationItem>
+              <PaginationPrevious href="#" />
+            </PaginationItem>
+            <PaginationItem>
+              <PaginationNext href="#" />
+            </PaginationItem>
           </PaginationContent>
         </Pagination>
       </div>
@@ -6109,9 +7083,19 @@ function PaginationPreview({
     <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
       <Pagination>
         <PaginationContent>
-          <PaginationItem><PaginationPrevious href="#" /></PaginationItem>
-          {[1,2,3].map((p) => <PaginationItem key={p}><PaginationLink href="#" isActive={p === page} onClick={() => setPage(p)}>{p}</PaginationLink></PaginationItem>)}
-          <PaginationItem><PaginationNext href="#" /></PaginationItem>
+          <PaginationItem>
+            <PaginationPrevious href="#" />
+          </PaginationItem>
+          {[1, 2, 3].map((p) => (
+            <PaginationItem key={p}>
+              <PaginationLink href="#" isActive={p === page} onClick={() => setPage(p)}>
+                {p}
+              </PaginationLink>
+            </PaginationItem>
+          ))}
+          <PaginationItem>
+            <PaginationNext href="#" />
+          </PaginationItem>
         </PaginationContent>
       </Pagination>
     </div>
@@ -6131,16 +7115,34 @@ function PopoverPreview({
     return (
       <div className="flex min-h-24 items-start justify-center gap-4 p-4" dir={dir}>
         <Popover>
-          <PopoverTrigger asChild><Button variant="outline" size="sm">Start</Button></PopoverTrigger>
-          <PopoverContent align="start" className="w-48 text-sm">Aligned to start.</PopoverContent>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm">
+              Start
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-48 text-sm">
+            Aligned to start.
+          </PopoverContent>
         </Popover>
         <Popover>
-          <PopoverTrigger asChild><Button variant="outline" size="sm">Center</Button></PopoverTrigger>
-          <PopoverContent align="center" className="w-48 text-sm">Aligned to center.</PopoverContent>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm">
+              Center
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="center" className="w-48 text-sm">
+            Aligned to center.
+          </PopoverContent>
         </Popover>
         <Popover>
-          <PopoverTrigger asChild><Button variant="outline" size="sm">End</Button></PopoverTrigger>
-          <PopoverContent align="end" className="w-48 text-sm">Aligned to end.</PopoverContent>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm">
+              End
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-48 text-sm">
+            Aligned to end.
+          </PopoverContent>
         </Popover>
       </div>
     )
@@ -6150,12 +7152,16 @@ function PopoverPreview({
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
         <Popover>
-          <PopoverTrigger asChild><Button variant="outline">Edit</Button></PopoverTrigger>
+          <PopoverTrigger asChild>
+            <Button variant="outline">Edit</Button>
+          </PopoverTrigger>
           <PopoverContent className="w-80">
             <div className="space-y-3">
               <h4 className="font-medium">Edit Name</h4>
               <Input placeholder="Name" />
-              <div className="flex justify-end gap-2"><Button size="sm">Save</Button></div>
+              <div className="flex justify-end gap-2">
+                <Button size="sm">Save</Button>
+              </div>
             </div>
           </PopoverContent>
         </Popover>
@@ -6167,7 +7173,9 @@ function PopoverPreview({
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir="rtl">
         <Popover>
-          <PopoverTrigger asChild><Button variant="outline">افتح</Button></PopoverTrigger>
+          <PopoverTrigger asChild>
+            <Button variant="outline">افتح</Button>
+          </PopoverTrigger>
           <PopoverContent className="w-48 text-sm">محتوى منبثق</PopoverContent>
         </Popover>
       </div>
@@ -6177,8 +7185,12 @@ function PopoverPreview({
   return (
     <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
       <Popover>
-        <PopoverTrigger asChild><Button variant="outline">Open Popover</Button></PopoverTrigger>
-        <PopoverContent className="w-64 text-sm">This is a basic popover with some content.</PopoverContent>
+        <PopoverTrigger asChild>
+          <Button variant="outline">Open Popover</Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-64 text-sm">
+          This is a basic popover with some content.
+        </PopoverContent>
       </Popover>
     </div>
   )
@@ -6211,9 +7223,13 @@ function ProgressPreview({
       <div className="flex min-h-24 flex-col items-center justify-center gap-3 p-4" dir={dir}>
         <Progress value={val} className="w-full max-w-md" />
         <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" onClick={() => setVal(Math.max(0, val - 10))}>-10</Button>
+          <Button size="sm" variant="outline" onClick={() => setVal(Math.max(0, val - 10))}>
+            -10
+          </Button>
           <span className="text-sm font-medium w-10 text-center">{val}%</span>
-          <Button size="sm" variant="outline" onClick={() => setVal(Math.min(100, val + 10))}>+10</Button>
+          <Button size="sm" variant="outline" onClick={() => setVal(Math.min(100, val + 10))}>
+            +10
+          </Button>
         </div>
       </div>
     )
@@ -6241,11 +7257,15 @@ function RadioGroupPreview({
         <RadioGroup defaultValue="comfortable" className="w-full max-w-md space-y-2">
           <div className="flex items-start space-x-2">
             <RadioGroupItem value="comfortable" id="r1" />
-            <label htmlFor="r1" className="text-sm font-medium">Comfortable</label>
+            <label htmlFor="r1" className="text-sm font-medium">
+              Comfortable
+            </label>
           </div>
           <div className="flex items-start space-x-2">
             <RadioGroupItem value="compact" id="r2" />
-            <label htmlFor="r2" className="text-sm font-medium">Compact</label>
+            <label htmlFor="r2" className="text-sm font-medium">
+              Compact
+            </label>
           </div>
         </RadioGroup>
       </div>
@@ -6256,10 +7276,19 @@ function RadioGroupPreview({
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
         <RadioGroup defaultValue="starter" className="w-full max-w-md">
-          {[{v:'starter',l:'Starter',d:'$9/mo'},{v:'pro',l:'Pro',d:'$29/mo'}].map(p => (
-            <label key={p.v} className="flex cursor-pointer items-center gap-3 rounded-lg border p-3 hover:bg-muted/50">
+          {[
+            { v: 'starter', l: 'Starter', d: '$9/mo' },
+            { v: 'pro', l: 'Pro', d: '$29/mo' }
+          ].map((p) => (
+            <label
+              key={p.v}
+              className="flex cursor-pointer items-center gap-3 rounded-lg border p-3 hover:bg-muted/50"
+            >
               <RadioGroupItem value={p.v} id={p.v} />
-              <div><div className="text-sm font-medium">{p.l}</div><div className="text-xs text-muted-foreground">{p.d}</div></div>
+              <div>
+                <div className="text-sm font-medium">{p.l}</div>
+                <div className="text-xs text-muted-foreground">{p.d}</div>
+              </div>
             </label>
           ))}
         </RadioGroup>
@@ -6271,8 +7300,18 @@ function RadioGroupPreview({
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
         <RadioGroup defaultValue="option-one" disabled className="w-full max-w-md space-y-2">
-          <div className="flex items-center space-x-2"><RadioGroupItem value="option-one" id="rd1" /><label htmlFor="rd1" className="text-sm">Option One</label></div>
-          <div className="flex items-center space-x-2"><RadioGroupItem value="option-two" id="rd2" /><label htmlFor="rd2" className="text-sm">Option Two</label></div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="option-one" id="rd1" />
+            <label htmlFor="rd1" className="text-sm">
+              Option One
+            </label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="option-two" id="rd2" />
+            <label htmlFor="rd2" className="text-sm">
+              Option Two
+            </label>
+          </div>
         </RadioGroup>
       </div>
     )
@@ -6281,9 +7320,24 @@ function RadioGroupPreview({
   return (
     <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
       <RadioGroup defaultValue="option-one" className="w-full max-w-md space-y-2">
-        <div className="flex items-center space-x-2"><RadioGroupItem value="option-one" id="r-b1" /><label htmlFor="r-b1" className="text-sm">Option One</label></div>
-        <div className="flex items-center space-x-2"><RadioGroupItem value="option-two" id="r-b2" /><label htmlFor="r-b2" className="text-sm">Option Two</label></div>
-        <div className="flex items-center space-x-2"><RadioGroupItem value="option-three" id="r-b3" /><label htmlFor="r-b3" className="text-sm">Option Three</label></div>
+        <div className="flex items-center space-x-2">
+          <RadioGroupItem value="option-one" id="r-b1" />
+          <label htmlFor="r-b1" className="text-sm">
+            Option One
+          </label>
+        </div>
+        <div className="flex items-center space-x-2">
+          <RadioGroupItem value="option-two" id="r-b2" />
+          <label htmlFor="r-b2" className="text-sm">
+            Option Two
+          </label>
+        </div>
+        <div className="flex items-center space-x-2">
+          <RadioGroupItem value="option-three" id="r-b3" />
+          <label htmlFor="r-b3" className="text-sm">
+            Option Three
+          </label>
+        </div>
       </RadioGroup>
     </div>
   )
@@ -6377,7 +7431,9 @@ function SelectPreview({
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
         <Select>
-          <SelectTrigger className="w-[200px]"><SelectValue placeholder="Select a fruit" /></SelectTrigger>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Select a fruit" />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="apple">Apple</SelectItem>
             <SelectItem value="banana">Banana</SelectItem>
@@ -6392,9 +7448,15 @@ function SelectPreview({
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
         <Select>
-          <SelectTrigger className="w-[200px]"><SelectValue placeholder="Select..." /></SelectTrigger>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Select..." />
+          </SelectTrigger>
           <SelectContent>
-            {Array.from({length:20},(_,i) => <SelectItem key={i} value={`item-${i}`}>Item {i+1}</SelectItem>)}
+            {Array.from({ length: 20 }, (_, i) => (
+              <SelectItem key={i} value={`item-${i}`}>
+                Item {i + 1}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -6405,8 +7467,12 @@ function SelectPreview({
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
         <Select disabled>
-          <SelectTrigger className="w-[200px]"><SelectValue placeholder="Disabled" /></SelectTrigger>
-          <SelectContent><SelectItem value="a">A</SelectItem></SelectContent>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Disabled" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="a">A</SelectItem>
+          </SelectContent>
         </Select>
       </div>
     )
@@ -6416,8 +7482,13 @@ function SelectPreview({
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir="rtl">
         <Select>
-          <SelectTrigger className="w-[200px]"><SelectValue placeholder="اختر خيارًا" /></SelectTrigger>
-          <SelectContent><SelectItem value="a">الخيار أ</SelectItem><SelectItem value="b">الخيار ب</SelectItem></SelectContent>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="اختر خيارًا" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="a">الخيار أ</SelectItem>
+            <SelectItem value="b">الخيار ب</SelectItem>
+          </SelectContent>
         </Select>
       </div>
     )
@@ -6426,7 +7497,9 @@ function SelectPreview({
   return (
     <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
       <Select>
-        <SelectTrigger className="w-[200px]"><SelectValue placeholder="Select an option" /></SelectTrigger>
+        <SelectTrigger className="w-[200px]">
+          <SelectValue placeholder="Select an option" />
+        </SelectTrigger>
         <SelectContent>
           <SelectItem value="1">Option 1</SelectItem>
           <SelectItem value="2">Option 2</SelectItem>
@@ -6447,14 +7520,21 @@ function SheetPreview({
   const dir = direction === 'rtl' ? 'rtl' : undefined
 
   if (name === 'sheet-side') {
-    const sides: ('top'|'right'|'bottom'|'left')[] = ['top','right','bottom','left']
+    const sides: ('top' | 'right' | 'bottom' | 'left')[] = ['top', 'right', 'bottom', 'left']
     return (
       <div className="flex min-h-24 items-center justify-center gap-2 p-4" dir={dir}>
-        {sides.map(s => (
+        {sides.map((s) => (
           <Sheet key={s}>
-            <SheetTrigger asChild><Button variant="outline" size="sm">{s}</Button></SheetTrigger>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="sm">
+                {s}
+              </Button>
+            </SheetTrigger>
             <SheetContent side={s}>
-              <SheetHeader><SheetTitle>{s} Sheet</SheetTitle><SheetDescription>This sheet opens from the {s}.</SheetDescription></SheetHeader>
+              <SheetHeader>
+                <SheetTitle>{s} Sheet</SheetTitle>
+                <SheetDescription>This sheet opens from the {s}.</SheetDescription>
+              </SheetHeader>
             </SheetContent>
           </Sheet>
         ))}
@@ -6466,9 +7546,14 @@ function SheetPreview({
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
         <Sheet>
-          <SheetTrigger asChild><Button variant="outline">Open Sheet</Button></SheetTrigger>
+          <SheetTrigger asChild>
+            <Button variant="outline">Open Sheet</Button>
+          </SheetTrigger>
           <SheetContent showCloseButton={false}>
-            <SheetHeader><SheetTitle>No Close Button</SheetTitle><SheetDescription>This sheet has no default close button.</SheetDescription></SheetHeader>
+            <SheetHeader>
+              <SheetTitle>No Close Button</SheetTitle>
+              <SheetDescription>This sheet has no default close button.</SheetDescription>
+            </SheetHeader>
           </SheetContent>
         </Sheet>
       </div>
@@ -6478,9 +7563,14 @@ function SheetPreview({
   return (
     <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
       <Sheet>
-        <SheetTrigger asChild><Button variant="outline">Open Sheet</Button></SheetTrigger>
+        <SheetTrigger asChild>
+          <Button variant="outline">Open Sheet</Button>
+        </SheetTrigger>
         <SheetContent>
-          <SheetHeader><SheetTitle>Sheet Title</SheetTitle><SheetDescription>This is a basic sheet panel.</SheetDescription></SheetHeader>
+          <SheetHeader>
+            <SheetTitle>Sheet Title</SheetTitle>
+            <SheetDescription>This is a basic sheet panel.</SheetDescription>
+          </SheetHeader>
         </SheetContent>
       </Sheet>
     </div>
@@ -6500,7 +7590,10 @@ function SkeletonPreview({
     return (
       <div className="flex min-h-24 items-center justify-center gap-4 p-4" dir={dir}>
         <Skeleton className="size-12 rounded-full" />
-        <div className="space-y-2"><Skeleton className="h-4 w-[200px]" /><Skeleton className="h-4 w-[150px]" /></div>
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-[200px]" />
+          <Skeleton className="h-4 w-[150px]" />
+        </div>
       </div>
     )
   }
@@ -6521,7 +7614,10 @@ function SkeletonPreview({
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
         <div className="w-full max-w-md space-y-2">
-          <Skeleton className="h-4 w-full" /><Skeleton className="h-4 w-5/6" /><Skeleton className="h-4 w-4/6" /><Skeleton className="h-4 w-3/6" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-5/6" />
+          <Skeleton className="h-4 w-4/6" />
+          <Skeleton className="h-4 w-3/6" />
         </div>
       </div>
     )
@@ -6531,8 +7627,10 @@ function SkeletonPreview({
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
         <div className="w-full max-w-md space-y-4">
-          <Skeleton className="h-4 w-20" /><Skeleton className="h-10 w-full" />
-          <Skeleton className="h-4 w-20" /><Skeleton className="h-10 w-full" />
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-10 w-full" />
           <Skeleton className="h-10 w-24" />
         </div>
       </div>
@@ -6604,7 +7702,12 @@ function SwitchPreview({
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
         <div className="flex items-start space-x-3">
           <Switch id="airplane-mode" />
-          <div className="grid gap-1.5"><label htmlFor="airplane-mode" className="text-sm font-medium">Airplane Mode</label><p className="text-xs text-muted-foreground">Disable all wireless connections.</p></div>
+          <div className="grid gap-1.5">
+            <label htmlFor="airplane-mode" className="text-sm font-medium">
+              Airplane Mode
+            </label>
+            <p className="text-xs text-muted-foreground">Disable all wireless connections.</p>
+          </div>
         </div>
       </div>
     )
@@ -6613,8 +7716,18 @@ function SwitchPreview({
   if (name === 'switch-disabled') {
     return (
       <div className="flex min-h-24 items-center justify-center gap-6 p-4" dir={dir}>
-        <div className="flex items-center space-x-2"><Switch id="s1" checked disabled /><label htmlFor="s1" className="text-sm text-muted-foreground">On</label></div>
-        <div className="flex items-center space-x-2"><Switch id="s2" disabled /><label htmlFor="s2" className="text-sm text-muted-foreground">Off</label></div>
+        <div className="flex items-center space-x-2">
+          <Switch id="s1" checked disabled />
+          <label htmlFor="s1" className="text-sm text-muted-foreground">
+            On
+          </label>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Switch id="s2" disabled />
+          <label htmlFor="s2" className="text-sm text-muted-foreground">
+            Off
+          </label>
+        </div>
       </div>
     )
   }
@@ -6636,12 +7749,7 @@ function SwitchPreview({
   )
 }
 
-function ScrollAreaPreview({
-  direction
-}: {
-  direction?: string
-  name: string
-}): React.JSX.Element {
+function ScrollAreaPreview({ direction }: { direction?: string; name: string }): React.JSX.Element {
   const dir = direction === 'rtl' ? 'rtl' : undefined
   const tags = Array.from({ length: 50 }).map((_, i, a) => `v1.2.0-beta.${a.length - i}`)
 
@@ -6662,12 +7770,7 @@ function ScrollAreaPreview({
   )
 }
 
-function SeparatorPreview({
-  direction
-}: {
-  direction?: string
-  name: string
-}): React.JSX.Element {
+function SeparatorPreview({ direction }: { direction?: string; name: string }): React.JSX.Element {
   const dir = direction === 'rtl' ? 'rtl' : undefined
 
   return (
@@ -6675,9 +7778,7 @@ function SeparatorPreview({
       <div className="w-full max-w-sm">
         <div className="space-y-1">
           <h4 className="text-sm font-medium leading-none">Radix Design System</h4>
-          <p className="text-sm text-muted-foreground">
-            An open-source UI component library.
-          </p>
+          <p className="text-sm text-muted-foreground">An open-source UI component library.</p>
         </div>
         <Separator className="my-4" />
         <div className="flex h-5 items-center space-x-4 text-sm">
@@ -6707,8 +7808,8 @@ function SonnerPreview({
         <Button
           variant="outline"
           onClick={() =>
-            toast.success("Success Toast", {
-              description: "The action completed successfully.",
+            toast.success('Success Toast', {
+              description: 'The action completed successfully.'
             })
           }
         >
@@ -6717,8 +7818,8 @@ function SonnerPreview({
         <Button
           variant="outline"
           onClick={() =>
-            toast.info("Info Toast", {
-              description: "Here is some information.",
+            toast.info('Info Toast', {
+              description: 'Here is some information.'
             })
           }
         >
@@ -6727,8 +7828,8 @@ function SonnerPreview({
         <Button
           variant="outline"
           onClick={() =>
-            toast.warning("Warning Toast", {
-              description: "Please check your inputs.",
+            toast.warning('Warning Toast', {
+              description: 'Please check your inputs.'
             })
           }
         >
@@ -6737,8 +7838,8 @@ function SonnerPreview({
         <Button
           variant="outline"
           onClick={() =>
-            toast.error("Error Toast", {
-              description: "Something went wrong.",
+            toast.error('Error Toast', {
+              description: 'Something went wrong.'
             })
           }
         >
@@ -6749,14 +7850,14 @@ function SonnerPreview({
   }
 
   if (name === 'sonner-position') {
-    const positions: ("top-left" | "top-right" | "bottom-left" | "bottom-right" | "top-center" | "bottom-center")[] = [
-      "top-left",
-      "top-right",
-      "bottom-left",
-      "bottom-right",
-      "top-center",
-      "bottom-center"
-    ]
+    const positions: (
+      | 'top-left'
+      | 'top-right'
+      | 'bottom-left'
+      | 'bottom-right'
+      | 'top-center'
+      | 'bottom-center'
+    )[] = ['top-left', 'top-right', 'bottom-left', 'bottom-right', 'top-center', 'bottom-center']
     return (
       <div className="grid grid-cols-2 gap-2 p-6 max-w-sm mx-auto" dir={dir}>
         {positions.map((pos) => (
@@ -6767,7 +7868,7 @@ function SonnerPreview({
             onClick={() =>
               toast(`Toast at ${pos}`, {
                 position: pos,
-                description: `This toast is configured at position: ${pos}`,
+                description: `This toast is configured at position: ${pos}`
               })
             }
           >
@@ -6784,12 +7885,12 @@ function SonnerPreview({
       <Button
         variant="outline"
         onClick={() =>
-          toast("Event has been created", {
-            description: "Sunday, December 03, 2023 at 9:00 AM",
+          toast('Event has been created', {
+            description: 'Sunday, December 03, 2023 at 9:00 AM',
             action: {
-              label: "Undo",
-              onClick: () => console.log("Undo Clicked"),
-            },
+              label: 'Undo',
+              onClick: () => console.log('Undo Clicked')
+            }
           })
         }
       >
@@ -6887,13 +7988,7 @@ function SpinnerPreview({
   )
 }
 
-function TabsPreview({
-  direction,
-  name
-}: {
-  direction?: string
-  name: string
-}): React.JSX.Element {
+function TabsPreview({ direction, name }: { direction?: string; name: string }): React.JSX.Element {
   const dir = direction === 'rtl' ? 'rtl' : undefined
 
   if (name === 'tabs-line') {
@@ -6928,7 +8023,9 @@ function TabsPreview({
         <Tabs defaultValue="account" className="w-[400px]">
           <TabsList>
             <TabsTrigger value="account">Account</TabsTrigger>
-            <TabsTrigger value="password" disabled>Password</TabsTrigger>
+            <TabsTrigger value="password" disabled>
+              Password
+            </TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
@@ -6940,8 +8037,14 @@ function TabsPreview({
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
         <Tabs defaultValue="account" className="w-[400px]">
           <TabsList>
-            <TabsTrigger value="account"><Settings className="mr-2 size-4" />Account</TabsTrigger>
-            <TabsTrigger value="password"><Search className="mr-2 size-4" />Search</TabsTrigger>
+            <TabsTrigger value="account">
+              <Settings className="mr-2 size-4" />
+              Account
+            </TabsTrigger>
+            <TabsTrigger value="password">
+              <Search className="mr-2 size-4" />
+              Search
+            </TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
@@ -6972,7 +8075,9 @@ function TogglePreview({
   if (name === 'toggle-outline') {
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
-        <Toggle variant="outline" aria-label="Toggle italic"><Type className="size-4" /></Toggle>
+        <Toggle variant="outline" aria-label="Toggle italic">
+          <Type className="size-4" />
+        </Toggle>
       </div>
     )
   }
@@ -6980,7 +8085,9 @@ function TogglePreview({
   if (name === 'toggle-with-text') {
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
-        <Toggle variant="outline" aria-label="Toggle bold"><Type className="size-4" /> Bold</Toggle>
+        <Toggle variant="outline" aria-label="Toggle bold">
+          <Type className="size-4" /> Bold
+        </Toggle>
       </div>
     )
   }
@@ -6988,9 +8095,15 @@ function TogglePreview({
   if (name === 'toggle-size') {
     return (
       <div className="flex min-h-24 items-center justify-center gap-2 p-4" dir={dir}>
-        <Toggle size="sm" aria-label="Toggle"><Type className="size-3" /></Toggle>
-        <Toggle aria-label="Toggle"><Type className="size-4" /></Toggle>
-        <Toggle size="lg" aria-label="Toggle"><Type className="size-5" /></Toggle>
+        <Toggle size="sm" aria-label="Toggle">
+          <Type className="size-3" />
+        </Toggle>
+        <Toggle aria-label="Toggle">
+          <Type className="size-4" />
+        </Toggle>
+        <Toggle size="lg" aria-label="Toggle">
+          <Type className="size-5" />
+        </Toggle>
       </div>
     )
   }
@@ -6998,14 +8111,18 @@ function TogglePreview({
   if (name === 'toggle-disabled') {
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
-        <Toggle disabled aria-label="Toggle"><Type className="size-4" /></Toggle>
+        <Toggle disabled aria-label="Toggle">
+          <Type className="size-4" />
+        </Toggle>
       </div>
     )
   }
 
   return (
     <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
-      <Toggle aria-label="Toggle"><Type className="size-4" /></Toggle>
+      <Toggle aria-label="Toggle">
+        <Type className="size-4" />
+      </Toggle>
     </div>
   )
 }
@@ -7023,9 +8140,15 @@ function ToggleGroupPreview({
     return (
       <div className="flex min-h-24 items-center justify-center p-4" dir={dir}>
         <ToggleGroup type="single" variant="outline" defaultValue="left">
-          <ToggleGroupItem value="left" aria-label="Left">Left</ToggleGroupItem>
-          <ToggleGroupItem value="center" aria-label="Center">Center</ToggleGroupItem>
-          <ToggleGroupItem value="right" aria-label="Right">Right</ToggleGroupItem>
+          <ToggleGroupItem value="left" aria-label="Left">
+            Left
+          </ToggleGroupItem>
+          <ToggleGroupItem value="center" aria-label="Center">
+            Center
+          </ToggleGroupItem>
+          <ToggleGroupItem value="right" aria-label="Right">
+            Right
+          </ToggleGroupItem>
         </ToggleGroup>
       </div>
     )
@@ -7034,9 +8157,18 @@ function ToggleGroupPreview({
   if (name === 'toggle-group-size') {
     return (
       <div className="flex min-h-24 items-center justify-center gap-3 p-4" dir={dir}>
-        <ToggleGroup type="single" size="sm" defaultValue="a"><ToggleGroupItem value="a">A</ToggleGroupItem><ToggleGroupItem value="b">B</ToggleGroupItem></ToggleGroup>
-        <ToggleGroup type="single" defaultValue="a"><ToggleGroupItem value="a">A</ToggleGroupItem><ToggleGroupItem value="b">B</ToggleGroupItem></ToggleGroup>
-        <ToggleGroup type="single" size="lg" defaultValue="a"><ToggleGroupItem value="a">A</ToggleGroupItem><ToggleGroupItem value="b">B</ToggleGroupItem></ToggleGroup>
+        <ToggleGroup type="single" size="sm" defaultValue="a">
+          <ToggleGroupItem value="a">A</ToggleGroupItem>
+          <ToggleGroupItem value="b">B</ToggleGroupItem>
+        </ToggleGroup>
+        <ToggleGroup type="single" defaultValue="a">
+          <ToggleGroupItem value="a">A</ToggleGroupItem>
+          <ToggleGroupItem value="b">B</ToggleGroupItem>
+        </ToggleGroup>
+        <ToggleGroup type="single" size="lg" defaultValue="a">
+          <ToggleGroupItem value="a">A</ToggleGroupItem>
+          <ToggleGroupItem value="b">B</ToggleGroupItem>
+        </ToggleGroup>
       </div>
     )
   }
@@ -7087,16 +8219,14 @@ function ToggleGroupPreview({
   )
 }
 
-function TextareaPreview({
-  direction
-}: {
-  direction?: string
-  name?: string
-}): React.JSX.Element {
+function TextareaPreview({ direction }: { direction?: string; name?: string }): React.JSX.Element {
   const dir = direction === 'rtl' ? 'rtl' : undefined
 
   return (
-    <div className="flex min-h-24 items-center justify-center p-6 w-full max-w-sm mx-auto" dir={dir}>
+    <div
+      className="flex min-h-24 items-center justify-center p-6 w-full max-w-sm mx-auto"
+      dir={dir}
+    >
       <div className="grid w-full gap-1.5">
         <Label htmlFor="message">Your Message</Label>
         <Textarea placeholder="Type your message here." id="message" />
@@ -7960,14 +9090,12 @@ function AccordionPreview({
     {
       value: 'item-2',
       trigger: 'Is it styled?',
-      content:
-        'Yes. It comes with default styles that match the other components aesthetic.'
+      content: 'Yes. It comes with default styles that match the other components aesthetic.'
     },
     {
       value: 'item-3',
       trigger: 'Is it animated?',
-      content:
-        "Yes. It's animated by default, but you can disable it if you prefer."
+      content: "Yes. It's animated by default, but you can disable it if you prefer."
     }
   ]
 
@@ -7976,25 +9104,17 @@ function AccordionPreview({
       <div dir="rtl">
         <Accordion type="single" collapsible className="w-full">
           <AccordionItem value="password">
-            <AccordionTrigger>
-              كيف يمكنني إعادة تعيين كلمة المرور؟
-            </AccordionTrigger>
+            <AccordionTrigger>كيف يمكنني إعادة تعيين كلمة المرور؟</AccordionTrigger>
             <AccordionContent>
               يمكنك إعادة تعيين كلمة المرور باستخدام خيار "نسيت كلمة المرور" في صفحة تسجيل الدخول.
             </AccordionContent>
           </AccordionItem>
           <AccordionItem value="subscription">
-            <AccordionTrigger>
-              هل يمكنني تغيير خطة الاشتراك الخاصة بي؟
-            </AccordionTrigger>
-            <AccordionContent>
-              نعم، يمكنك تغيير خطتك في أي وقت من إعدادات الحساب.
-            </AccordionContent>
+            <AccordionTrigger>هل يمكنني تغيير خطة الاشتراك الخاصة بي؟</AccordionTrigger>
+            <AccordionContent>نعم، يمكنك تغيير خطتك في أي وقت من إعدادات الحساب.</AccordionContent>
           </AccordionItem>
           <AccordionItem value="payment">
-            <AccordionTrigger>
-              ما هي طرق الدفع التي تقبلونها؟
-            </AccordionTrigger>
+            <AccordionTrigger>ما هي طرق الدفع التي تقبلونها؟</AccordionTrigger>
             <AccordionContent>
               نقبل بطاقات الائتمان الرئيسية و PayPal والتحويل المصرفي.
             </AccordionContent>
@@ -8011,22 +9131,21 @@ function AccordionPreview({
           <AccordionItem value="notifications">
             <AccordionTrigger>Notification Settings</AccordionTrigger>
             <AccordionContent>
-              Manage how you receive notifications. You can enable email alerts
-              for updates or push notifications.
+              Manage how you receive notifications. You can enable email alerts for updates or push
+              notifications.
             </AccordionContent>
           </AccordionItem>
           <AccordionItem value="privacy">
             <AccordionTrigger>Privacy & Security</AccordionTrigger>
             <AccordionContent>
-              Control your privacy settings and manage how your data is shared
-              and used across the platform.
+              Control your privacy settings and manage how your data is shared and used across the
+              platform.
             </AccordionContent>
           </AccordionItem>
           <AccordionItem value="billing">
             <AccordionTrigger>Billing & Subscription</AccordionTrigger>
             <AccordionContent>
-              View and manage your billing information, payment methods, and
-              subscription details.
+              View and manage your billing information, payment methods, and subscription details.
             </AccordionContent>
           </AccordionItem>
         </Accordion>
@@ -8041,26 +9160,22 @@ function AccordionPreview({
           <AccordionItem value="history">
             <AccordionTrigger>Can I access my account history?</AccordionTrigger>
             <AccordionContent>
-              Yes, you can view your complete account history including past
-              transactions and activity logs from the dashboard.
+              Yes, you can view your complete account history including past transactions and
+              activity logs from the dashboard.
             </AccordionContent>
           </AccordionItem>
           <AccordionItem value="premium" disabled>
-            <AccordionTrigger>
-              Premium feature information
-            </AccordionTrigger>
+            <AccordionTrigger>Premium feature information</AccordionTrigger>
             <AccordionContent>
-              This feature requires a premium subscription. Upgrade your plan to
-              access advanced features and tools.
+              This feature requires a premium subscription. Upgrade your plan to access advanced
+              features and tools.
             </AccordionContent>
           </AccordionItem>
           <AccordionItem value="email">
-            <AccordionTrigger>
-              How do I update my email address?
-            </AccordionTrigger>
+            <AccordionTrigger>How do I update my email address?</AccordionTrigger>
             <AccordionContent>
-              Go to your profile settings and click on the email field to change
-              it. A verification email will be sent to confirm.
+              Go to your profile settings and click on the email field to change it. A verification
+              email will be sent to confirm.
             </AccordionContent>
           </AccordionItem>
         </Accordion>
@@ -8071,36 +9186,26 @@ function AccordionPreview({
   if (name === 'accordion-borders') {
     return (
       <div dir={dir}>
-        <Accordion
-          type="single"
-          collapsible
-          className="w-full rounded-md border"
-        >
+        <Accordion type="single" collapsible className="w-full rounded-md border">
           <AccordionItem value="billing">
-            <AccordionTrigger className="px-4">
-              How does billing work?
-            </AccordionTrigger>
+            <AccordionTrigger className="px-4">How does billing work?</AccordionTrigger>
             <AccordionContent className="px-4">
-              We offer monthly and annual subscription plans. Billing is charged
-              at the beginning of each cycle.
+              We offer monthly and annual subscription plans. Billing is charged at the beginning of
+              each cycle.
             </AccordionContent>
           </AccordionItem>
           <AccordionItem value="security">
-            <AccordionTrigger className="px-4">
-              Is my data secure?
-            </AccordionTrigger>
+            <AccordionTrigger className="px-4">Is my data secure?</AccordionTrigger>
             <AccordionContent className="px-4">
-              Your data is encrypted both in transit and at rest. We follow
-              industry best practices to keep your information safe.
+              Your data is encrypted both in transit and at rest. We follow industry best practices
+              to keep your information safe.
             </AccordionContent>
           </AccordionItem>
           <AccordionItem value="integrations">
-            <AccordionTrigger className="px-4">
-              What integrations do you support?
-            </AccordionTrigger>
+            <AccordionTrigger className="px-4">What integrations do you support?</AccordionTrigger>
             <AccordionContent className="px-4">
-              We support integrations with popular tools like Slack, GitHub,
-              Jira, and many more through our API.
+              We support integrations with popular tools like Slack, GitHub, Jira, and many more
+              through our API.
             </AccordionContent>
           </AccordionItem>
         </Accordion>
@@ -8115,37 +9220,30 @@ function AccordionPreview({
           <CardHeader>
             <CardTitle>Subscription & Billing</CardTitle>
             <CardDescription>
-              Common questions about your account, plans, payments and
-              cancellations.
+              Common questions about your account, plans, payments and cancellations.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Accordion type="single" collapsible className="w-full">
               <AccordionItem value="plans">
-                <AccordionTrigger>
-                  What subscription plans do you offer?
-                </AccordionTrigger>
+                <AccordionTrigger>What subscription plans do you offer?</AccordionTrigger>
                 <AccordionContent>
-                  We offer three tiers: Starter ($9/mo), Professional ($29/mo),
-                  and Enterprise ($99/mo). Each tier includes different features
-                  and support levels.
+                  We offer three tiers: Starter ($9/mo), Professional ($29/mo), and Enterprise
+                  ($99/mo). Each tier includes different features and support levels.
                 </AccordionContent>
               </AccordionItem>
               <AccordionItem value="billing-card">
                 <AccordionTrigger>How does billing work?</AccordionTrigger>
                 <AccordionContent>
-                  Billing is charged at the beginning of each billing cycle. You
-                  can upgrade or downgrade your plan at any time.
+                  Billing is charged at the beginning of each billing cycle. You can upgrade or
+                  downgrade your plan at any time.
                 </AccordionContent>
               </AccordionItem>
               <AccordionItem value="cancel">
-                <AccordionTrigger>
-                  How do I cancel my subscription?
-                </AccordionTrigger>
+                <AccordionTrigger>How do I cancel my subscription?</AccordionTrigger>
                 <AccordionContent>
-                  You can cancel your subscription anytime from your account
-                  settings. Your access will continue until the end of the
-                  current billing period.
+                  You can cancel your subscription anytime from your account settings. Your access
+                  will continue until the end of the current billing period.
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
@@ -8227,9 +9325,7 @@ function SidebarPreview({
                         {item.icon && <item.icon />}
                         <span>{item.label}</span>
                       </SidebarMenuButton>
-                      {item.badge && (
-                        <SidebarMenuBadge>{item.badge}</SidebarMenuBadge>
-                      )}
+                      {item.badge && <SidebarMenuBadge>{item.badge}</SidebarMenuBadge>}
                     </SidebarMenuItem>
                   ))}
                 </SidebarMenu>
@@ -8345,7 +9441,8 @@ function SidebarPreview({
           <SidebarInset className="p-4">
             <h4 className="text-sm font-semibold">Main Content Area</h4>
             <p className="text-xs text-muted-foreground mt-1">
-              This content is wrapped in SidebarInset and automatically adjusts to the sidebar width.
+              This content is wrapped in SidebarInset and automatically adjusts to the sidebar
+              width.
             </p>
           </SidebarInset>
         </SidebarProvider>
@@ -8629,9 +9726,7 @@ function SidebarPreview({
                       {item.icon && <item.icon />}
                       <span>{item.label}</span>
                     </SidebarMenuButton>
-                    {item.badge && (
-                      <SidebarMenuBadge>{item.badge}</SidebarMenuBadge>
-                    )}
+                    {item.badge && <SidebarMenuBadge>{item.badge}</SidebarMenuBadge>}
                   </SidebarMenuItem>
                 ))}
               </SidebarMenu>
@@ -8729,9 +9824,7 @@ function AppSidebar({
                           <item.icon className="size-4 shrink-0" />
                           <span>{text.nav[item.id]}</span>
                         </SidebarMenuButton>
-                        {item.badge ? (
-                          <SidebarMenuBadge>{item.badge}</SidebarMenuBadge>
-                        ) : null}
+                        {item.badge ? <SidebarMenuBadge>{item.badge}</SidebarMenuBadge> : null}
                       </SidebarMenuItem>
                     )
                   })}
@@ -8762,7 +9855,9 @@ function AppSidebar({
                     <TooltipTrigger asChild>
                       <Button
                         aria-label={
-                          themeMode === 'dark' ? text.header.switchToLight : text.header.switchToDark
+                          themeMode === 'dark'
+                            ? text.header.switchToLight
+                            : text.header.switchToDark
                         }
                         onClick={() =>
                           setThemeMode((current) => (current === 'dark' ? 'light' : 'dark'))
@@ -8785,7 +9880,9 @@ function AppSidebar({
                       <Button
                         aria-label={text.header.switchLanguage}
                         className="text-xs shadow-none"
-                        onClick={() => setLanguageMode((current) => (current === 'zh' ? 'en' : 'zh'))}
+                        onClick={() =>
+                          setLanguageMode((current) => (current === 'zh' ? 'en' : 'zh'))
+                        }
                         size="icon-sm"
                         variant="outline"
                       >

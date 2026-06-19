@@ -9,6 +9,26 @@ const api = {
     scan: (root: string) => ipcRenderer.invoke('library:scan', root),
     listVolumes: (seriesPath: string) => ipcRenderer.invoke('library:listVolumes', seriesPath),
     listPages: (volumePath: string) => ipcRenderer.invoke('library:listPages', volumePath)
+  },
+  convert: {
+    volume: (req: unknown) => ipcRenderer.invoke('convert:volume', req),
+    onProgress: (cb: (payload: unknown) => void): (() => void) => {
+      const listener = (_e: unknown, payload: unknown): void => cb(payload)
+      ipcRenderer.on('convert:progress', listener)
+      return () => ipcRenderer.removeListener('convert:progress', listener)
+    }
+  },
+  artifacts: {
+    list: () => ipcRenderer.invoke('artifacts:list'),
+    reveal: (id: string) => ipcRenderer.invoke('artifacts:reveal', id),
+    export: (id: string): Promise<boolean> => ipcRenderer.invoke('artifacts:export', id),
+    remove: (id: string) => ipcRenderer.invoke('artifacts:remove', id)
+  },
+  deliver: {
+    getConfig: () => ipcRenderer.invoke('deliver:getConfig'),
+    saveConfig: (cfg: unknown) => ipcRenderer.invoke('deliver:saveConfig', cfg),
+    testSMTP: (cfg: unknown) => ipcRenderer.invoke('deliver:testSMTP', cfg),
+    send: (artifactId: string) => ipcRenderer.invoke('deliver:send', artifactId)
   }
 }
 
