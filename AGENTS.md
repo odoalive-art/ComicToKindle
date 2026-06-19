@@ -2,7 +2,7 @@
 
 ## 项目状态
 
-ComicToKindle 是一个桌面应用项目，用于本地漫画库管理、Kindle 转换流程和投递工具。已实现：应用壳、真实本地漫画库浏览（部 / 卷册两级）和卷册阅读器。尚未实现：元数据存储/索引、转换流水线、图像处理、Kindle 投递、任务队列。漫画库数据层（comic:// 协议、IPC、数据模型、存储键）详见 `docs/architecture.md`。
+ComicToKindle 是一个桌面应用项目，用于本地漫画库管理、Kindle 转换流程和投递工具。核心闭环已打通：应用壳、真实本地漫画库浏览（部 / 卷册两级）、卷册阅读器、卷册转 Kindle 固定版式 EPUB（sharp + archiver）、产物归档、SMTP 投递到 Kindle（nodemailer + safeStorage 加密凭据）。尚未实现：元数据存储/索引、压缩包（CBZ/CBR/PDF）来源、图像放大、队列持久化。数据层与转换/投递层（comic:// 协议、IPC、数据模型、存储键、产物清单、凭据安全）详见 `docs/architecture.md`。
 
 当前仓库路径：
 
@@ -78,7 +78,7 @@ src/renderer/src/components/ui/
 归档
 ```
 
-当前只有 `漫画库`、`设计组件` 和 `基础规范` 有实际本地 UI。`漫画库` 已是真实功能：扫描本地目录、按「部 / 卷册」两级浏览，点卷册进入阅读器（单页/双页、左右方向、续读）。漫画库的文件访问全部走 main 进程 + preload（`window.api.library.*`），数据层细节见 `docs/architecture.md` 的「漫画库数据层」。`导入收件箱 / 转换队列 / 投递记录 / 归档` 仍是导航占位。
+`漫画库` 是真实功能：扫描本地目录、按「部 / 卷册」两级浏览，点卷册进入阅读器（单页/双页、左右方向、续读）；卷册可单本或多选/框选批量转 Kindle EPUB。文件访问全部走 main 进程 + preload（`window.api.library/convert/artifacts/deliver.*`），数据层细节见 `docs/architecture.md`。`归档`（产物管理 + 投递）、`设备与邮箱`（SMTP 配置）、`转换设置` 均已是真实 UI，挂在侧边栏「Kindle 推送」组（注意：侧边栏渲染用 `sidebarGroups` 而非 `primaryNav`）。`导入收件箱` 仍是导航占位。`设计组件 / 基础规范` 是开发期工具页。
 
 顶栏有应用级深浅模式切换按钮，会在 `document.documentElement` 上切换 `.dark` class，并把选择保存到 `localStorage` 的 `comic-to-kindle-theme`。
 
@@ -106,7 +106,7 @@ src/renderer/src/data/design-tokens.ts
 
 ## 当前产品边界
 
-已实现：本地漫画目录扫描与「部 / 卷册」浏览、卷册阅读器、库根目录持久化（`userData/settings.json`）。
+已实现：本地漫画目录扫描与「部 / 卷册」浏览、卷册阅读器、库根目录持久化（`userData/settings.json`）、卷册转 Kindle 固定版式 EPUB（`src/main/convert.ts`）、产物清单与归档（`src/main/artifacts.ts`，`userData/artifacts.json` + `userData/converted/`）、SMTP 投递（`src/main/deliver.ts`，凭据 safeStorage 加密）、App 层转换队列（`useConvertActivity`，renderer 内存态）。
 
 应用尚未实现：
 
@@ -114,8 +114,8 @@ src/renderer/src/data/design-tokens.ts
 - CBZ、CBR、EPUB 或 PDF 等压缩/单文件卷册的读取与转换逻辑（仅支持图片文件夹）
 - 图像增强或 AI 放大
 - Send to Kindle 网页嵌入
-- Kindle 邮箱投递
-- 任务队列
+- 转换队列持久化（重启会丢未完成排队）
+- 转换后自动投递
 
 除非代码已经实现，否则不要把这些写成现有功能。
 

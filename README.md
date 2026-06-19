@@ -2,7 +2,7 @@
 
 ComicToKindle 是一个 Electron 桌面应用，用于本地漫画库管理、面向 Kindle 的转换流程和投递工具。
 
-当前已实现：可运行的应用壳、真实的本地漫画库浏览（按「部 / 卷册」两级展示）和卷册阅读器（单页/双页、左右阅读方向、记住续读进度），以及开发期用于搭建界面的设计辅助工作区。图像处理、EPUB 生成和 Kindle 投递等转换/投递工作流尚未实现。
+当前已实现完整闭环：可运行的应用壳、真实的本地漫画库浏览（按「部 / 卷册」两级展示）、卷册阅读器（单页/双页、左右阅读方向、记住续读进度）、卷册转 Kindle 固定版式 EPUB（sharp + archiver）、产物归档、以及 SMTP 投递到 Kindle 邮箱（nodemailer + safeStorage 加密凭据）。库视图支持多选/框选批量转换。另含开发期用于搭建界面的设计辅助工作区。尚未实现：漫画元数据库/索引、压缩包（CBZ/CBR/PDF）来源、图像 AI 放大、队列持久化。
 
 ## 技术栈
 
@@ -111,9 +111,11 @@ src/renderer/src/components/ui/
 - Tailwind CSS 和 shadcn/ui 已配置。
 - 真实本地漫画库浏览：通过 main 进程扫描目录、`comic://` 协议加载封面，按「部 / 卷册」两级展示；库根目录持久化。
 - 卷册阅读器：单页/双页、左右阅读方向、记住每卷续读进度。
+- 转换闭环：卷册 → Kindle 固定版式 EPUB（`src/main/convert.ts`，sharp + archiver），产物由应用托管落在 `userData/converted/`，「归档」视图管理；库卡片显示「已转换」角标。
+- 库视图多选：选择按钮 / 点选 / 空白处框选 / Cmd·Ctrl+A 全选 → 批量转换。
+- Kindle 投递：SMTP（`src/main/deliver.ts`，nodemailer），密码经 `safeStorage` 加密存储、不回传 renderer；「设备与邮箱」配置页可保存 + 测试连接，归档每条可手动投递/重发。
 - 顶栏提供应用级深浅模式切换和中英切换，切换会影响整个 renderer。
 - 开发期工作区包含 shadcn 组件选型页和基础规范页；基础规范页读取 `src/renderer/src/data/design-tokens.ts`。
-- shadcn 本地组件文档镜像目前包含完整组件索引，并已补全 A 到 I 范围内组件文档；这些镜像文档支持中文阅读和英文原文切换，复制示例名时仍复制英文源值。
-- 尚未实现：漫画元数据存储/索引、转换器、图像放大、EPUB 生成、Kindle 投递、任务队列。
+- 尚未实现：漫画元数据存储/索引、压缩包（CBZ/CBR/PDF）来源、图像 AI 放大、队列持久化。
 
 详细架构（漫画库数据层、IPC、数据模型、存储键）见 `docs/architecture.md`。
