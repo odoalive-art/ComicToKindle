@@ -1936,6 +1936,14 @@ function LibraryView({
   // 多选模式：先勾选若干卷再批量转换（替代「转换整部」入口）
   const [selectMode, setSelectMode] = useState(false)
   const [selectedVols, setSelectedVols] = useState<Set<string>>(new Set())
+  // 框选（橡皮筋）：在空白处按下拖动进入多选
+  const gridWrapRef = React.useRef<HTMLDivElement>(null)
+  const [marquee, setMarquee] = useState<{
+    left: number
+    top: number
+    width: number
+    height: number
+  } | null>(null)
   // 转换活动（队列 + 产物 + 进度）由 App 层 hook 提供，跨视图保活
   const { convertedPaths, jobByPath, enqueue } = activity
 
@@ -1983,6 +1991,60 @@ function LibraryView({
     )
     toast.success(text.activity.enqueued(picked.length))
     exitSelect()
+  }
+
+  // 空白处按下并拖动 → 框选进入多选；移动不足阈值视为普通点击
+  const startMarquee = (e: React.PointerEvent<HTMLDivElement>): void => {
+    if (e.button !== 0 || selected === null || volumes.length === 0) return
+    const el = e.target as HTMLElement
+    if (el.closest('[data-vol-card]')) return // 命中卡片则不框选
+    const wrap = gridWrapRef.current
+    if (!wrap) return
+    const wrapRect = wrap.getBoundingClientRect()
+    const start = { x: e.clientX - wrapRect.left, y: e.clientY - wrapRect.top }
+    const base = new Set(selectMode ? selectedVols : [])
+    let moved = false
+
+    const onMove = (ev: PointerEvent): void => {
+      const x = ev.clientX - wrapRect.left
+      const y = ev.clientY - wrapRect.top
+      if (!moved && Math.hypot(x - start.x, y - start.y) < 6) return
+      moved = true
+      ev.preventDefault()
+      const left = Math.min(start.x, x)
+      const top = Math.min(start.y, y)
+      const width = Math.abs(x - start.x)
+      const height = Math.abs(y - start.y)
+      setMarquee({ left, top, width, height })
+      // 命中测试（视口坐标）
+      const sel = {
+        left: wrapRect.left + left,
+        top: wrapRect.top + top,
+        right: wrapRect.left + left + width,
+        bottom: wrapRect.top + top + height
+      }
+      const hit = new Set(base)
+      wrap.querySelectorAll<HTMLElement>('[data-vol-card]').forEach((card) => {
+        const r = card.getBoundingClientRect()
+        const intersect = !(
+          r.right < sel.left ||
+          r.left > sel.right ||
+          r.bottom < sel.top ||
+          r.top > sel.bottom
+        )
+        const path = card.dataset.volPath
+        if (path && intersect) hit.add(path)
+      })
+      if (hit.size > 0) setSelectMode(true)
+      setSelectedVols(hit)
+    }
+    const onUp = (): void => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      setMarquee(null)
+    }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
   }
 
   const loadSeries = React.useCallback(async (target: string) => {
@@ -2058,6 +2120,22 @@ function LibraryView({
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [selectMode])
+
+  // 卷册视图下 Cmd/Ctrl+A：只全选内容区的漫画卷，而非浏览器默认的整页全选
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== 'a') return
+      const t = e.target as HTMLElement | null
+      // 输入类控件内保留原生全选
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return
+      if (selected === null || volumes.length === 0) return
+      e.preventDefault()
+      setSelectMode(true)
+      setSelectedVols(new Set(volumes.map((v) => v.path)))
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [selected, volumes])
 
   // 阅读某一卷：接管整个内容区
   if (readingVolume) {
@@ -2211,7 +2289,22 @@ function LibraryView({
         </div>
       ) : (
         <ScrollArea className="min-h-0 flex-1">
-          <div className="p-4 lg:p-6">
+          <div
+            ref={gridWrapRef}
+            onPointerDown={startMarquee}
+            className={`relative p-4 lg:p-6 ${marquee ? 'select-none' : ''}`}
+          >
+            {marquee ? (
+              <div
+                className="pointer-events-none absolute z-10 rounded-sm border border-primary bg-primary/15"
+                style={{
+                  left: marquee.left,
+                  top: marquee.top,
+                  width: marquee.width,
+                  height: marquee.height
+                }}
+              />
+            ) : null}
             {loading ? (
               <div className={LIBRARY_GRID}>
                 {Array.from({ length: 12 }).map((_, i) => (
@@ -2234,7 +2327,12 @@ function LibraryView({
                     const job = jobByPath.get(vol.path)
                     const picked = selectedVols.has(vol.path)
                     return (
-                      <div key={vol.id} className="group flex flex-col gap-2 text-left">
+                      <div
+                        key={vol.id}
+                        data-vol-card
+                        data-vol-path={vol.path}
+                        className="group flex flex-col gap-2 text-left"
+                      >
                         <div className="relative">
                           <button
                             type="button"
