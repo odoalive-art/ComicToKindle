@@ -54,6 +54,7 @@ export interface Artifact {
   id: string
   sourceVolumePath: string
   seriesName: string
+  seriesTitle: string
   volumeTitle: string
   author: string | null
   outputs: ConvertOutput[]
@@ -66,6 +67,7 @@ export interface Artifact {
 export interface ConvertRequest {
   sourceVolumePath: string
   seriesName: string
+  seriesTitle: string
   volumeTitle: string
   author?: string | null
   options?: ConvertOptions
@@ -79,6 +81,7 @@ export interface ConvertProgress {
 
 export interface ConvertAPI {
   volume: (req: ConvertRequest) => Promise<Artifact>
+  cancel: (sourceVolumePath: string) => Promise<void>
   onProgress: (cb: (payload: ConvertProgress) => void) => () => void
 }
 

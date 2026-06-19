@@ -114,6 +114,7 @@ LibraryVolume  id, path, name, title, kind('folder'|'file'), pageCount, coverUrl
 - `archiver` 8 的 `ZipArchive` 打包，`mimetype` 必须第一个且 `store`（不压缩）。
 - 设备档位（`PROFILE_RES`）：pw3/pw5/pw6/**ko3**/oasis/scribe/original；**默认 pw6/ko3 = 1264×1680**。
 - 入参是「按阅读顺序的图片绝对路径列表」，由 `library.collectVolumeImagePaths` 提供，因此支持嵌套单话子文件夹。
+- 可取消：`convert:cancel(sourceVolumePath)` 把路径加入 `cancelledPaths`，引擎的 `checkCancelled` 在下一张图/下一卷边界处抛 `Cancelled` 中止（非瞬时）。
 - 转换选项（设备档位/方向/灰度/双页/质量/分卷上限）由 renderer「转换设置」页存 `localStorage`，转换时作为 `options` 传入；main 用 `DEFAULTS` 兜底合并。引擎参数与 renderer 默认值需保持一致。
 - 原型里的 Calibre/AZW3 已移除（无线投递发 EPUB，亚马逊云端自转）。
 
@@ -126,6 +127,7 @@ LibraryVolume  id, path, name, title, kind('folder'|'file'), pageCount, coverUrl
 
 ```txt
 convert:volume     转换一卷（取图→转换→写清单）→ Artifact；过程通过 convert:progress 事件上报
+convert:cancel     请求取消某卷的进行中转换（sourceVolumePath）
 convert:progress   main→renderer 进度事件 { sourceVolumePath, percent, message }
 artifacts:list     读取清单 → Artifact[]
 artifacts:reveal   在 Finder 中显示产物
@@ -137,9 +139,10 @@ artifacts:remove   删除产物文件 + 清单条目
 
 ```txt
 ConvertOutput  path, fileName, sizeBytes, volTitle
-Artifact       id, sourceVolumePath, seriesName, volumeTitle, author,
+Artifact       id, sourceVolumePath, seriesName, seriesTitle, volumeTitle, author,
                outputs(ConvertOutput[]), format('epub'), pageCount, createdAt,
                status('ready'|'delivered'|'failed')   // 投递成功置 'delivered'，失败置 'failed'
+               // seriesTitle 为解析后的部标题；旧产物无此字段时 UI 回退 seriesName
 ```
 
 ## 投递层
@@ -175,7 +178,8 @@ deliver:send        发送某 artifact 的全部 EPUB → 置 status；未配置
 转换活动（队列）
   转换状态由 App 层 hook `useConvertActivity` 管理（队列顺序处理、进度订阅、产物刷新），
   上提到 App 层因此切换视图时队列不中断。库顶栏右上角「转换活动」浮窗（ConvertActivityPopover）
-  合并展示进行中（排队/进度/失败可重试）+ 最近完成（投递/在 Finder 显示/删除），底部「查看全部归档」跳归档页。
+  合并展示进行中（排队/进度/失败可重试，每条可取消、顶部可「清空」）+ 最近完成（投递/在 Finder 显示/删除），底部「查看全部归档」跳归档页。
+  产物显示用「部标题 · 卷」（artifactLabel）。取消的任务静默移除（不弹失败 toast）。
 
 归档（ArchiveView）
   列出 artifacts.json 中的转换产物（卷名/部/文件数/页数/大小/时间/状态）。

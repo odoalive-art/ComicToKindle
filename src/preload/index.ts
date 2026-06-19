@@ -12,6 +12,7 @@ const api = {
   },
   convert: {
     volume: (req: unknown) => ipcRenderer.invoke('convert:volume', req),
+    cancel: (sourceVolumePath: string) => ipcRenderer.invoke('convert:cancel', sourceVolumePath),
     onProgress: (cb: (payload: unknown) => void): (() => void) => {
       const listener = (_e: unknown, payload: unknown): void => cb(payload)
       ipcRenderer.on('convert:progress', listener)

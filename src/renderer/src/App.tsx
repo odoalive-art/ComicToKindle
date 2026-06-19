@@ -430,6 +430,8 @@ const uiText = {
       empty: '暂无转换活动。在漫画库里点卷册的「转换为 Kindle」即可开始。',
       retry: '重试',
       dismiss: '移除',
+      cancel: '取消',
+      clearAll: '清空',
       viewAll: '查看全部归档',
       convertSeries: '转换整部',
       enqueued: (n: number) => `已加入 ${n} 卷到转换队列`,
@@ -650,6 +652,8 @@ const uiText = {
       empty: 'No conversion activity yet. Hit “Convert for Kindle” on a volume to start.',
       retry: 'Retry',
       dismiss: 'Dismiss',
+      cancel: 'Cancel',
+      clearAll: 'Clear all',
       viewAll: 'View full archive',
       convertSeries: 'Convert series',
       enqueued: (n: number) => `Queued ${n} volume${n === 1 ? '' : 's'} for conversion`,
@@ -1269,6 +1273,8 @@ interface ConvertActivity {
   enqueue: (input: ConvertEnqueueInput) => void
   retry: (id: string) => void
   dismiss: (id: string) => void
+  cancel: (job: ConvertJob) => void
+  clearAll: () => void
   refreshArtifacts: () => Promise<void>
 }
 
@@ -1277,6 +1283,8 @@ function useConvertActivity(locale: LanguageMode): ConvertActivity {
   const [jobs, setJobs] = useState<ConvertJob[]>([])
   const [artifacts, setArtifacts] = useState<Artifact[]>([])
   const runningRef = useRef(false)
+  // 已取消任务的 id：用于在转换 promise 落定时静默处理（不标失败、不弹 toast）
+  const cancelledIdsRef = useRef<Set<string>>(new Set())
 
   const refreshArtifacts = React.useCallback(async () => {
     try {
@@ -1316,6 +1324,7 @@ function useConvertActivity(locale: LanguageMode): ConvertActivity {
       .volume({
         sourceVolumePath: next.sourceVolumePath,
         seriesName: next.seriesPathName,
+        seriesTitle: next.seriesTitle,
         volumeTitle: next.volumeTitle,
         author: next.author,
         options: loadConvertOptions()
@@ -1323,9 +1332,12 @@ function useConvertActivity(locale: LanguageMode): ConvertActivity {
       .then(async () => {
         await refreshArtifacts()
         setJobs((prev) => prev.filter((j) => j.id !== next.id))
-        toast.success(text.convert.done(next.volumeTitle))
+        if (!cancelledIdsRef.current.delete(next.id))
+          toast.success(text.convert.done(next.volumeTitle))
       })
       .catch((err) => {
+        // 用户取消的任务已从列表移除，静默处理
+        if (cancelledIdsRef.current.delete(next.id)) return
         setJobs((prev) =>
           prev.map((j) => (j.id === next.id ? { ...j, status: 'failed', error: `${err}` } : j))
         )
@@ -1361,6 +1373,24 @@ function useConvertActivity(locale: LanguageMode): ConvertActivity {
     setJobs((prev) => prev.filter((j) => j.id !== id))
   }, [])
 
+  // 取消某个任务：进行中的请求 main 中止，并从列表移除（静默）
+  const cancel = React.useCallback((job: ConvertJob) => {
+    cancelledIdsRef.current.add(job.id)
+    if (job.status === 'converting') void window.api.convert.cancel(job.sourceVolumePath)
+    setJobs((prev) => prev.filter((j) => j.id !== job.id))
+  }, [])
+
+  // 清空：取消进行中的那卷 + 清掉全部排队/失败
+  const clearAll = React.useCallback(() => {
+    setJobs((prev) => {
+      prev.forEach((j) => {
+        cancelledIdsRef.current.add(j.id)
+        if (j.status === 'converting') void window.api.convert.cancel(j.sourceVolumePath)
+      })
+      return []
+    })
+  }, [])
+
   const convertedPaths = useMemo(
     () => new Set(artifacts.map((a) => a.sourceVolumePath)),
     [artifacts]
@@ -1384,6 +1414,8 @@ function useConvertActivity(locale: LanguageMode): ConvertActivity {
     enqueue,
     retry,
     dismiss,
+    cancel,
+    clearAll,
     refreshArtifacts
   }
 }
@@ -1711,7 +1743,19 @@ function ConvertActivityPopover({
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-96 p-0">
-        <div className="border-b px-3 py-2 text-sm font-medium">{t.title}</div>
+        <div className="flex items-center justify-between border-b px-3 py-2">
+          <span className="text-sm font-medium">{t.title}</span>
+          {activity.activeCount > 0 ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-xs"
+              onClick={() => activity.clearAll()}
+            >
+              {t.clearAll}
+            </Button>
+          ) : null}
+        </div>
         {!hasAny ? (
           <p className="px-3 py-8 text-center text-sm text-muted-foreground">{t.empty}</p>
         ) : (
@@ -1728,8 +1772,17 @@ function ConvertActivityPopover({
                         <span className="truncate text-sm" title={j.volumeTitle}>
                           {j.volumeTitle}
                         </span>
-                        {j.status === 'failed' ? (
-                          <span className="flex shrink-0 gap-1">
+                        <span className="flex shrink-0 items-center gap-1">
+                          <span
+                            className={`text-xs ${j.status === 'failed' ? 'text-destructive' : 'text-muted-foreground'}`}
+                          >
+                            {j.status === 'converting'
+                              ? `${Math.max(0, j.percent)}%`
+                              : j.status === 'queued'
+                                ? t.queued
+                                : t.failed}
+                          </span>
+                          {j.status === 'failed' ? (
                             <Button
                               variant="ghost"
                               size="icon"
@@ -1739,21 +1792,17 @@ function ConvertActivityPopover({
                             >
                               <RotateCcw className="size-3.5" />
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="size-6"
-                              title={t.dismiss}
-                              onClick={() => activity.dismiss(j.id)}
-                            >
-                              <X className="size-3.5" />
-                            </Button>
-                          </span>
-                        ) : (
-                          <span className="shrink-0 text-xs text-muted-foreground">
-                            {j.status === 'converting' ? `${Math.max(0, j.percent)}%` : t.queued}
-                          </span>
-                        )}
+                          ) : null}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-6"
+                            title={t.cancel}
+                            onClick={() => activity.cancel(j)}
+                          >
+                            <X className="size-3.5" />
+                          </Button>
+                        </span>
                       </div>
                       <div className="truncate text-xs text-muted-foreground">{j.seriesTitle}</div>
                       {j.status === 'converting' ? (
@@ -1764,9 +1813,9 @@ function ConvertActivityPopover({
                           />
                         </div>
                       ) : null}
-                      {j.status === 'failed' ? (
+                      {j.status === 'failed' && j.error ? (
                         <div className="mt-0.5 truncate text-xs text-destructive" title={j.error}>
-                          {t.failed}
+                          {j.error}
                         </div>
                       ) : null}
                     </div>
@@ -1784,8 +1833,8 @@ function ConvertActivityPopover({
                       className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted/50"
                     >
                       <div className="min-w-0 flex-1">
-                        <div className="truncate text-sm" title={a.volumeTitle}>
-                          {a.volumeTitle}
+                        <div className="truncate text-sm" title={artifactLabel(a)}>
+                          {artifactLabel(a)}
                         </div>
                         <div className="truncate text-xs text-muted-foreground">
                           {a.status === 'delivered'
@@ -2357,6 +2406,16 @@ function formatBytes(bytes: number): string {
   return `${(bytes / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1)} ${units[i]}`
 }
 
+// 产物显示标题：「部标题 · 卷」。旧产物无 seriesTitle 时回退 seriesName
+function artifactLabel(a: {
+  seriesTitle?: string
+  seriesName?: string
+  volumeTitle: string
+}): string {
+  const series = a.seriesTitle || a.seriesName
+  return series ? `${series} · ${a.volumeTitle}` : a.volumeTitle
+}
+
 // 把 main 返回的投递错误码翻译成当前语言文案；unknown 时附带服务器原始细节
 function deliveryErrorMsg(
   d: { errors: Record<string, string> },
@@ -2608,17 +2667,19 @@ function ArchiveView({ locale }: { locale: LanguageMode }): React.JSX.Element {
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="truncate text-sm font-medium" title={a.volumeTitle}>
-                        {a.volumeTitle}
+                      <span className="truncate text-sm font-medium" title={artifactLabel(a)}>
+                        {artifactLabel(a)}
                       </span>
                       <Badge variant="secondary" className="shrink-0 gap-1">
                         {statusIcon(a.status)}
                         {statusLabel(a.status)}
                       </Badge>
                     </div>
-                    <div className="mt-0.5 truncate text-xs text-muted-foreground">
-                      {a.seriesName}
-                    </div>
+                    {a.author ? (
+                      <div className="mt-0.5 truncate text-xs text-muted-foreground">
+                        {a.author}
+                      </div>
+                    ) : null}
                     <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
                       <span>{t.volumeFiles(a.outputs.length)}</span>
                       <span>{t.pages(a.pageCount)}</span>

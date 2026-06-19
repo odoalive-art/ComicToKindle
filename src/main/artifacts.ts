@@ -19,6 +19,7 @@ export interface Artifact {
   id: string
   sourceVolumePath: string
   seriesName: string
+  seriesTitle: string
   volumeTitle: string
   author: string | null
   outputs: ConvertOutput[]
@@ -66,10 +67,14 @@ async function upsertArtifact(artifact: Artifact): Promise<void> {
 export interface ConvertRequest {
   sourceVolumePath: string
   seriesName: string
+  seriesTitle: string
   volumeTitle: string
   author?: string | null
   options?: ConvertOptions
 }
+
+// 进行中转换的取消标记：sourceVolumePath → 已请求取消
+const cancelledPaths = new Set<string>()
 
 // 供投递层（deliver.ts）读取产物与更新投递状态
 export async function getArtifactById(id: string): Promise<Artifact | undefined> {
@@ -109,6 +114,7 @@ export function setupArtifacts(): void {
     const outputDir = join(convertedRoot(), sanitize(req.seriesName))
     await fs.mkdir(outputDir, { recursive: true })
 
+    cancelledPaths.delete(req.sourceVolumePath)
     let result: { outputs: ConvertOutput[]; pageCount: number }
     try {
       result = await convertMangaToEPUB({
@@ -118,17 +124,21 @@ export function setupArtifacts(): void {
         author: req.author ?? 'Unknown',
         options: req.options,
         onProgress: emitProgress,
-        onLog: (m) => console.log('[convert]', m)
+        onLog: (m) => console.log('[convert]', m),
+        checkCancelled: () => cancelledPaths.has(req.sourceVolumePath)
       })
     } catch (err) {
       emitProgress(-1, `转换失败：${(err as Error).message}`)
       throw err
+    } finally {
+      cancelledPaths.delete(req.sourceVolumePath)
     }
 
     const artifact: Artifact = {
       id: `${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
       sourceVolumePath: req.sourceVolumePath,
       seriesName: req.seriesName,
+      seriesTitle: req.seriesTitle,
       volumeTitle: req.volumeTitle,
       author: req.author ?? null,
       outputs: result.outputs,
@@ -140,6 +150,11 @@ export function setupArtifacts(): void {
     await upsertArtifact(artifact)
     emitProgress(100, '完成')
     return artifact
+  })
+
+  // 请求取消某卷的进行中转换；引擎在下一张图/下一卷边界处中止
+  ipcMain.handle('convert:cancel', (_event, sourceVolumePath: string): void => {
+    cancelledPaths.add(sourceVolumePath)
   })
 
   ipcMain.handle('artifacts:reveal', async (_event, id: string): Promise<void> => {
