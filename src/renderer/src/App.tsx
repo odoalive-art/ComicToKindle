@@ -1993,38 +1993,57 @@ function LibraryView({
     exitSelect()
   }
 
-  // 空白处按下并拖动 → 框选进入多选；移动不足阈值视为普通点击
-  const startMarquee = (e: React.PointerEvent<HTMLDivElement>): void => {
+  // 框选拖动态（用 ref 避免每次移动都触发重渲染）
+  const marqueeDrag = React.useRef<{
+    startX: number
+    startY: number
+    wrapRect: DOMRect
+    base: Set<string>
+    moved: boolean
+  } | null>(null)
+
+  // 空白处按下：仅记录起点并抓取指针；拖动超过阈值才真正进入框选
+  const onWrapPointerDown = (e: React.PointerEvent<HTMLDivElement>): void => {
     if (e.button !== 0 || selected === null || volumes.length === 0) return
     const el = e.target as HTMLElement
     if (el.closest('[data-vol-card]')) return // 命中卡片则不框选
     const wrap = gridWrapRef.current
     if (!wrap) return
     const wrapRect = wrap.getBoundingClientRect()
-    const start = { x: e.clientX - wrapRect.left, y: e.clientY - wrapRect.top }
-    const base = new Set(selectMode ? selectedVols : [])
-    let moved = false
+    marqueeDrag.current = {
+      startX: e.clientX - wrapRect.left,
+      startY: e.clientY - wrapRect.top,
+      wrapRect,
+      base: new Set(selectMode ? selectedVols : []),
+      moved: false
+    }
+    e.preventDefault() // 抑制原生文本选区
+    wrap.setPointerCapture(e.pointerId)
+  }
 
-    const onMove = (ev: PointerEvent): void => {
-      const x = ev.clientX - wrapRect.left
-      const y = ev.clientY - wrapRect.top
-      if (!moved && Math.hypot(x - start.x, y - start.y) < 6) return
-      moved = true
-      ev.preventDefault()
-      const left = Math.min(start.x, x)
-      const top = Math.min(start.y, y)
-      const width = Math.abs(x - start.x)
-      const height = Math.abs(y - start.y)
-      setMarquee({ left, top, width, height })
-      // 命中测试（视口坐标）
-      const sel = {
-        left: wrapRect.left + left,
-        top: wrapRect.top + top,
-        right: wrapRect.left + left + width,
-        bottom: wrapRect.top + top + height
-      }
-      const hit = new Set(base)
-      wrap.querySelectorAll<HTMLElement>('[data-vol-card]').forEach((card) => {
+  const onWrapPointerMove = (e: React.PointerEvent<HTMLDivElement>): void => {
+    const d = marqueeDrag.current
+    if (!d) return
+    const x = e.clientX - d.wrapRect.left
+    const y = e.clientY - d.wrapRect.top
+    if (!d.moved && Math.hypot(x - d.startX, y - d.startY) < 6) return
+    d.moved = true
+    const left = Math.min(d.startX, x)
+    const top = Math.min(d.startY, y)
+    const width = Math.abs(x - d.startX)
+    const height = Math.abs(y - d.startY)
+    setMarquee({ left, top, width, height })
+    // 命中测试（视口坐标）
+    const sel = {
+      left: d.wrapRect.left + left,
+      top: d.wrapRect.top + top,
+      right: d.wrapRect.left + left + width,
+      bottom: d.wrapRect.top + top + height
+    }
+    const hit = new Set(d.base)
+    gridWrapRef.current
+      ?.querySelectorAll<HTMLElement>('[data-vol-card]')
+      .forEach((card) => {
         const r = card.getBoundingClientRect()
         const intersect = !(
           r.right < sel.left ||
@@ -2035,16 +2054,15 @@ function LibraryView({
         const path = card.dataset.volPath
         if (path && intersect) hit.add(path)
       })
-      if (hit.size > 0) setSelectMode(true)
-      setSelectedVols(hit)
-    }
-    const onUp = (): void => {
-      window.removeEventListener('pointermove', onMove)
-      window.removeEventListener('pointerup', onUp)
-      setMarquee(null)
-    }
-    window.addEventListener('pointermove', onMove)
-    window.addEventListener('pointerup', onUp)
+    if (hit.size > 0) setSelectMode(true)
+    setSelectedVols(hit)
+  }
+
+  const onWrapPointerUp = (e: React.PointerEvent<HTMLDivElement>): void => {
+    const wrap = gridWrapRef.current
+    if (wrap?.hasPointerCapture(e.pointerId)) wrap.releasePointerCapture(e.pointerId)
+    marqueeDrag.current = null
+    setMarquee(null)
   }
 
   const loadSeries = React.useCallback(async (target: string) => {
@@ -2291,7 +2309,9 @@ function LibraryView({
         <ScrollArea className="min-h-0 flex-1">
           <div
             ref={gridWrapRef}
-            onPointerDown={startMarquee}
+            onPointerDown={onWrapPointerDown}
+            onPointerMove={onWrapPointerMove}
+            onPointerUp={onWrapPointerUp}
             className={`relative p-4 lg:p-6 ${marquee ? 'select-none' : ''}`}
           >
             {marquee ? (
