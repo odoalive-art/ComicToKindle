@@ -1759,7 +1759,9 @@ function ConvertActivityPopover({
         {!hasAny ? (
           <p className="px-3 py-8 text-center text-sm text-muted-foreground">{t.empty}</p>
         ) : (
-          <ScrollArea className="max-h-[60vh]">
+          // 用普通 overflow 滚动容器而非 ScrollArea：后者 Viewport 内层 display:table
+          // 会按内容宽度撑开、突破浮窗宽度，导致行内 truncate 失效、右侧按钮被挤出
+          <div className="max-h-[60vh] overflow-y-auto">
             <div className="p-2">
               {active.length > 0 ? (
                 <>
@@ -1769,7 +1771,7 @@ function ConvertActivityPopover({
                   {active.map((j) => (
                     <div key={j.id} className="rounded-md px-2 py-2 hover:bg-muted/50">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="truncate text-sm" title={j.volumeTitle}>
+                        <span className="min-w-0 flex-1 truncate text-sm" title={j.volumeTitle}>
                           {j.volumeTitle}
                         </span>
                         <span className="flex shrink-0 items-center gap-1">
@@ -1881,7 +1883,7 @@ function ConvertActivityPopover({
                 </>
               ) : null}
             </div>
-          </ScrollArea>
+          </div>
         )}
         <div className="border-t p-2">
           <Button
