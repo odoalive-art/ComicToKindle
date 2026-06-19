@@ -1140,12 +1140,19 @@ function AppHeader({
   selectedComponentSlug
 }: AppHeaderProps): React.JSX.Element {
   const text = uiText[languageMode]
+  const { isMobile } = useSidebar()
 
   return (
     <header
       className="flex h-12 shrink-0 items-center gap-2 border-b bg-background px-4"
       style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
     >
+      {isMobile ? (
+        <SidebarTrigger
+          className="-ml-1 size-8 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+        />
+      ) : null}
       <div className="flex items-center gap-1.5">
         <span className="text-sm font-semibold text-foreground">{text.nav[activeNavItemId]}</span>
       </div>
@@ -1919,6 +1926,7 @@ function LibraryView({
   onOpenArchive: () => void
 }): React.JSX.Element {
   const text = uiText[locale]
+  const { isMobile } = useSidebar()
   const [root, setRoot] = useState<string | null>(null)
   const [series, setSeries] = useState<LibrarySeries[]>([])
   const [selected, setSelected] = useState<LibrarySeries | null>(null)
@@ -2068,6 +2076,13 @@ function LibraryView({
         className="flex h-12 shrink-0 items-center gap-2 border-b bg-background px-4"
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
       >
+        {/* 窄屏（侧栏 offcanvas）时补一个开合入口 */}
+        {isMobile ? (
+          <SidebarTrigger
+            className="-ml-1 size-8 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+          />
+        ) : null}
         {selectMode ? (
           <span
             className="min-w-0 flex-1 truncate text-sm font-medium"
@@ -10585,7 +10600,7 @@ function AppSidebar({
   setLanguageMode: React.Dispatch<React.SetStateAction<LanguageMode>>
 }): React.JSX.Element {
   const text = uiText[locale]
-  const { state } = useSidebar()
+  const { state, isMobile } = useSidebar()
 
   return (
     <Sidebar collapsible="icon" variant="inset">
@@ -10638,7 +10653,9 @@ function AppSidebar({
         ))}
       </SidebarContent>
 
-      <Separator className="-mx-2 !w-auto bg-sidebar-border" />
+      <Separator
+        className={`bg-sidebar-border ${isMobile ? '' : '-mx-2 !w-auto'}`}
+      />
       <SidebarFooter className="p-2 pt-2">
         <div className="flex items-center justify-between w-full gap-2">
           <SidebarMenu className="flex-1 min-w-0">
