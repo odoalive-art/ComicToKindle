@@ -4,7 +4,7 @@
 
 ## 当前范围
 
-ComicToKindle 目前是一个桌面应用工作台，已实现真实的本地漫画库浏览与卷册阅读器；Kindle 转换流程和投递工具尚未实现。
+ComicToKindle 目前是一个桌面应用工作台，已打通核心闭环:**本地漫画库浏览 → 卷册阅读 → 图片卷册转 Kindle 固定版式 EPUB → 归档管理 → SMTP 投递到 Kindle 邮箱**。
 
 已实现：
 
@@ -17,6 +17,9 @@ ComicToKindle 目前是一个桌面应用工作台，已实现真实的本地漫
 - `src/renderer/src/App.tsx` 中的侧边栏工作台壳
 - **真实漫画库浏览**：扫描本地目录，按「部 / 卷册」两级展示（详见「漫画库数据层」）
 - **卷册阅读器**：单页 / 双页、左右阅读方向、记住每卷续读进度
+- **转换流水线**：图片卷册 → Kindle 固定版式 EPUB3（详见「转换与产物层」）
+- **归档视图**：列出转换产物，支持在 Finder 显示 / 导出副本 / 删除 / 投递到 Kindle
+- **Kindle 投递**：SMTP 配置页（设备与邮箱）+ 归档手动投递（详见「投递层」）
 - 顶栏应用级深浅模式切换
 - 顶栏中英切换
 - 自定义交通灯窗口控件（通过 IPC 接管关闭/最小化/最大化）
@@ -25,10 +28,12 @@ ComicToKindle 目前是一个桌面应用工作台，已实现真实的本地漫
 
 未实现：
 
-- 元数据持久化（数据库 / 索引；当前每次进入实时扫描）
-- 转换流水线（CBZ/CBR/图片文件夹 → Kindle 友好 EPUB）
+- 元数据持久化（数据库 / 索引；漫画库当前每次进入实时扫描）
+- 压缩包卷册读取（CBZ/CBR/PDF；转换目前只吃图片目录）
+- 转换选项 UI（设备档位、灰度、双页拆分等当前用默认值，未暴露）
 - 图像处理或 AI 放大
-- Kindle 投递
+- 本地 AZW3 导出（原型曾用 Calibre，已移除；无线投递发 EPUB）
+- 自动投递（转换完成即发；当前只支持归档手动投递）
 - Send to Kindle 网页嵌入
 - 任务队列
 
@@ -39,15 +44,26 @@ Electron main process
   src/main/index.ts
   负责 BrowserWindow 创建、应用生命周期、外部链接打开行为和 main-process IPC。
   处理自定义交通灯的 window-close / window-minimize / window-maximize IPC 事件。
-  app ready 前调用 registerComicScheme()，ready 后调用 setupLibrary()。
+  app ready 前调用 registerComicScheme()，ready 后调用 setupLibrary() / setupArtifacts() / setupDelivery()。
 
   src/main/library.ts
   漫画库数据层：comic:// 协议、目录扫描、库根目录持久化。
+  导出 collectVolumeImagePaths() 供转换流水线按阅读顺序取图（支持嵌套单话子文件夹）。
+
+  src/main/convert.ts
+  转换引擎：图片 → Kindle 固定版式 EPUB3。无 IPC、无 electron 依赖，纯函数 convertMangaToEPUB。
+
+  src/main/artifacts.ts
+  产物清单数据层：artifacts.json 读写、转换编排（调用 convert.ts）、转换/产物 IPC。
+  导出 getArtifactById / setArtifactStatus 供投递层更新状态。
+
+  src/main/deliver.ts
+  Kindle 投递层：SMTP 配置存储（密码经 safeStorage 加密）、nodemailer 发送、投递 IPC。
 
 Preload process
   src/preload/index.ts
-  将安全的 Electron API 桥接给 renderer，暴露 window.api.library.*。
-  类型定义在 src/preload/index.d.ts（LibrarySeries / LibraryVolume / LibraryAPI）。
+  将安全的 Electron API 桥接给 renderer，暴露 window.api.library.* / convert.* / artifacts.* / deliver.*。
+  类型定义在 src/preload/index.d.ts（LibrarySeries / LibraryVolume / Artifact / DeliveryConfig* / 各 API 接口）。
 
 Renderer process
   src/renderer/src/
@@ -87,6 +103,62 @@ LibrarySeries  id, path, name, title, author, volumeCount, coverUrl
 LibraryVolume  id, path, name, title, kind('folder'|'file'), pageCount, coverUrl
 ```
 
+## 转换与产物层
+
+转换技术实现移植自既有原型 quirky-planck（仅取经验证的引擎，不继承其设计）。核心判断：**漫画库 = 源，转换产物（EPUB）是派生物**，两者不混在库网格里；库卡片只加「已转换」角标，产物在「归档」视图独立管理。
+
+**转换引擎 `src/main/convert.ts`**（`convertMangaToEPUB`，纯函数、无 electron 依赖）：
+
+- 输出**固定版式 EPUB3**（`rendition:layout=pre-paginated`），每页一张整图 + 一个 xhtml 包装；`content.opf` 带 Kindle 漫画元数据（`book-type=comic`、`fixed-layout`、`primary-writing-mode`、`page-progression-direction`、`cover-image` 等）。
+- `sharp` 图像管线：灰度（封面保留彩色）、按设备档位缩放、mozjpeg 压缩。
+- 双页拆分：横图按阅读方向切左右两页；按体积分卷：超过 `maxVolumeSize` 切成多个 EPUB。
+- `archiver` 8 的 `ZipArchive` 打包，`mimetype` 必须第一个且 `store`（不压缩）。
+- 设备档位（`PROFILE_RES`）：pw3/pw5/pw6/**ko3**/oasis/scribe/original；**默认 pw6/ko3 = 1264×1680**。
+- 入参是「按阅读顺序的图片绝对路径列表」，由 `library.collectVolumeImagePaths` 提供，因此支持嵌套单话子文件夹。
+- 原型里的 Calibre/AZW3 已移除（无线投递发 EPUB，亚马逊云端自转）。
+
+**产物清单 `src/main/artifacts.ts`**：
+
+- 产物**由应用托管**，落在 `userData/converted/<部>/`，用户无需指定路径。
+- 清单 `userData/artifacts.json` 记录「源卷 → N 个产物文件」映射（一个源卷可能因分卷产出多个 EPUB，故 `outputs` 是数组），用于库内角标命中和归档视图。
+
+**IPC 频道**：
+
+```txt
+convert:volume     转换一卷（取图→转换→写清单）→ Artifact；过程通过 convert:progress 事件上报
+convert:progress   main→renderer 进度事件 { sourceVolumePath, percent, message }
+artifacts:list     读取清单 → Artifact[]
+artifacts:reveal   在 Finder 中显示产物
+artifacts:export   选目录导出产物副本
+artifacts:remove   删除产物文件 + 清单条目
+```
+
+**数据模型**（`src/preload/index.d.ts` 为单一事实来源）：
+
+```txt
+ConvertOutput  path, fileName, sizeBytes, volTitle
+Artifact       id, sourceVolumePath, seriesName, volumeTitle, author,
+               outputs(ConvertOutput[]), format('epub'), pageCount, createdAt,
+               status('ready'|'delivered'|'failed')   // 投递成功置 'delivered'，失败置 'failed'
+```
+
+## 投递层
+
+`src/main/deliver.ts`，技术实现移植自原型 quirky-planck/sender.js（nodemailer）。
+
+- **配置存储**：SMTP host/port/user/Kindle 邮箱存 `settings.json` 的 `delivery` 字段；**密码用 Electron `safeStorage`（系统钥匙串）加密**后存 `passEncrypted`(base64)，绝不明文落盘、绝不回传 renderer。钥匙串不可用时回退 `passPlain`（极少见）。
+- **触发**：归档视图每条产物手动投递，可重发；发送一卷的全部 EPUB 后把 `status` 置 `delivered`，失败置 `failed`。无线投递发 EPUB（亚马逊云端自转）。
+- **配置入口**：「设备与邮箱」视图（`DeliverySettingsView`），含保存 + 测试连接。
+
+**IPC 频道**：
+
+```txt
+deliver:getConfig   读取配置 → { host, port, user, kindleEmail, hasPassword }（不含密码）
+deliver:saveConfig  保存配置；password 非空才更新（加密存储）
+deliver:testSMTP    nodemailer verify() 测试连接；密码留空则用已存密码
+deliver:send        发送某 artifact 的全部 EPUB → 置 status；未配置则报错引导去设置页
+```
+
 ## Renderer 工作区
 
 当前 renderer 是本地桌面工作台，还不是完整产品 UI。
@@ -97,6 +169,15 @@ LibraryVolume  id, path, name, title, kind('folder'|'file'), pageCount, coverUrl
   未设库 → 空状态选目录；一级部封面网格 → 点进二级卷册封面网格。
   点卷册进入 VolumeReader（单页/双页、左右方向、续读、相邻页预加载）。
   封面经 comic:// 加载，内描边样式，卷册卡片显示续读进度条。
+  卷册卡片：hover 显示「转换为 Kindle」按钮，转换中显示进度角标，已转换显示「已转换」角标。
+
+归档（ArchiveView）
+  列出 artifacts.json 中的转换产物（卷名/部/文件数/页数/大小/时间/状态）。
+  每条操作：投递到 Kindle / 在 Finder 中显示 / 导出副本 / 删除。
+
+设备与邮箱（DeliverySettingsView）
+  SMTP host/port/user/password + Kindle 邮箱表单，保存 + 测试连接。
+  密码不回传渲染端；已存密码时密码框显示占位、留空不修改。
 
 设计组件
   开发期 shadcn/ui 组件索引和本地文档镜像。
@@ -107,8 +188,8 @@ LibraryVolume  id, path, name, title, kind('folder'|'file'), pageCount, coverUrl
   开发期设计基础参考页。
   覆盖颜色 token、字体栈、字号层级和间距层级。
 
-导入收件箱 / 转换队列 / 投递记录 / 归档
-  导航占位。对应产品工作流尚未实现。
+导入收件箱 / 转换队列 / 投递记录
+  导航占位。对应产品工作流尚未实现（归档已实装，见上）。
 ```
 
 `设计组件` 和 `基础规范` 只用于开发阶段提效。除非后续明确做产品化设计，否则不要把它们当作用户功能描述。
@@ -187,11 +268,13 @@ renderer alias：
 漫画库领域（浏览/阅读已实现，元数据存储待做）
   扫描本地目录、图片文件夹已实现；压缩包读取与元数据存储待做。
 
-转换领域
-  规范化页面，处理图像，生成 Kindle 友好的 EPUB。
+转换领域（已实现首切）
+  规范化页面、处理图像、生成固定版式 EPUB（convert.ts）；产物由 artifacts.ts 托管编排。
+  待做：转换选项 UI、压缩包来源、任务队列化。
 
-投递领域
-  通过 Kindle 邮箱、本地导出或 Send to Kindle 网页流程交付生成文件。
+投递领域（已实现首切）
+  SMTP 投递（deliver.ts）+ 归档手动投递 + 本地导出副本均已实现。
+  待做：自动投递、Send to Kindle 网页流程。
 
 任务领域
   跟踪扫描、转换、放大和投递等长任务。
@@ -201,9 +284,11 @@ Electron main 或专门的服务模块应负责本地文件系统和进程执行
 
 ## 存储
 
-当前没有数据库 / 漫画索引（每次进入实时扫描目录）。已有的持久化：
+漫画库本身没有数据库 / 索引（每次进入实时扫描目录）。已有的持久化：
 
 - **库根目录**：main 进程写入 `app.getPath('userData')/settings.json` 的 `libraryRoot` 字段。
+- **转换产物**：EPUB 文件落在 `app.getPath('userData')/converted/<部>/`；清单 `app.getPath('userData')/artifacts.json`（`{ version, artifacts: Artifact[] }`）。同一源卷重转会覆盖旧清单条目，删除产物会同时删文件和条目。
+- **投递配置**：`settings.json` 的 `delivery` 字段（host/port/user/kindleEmail + `passEncrypted` 或 `passPlain`）。密码经 `safeStorage` 系统钥匙串加密，不明文落盘。
 - **renderer localStorage 键**：
   - `comic-to-kindle-theme` 深浅模式
   - `comic-to-kindle-language` 中英语言
@@ -215,6 +300,7 @@ Electron main 或专门的服务模块应负责本地文件系统和进程执行
 
 ## 安全说明
 
-- BrowserWindow 设置了 `sandbox: false`。本地文件访问已落地（漫画库），但全部走 main 进程 + preload IPC，renderer 不直接用 Node API；后续实现 Send to Kindle 嵌入或凭据存储前需重新评估。
+- BrowserWindow 设置了 `sandbox: false`。本地文件访问已落地（漫画库），但全部走 main 进程 + preload IPC，renderer 不直接用 Node API；后续实现 Send to Kindle 嵌入前需重新评估。
+- **SMTP 凭据**：密码经 `safeStorage`（macOS 钥匙串）加密存 `settings.json`，main 进程持有；`deliver:getConfig` 只回传 `hasPassword` 布尔、绝不回传密码明文给 renderer。
 - `comic://` 协议服务图片时做越权校验：只允许图片扩展名且路径位于当前库根目录内，否则返回 403。
 - 外部链接通过 `shell.openExternal` 打开，应用窗口拒绝 new-window 导航。
