@@ -2,7 +2,7 @@
 
 ComicToKindle 是一个 Electron 桌面应用，用于本地漫画库管理、面向 Kindle 的转换流程和投递工具。
 
-当前已实现完整闭环：可运行的应用壳、真实的本地漫画库浏览（按「部 / 卷册」两级展示）、卷册阅读器（单页/双页、左右阅读方向、记住续读进度）、卷册转 Kindle 固定版式 EPUB（sharp + archiver）、产物归档、以及 SMTP 投递到 Kindle 邮箱（nodemailer + safeStorage 加密凭据）。库视图支持多选/框选批量转换。另含开发期用于搭建界面的设计辅助工作区。尚未实现：漫画元数据库/索引、压缩包（CBZ/CBR/PDF）来源、图像 AI 放大、队列持久化。
+当前已实现完整闭环：可运行的应用壳、真实的本地漫画库浏览（按「部 / 卷册」两级展示）、卷册阅读器（单页/双页、左右阅读方向、记住续读进度）、卷册转 Kindle 固定版式 EPUB（sharp + archiver）、产物归档、以及投递到 Kindle（SMTP 邮件 nodemailer + safeStorage 加密凭据 / Send to Kindle 网页通道 ≤200MB 二选一）。库视图支持多选/框选批量转换。另含开发期用于搭建界面的设计辅助工作区。尚未实现：漫画元数据库/索引、压缩包（CBZ/CBR/PDF）来源、图像 AI 放大、队列持久化、转换后自动投递。
 
 ## 技术栈
 
@@ -105,7 +105,7 @@ src/renderer/src/components/ui/
 
 ## 当前状态
 
-截至 2026-06-19：
+截至 2026-06-20：
 
 - Electron + Vite + React + TypeScript 应用可以成功构建。
 - Tailwind CSS 和 shadcn/ui 已配置。
@@ -114,6 +114,7 @@ src/renderer/src/components/ui/
 - 转换闭环：卷册 → Kindle 固定版式 EPUB（`src/main/convert.ts`，sharp + archiver），产物由应用托管落在 `userData/converted/`，「归档」视图管理；库卡片显示「已转换」角标。
 - 库视图多选：选择按钮 / 点选 / 空白处框选 / Cmd·Ctrl+A 全选 → 批量转换。
 - Kindle 投递：SMTP（`src/main/deliver.ts`，nodemailer），密码经 `safeStorage` 加密存储、不回传 renderer；「设备与邮箱」配置页可保存 + 测试连接，归档每条可手动投递/重发。
+- Send to Kindle 网页推送：应用内嵌 Amazon 网页通道（`src/main/webpush.ts`，≤200MB 单文件，适合 SMTP 发不动的大卷），CDP 拦截文件框自动填入产物、半自动发送；归档/转换活动浮窗均有「网页推送」入口。
 - 顶栏提供应用级深浅模式切换和中英切换，切换会影响整个 renderer。
 - 开发期工作区包含 shadcn 组件选型页和基础规范页；基础规范页读取 `src/renderer/src/data/design-tokens.ts`。
 - 尚未实现：漫画元数据存储/索引、压缩包（CBZ/CBR/PDF）来源、图像 AI 放大、队列持久化。

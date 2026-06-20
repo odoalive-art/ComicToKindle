@@ -43,6 +43,7 @@ npm run dev
 - 顶栏中英切换按钮可以切换应用壳、开发期页面和 shadcn 镜像文档阅读语言。
 - `所有漫画` 视图首次进入显示空状态，点「选择漫画库文件夹」选目录后显示部封面网格；点进某部看卷册，点卷册进入阅读器（单页/双页、左右方向、续读）。库根目录会被记住。
 - `设计组件` 中的示例复制按钮仍复制英文示例名，例如 `button-with-icon`。
+- `网页推送`（或归档条目的「网页推送」入口）打开内嵌 Amazon 网页窗口；首次需在该窗口登录 Amazon（登录态存在独立 `persist:amazon-stk` partition、重启保留）。带产物推送时会盖黑色蒙层并自动填入文件，最后由用户在网页里点 Send。
 
 注意：改动 `src/main/**` 或 `src/preload/**` 后，需重启 `npm run dev`（main/preload 不走 renderer HMR）；否则新增的 IPC handler 不会生效。
 
@@ -84,7 +85,9 @@ git status --short
 
 当前没有应用专属环境变量。
 
-如果后续新增转换器路径、Kindle 邮箱设置、Send to Kindle 自动化开关或模型位置，需要同步更新本文和 `AGENTS.md`。
+如果后续新增转换器路径、Kindle 邮箱设置、转换后自动投递开关或模型位置，需要同步更新本文和 `AGENTS.md`。
+
+Send to Kindle 网页通道有一项可配置项：STK 站点 URL，存 `userData/settings.json` 的 `webpush.url`（默认 amazon.com 美区），可在 `网页推送` 页修改。
 
 ## 本地状态与重置
 
