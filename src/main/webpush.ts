@@ -94,6 +94,7 @@ function getOrCreatePushWindow(): BrowserWindow {
 
   // 关闭确认：启用 Page 域后 Amazon 暂存文件触发的 beforeunload 会被 CDP 接管、不再弹给用户，
   // 表现为「点关闭没反应」。这里自己接管关闭：弹确认框，确认后 destroy（绕过 beforeunload）。
+  // 确认框用注入式组件库风格（与横幅/蒙层一致），注入失败再回退原生弹窗。
   let confirming = false
   pushWindow.on('close', (e) => {
     if (confirming || !pushWindow) return
@@ -101,19 +102,10 @@ function getOrCreatePushWindow(): BrowserWindow {
     if (!hasStagedFiles) return
     e.preventDefault()
     confirming = true
-    dialog
-      .showMessageBox(pushWindow, {
-        type: 'question',
-        buttons: ['取消', '关闭'],
-        defaultId: 1,
-        cancelId: 0,
-        message: '关闭 Send to Kindle 窗口？',
-        detail: '尚未点 Send 的文件不会发送。'
-      })
-      .then(({ response }) => {
-        confirming = false
-        if (response === 1) pushWindow?.destroy()
-      })
+    confirmClose(pushWindow).then((ok) => {
+      confirming = false
+      if (ok) pushWindow?.destroy()
+    })
   })
 
   pushWindow.on('closed', () => {
@@ -253,6 +245,71 @@ function hideOverlay(win: BrowserWindow): void {
     .catch(() => {})
 }
 
+const CLOSE_CONFIRM_TITLE = '关闭 Send to Kindle 窗口？'
+const CLOSE_CONFIRM_DESC = '尚未点 Send 的文件不会发送。'
+
+// 注入式确认框：与横幅/蒙层同款 design token（border/foreground/muted-foreground/primary、radius 8px），
+// 无 emoji。返回一个 Promise，按钮点击/Esc/点背景把选择（true=关闭 / false=取消）resolve 回主进程，
+// 不需要 IPC（executeJavaScript 会等待页面里的 Promise 落定）。
+function closeConfirmScript(): string {
+  return `(() => new Promise((resolve) => {
+    if (!document.body) { throw new Error('no body'); }
+    const ID = 'c2k-confirm';
+    const prev = document.getElementById(ID); if (prev) prev.remove();
+    if (!document.getElementById('c2k-cf-style')) {
+      const s = document.createElement('style'); s.id = 'c2k-cf-style';
+      s.textContent = [
+        "#c2k-confirm{position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;background:oklch(0 0 0 / 0.5);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif}",
+        "#c2k-confirm .c2k-cf-card{width:min(420px,calc(100vw - 48px));background:oklch(1 0 0);border:1px solid oklch(0.922 0 0);border-radius:8px;box-shadow:0 10px 40px oklch(0 0 0 / 0.3);padding:20px}",
+        "#c2k-confirm .c2k-cf-title{font-size:15px;font-weight:600;color:oklch(0.145 0 0)}",
+        "#c2k-confirm .c2k-cf-desc{margin-top:6px;font-size:13px;line-height:1.5;color:oklch(0.556 0 0)}",
+        "#c2k-confirm .c2k-cf-actions{margin-top:18px;display:flex;justify-content:flex-end;gap:8px}",
+        "#c2k-confirm .c2k-cf-btn{height:34px;padding:0 16px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;transition:background .15s,opacity .15s;border:1px solid transparent}",
+        "#c2k-confirm .c2k-cf-cancel{background:transparent;border-color:oklch(0.922 0 0);color:oklch(0.145 0 0)}",
+        "#c2k-confirm .c2k-cf-cancel:hover{background:oklch(0.97 0 0)}",
+        "#c2k-confirm .c2k-cf-ok{background:oklch(0.205 0 0);color:oklch(0.985 0 0)}",
+        "#c2k-confirm .c2k-cf-ok:hover{opacity:.9}"
+      ].join('');
+      document.head.appendChild(s);
+    }
+    const wrap = document.createElement('div'); wrap.id = ID;
+    const card = document.createElement('div'); card.className = 'c2k-cf-card';
+    card.setAttribute('role', 'alertdialog'); card.setAttribute('aria-modal', 'true');
+    const t = document.createElement('div'); t.className = 'c2k-cf-title'; t.textContent = ${JSON.stringify(CLOSE_CONFIRM_TITLE)};
+    const d = document.createElement('div'); d.className = 'c2k-cf-desc'; d.textContent = ${JSON.stringify(CLOSE_CONFIRM_DESC)};
+    const acts = document.createElement('div'); acts.className = 'c2k-cf-actions';
+    const cancel = document.createElement('button'); cancel.className = 'c2k-cf-btn c2k-cf-cancel'; cancel.textContent = '取消';
+    const ok = document.createElement('button'); ok.className = 'c2k-cf-btn c2k-cf-ok'; ok.textContent = '关闭';
+    acts.appendChild(cancel); acts.appendChild(ok);
+    card.appendChild(t); card.appendChild(d); card.appendChild(acts);
+    wrap.appendChild(card); document.body.appendChild(wrap);
+    const onKey = (e) => { if (e.key === 'Escape') finish(false); };
+    const finish = (v) => { document.removeEventListener('keydown', onKey); wrap.remove(); resolve(v); };
+    cancel.onclick = () => finish(false);
+    ok.onclick = () => finish(true);
+    wrap.addEventListener('click', (e) => { if (e.target === wrap) finish(false); });
+    document.addEventListener('keydown', onKey);
+    ok.focus();
+  }))()`
+}
+
+async function confirmClose(win: BrowserWindow): Promise<boolean> {
+  try {
+    return Boolean(await win.webContents.executeJavaScript(closeConfirmScript(), true))
+  } catch {
+    // 注入失败（页面正在导航、无 body 等）→ 回退原生系统弹窗，保证关窗始终可确认
+    const { response } = await dialog.showMessageBox(win, {
+      type: 'question',
+      buttons: ['取消', '关闭'],
+      defaultId: 1,
+      cancelId: 0,
+      message: CLOSE_CONFIRM_TITLE,
+      detail: CLOSE_CONFIRM_DESC
+    })
+    return response === 1
+  }
+}
+
 /**
  * 探测页面状态（可选顺带点击上传入口）：
  *   - 找上传控件（add a file / select file / 选择文件…），排除「Sign in」字样；找到即（可选）点击。
@@ -327,47 +384,35 @@ async function probeFrames(win: BrowserWindow, doClick: boolean): Promise<ProbeR
   return merged
 }
 
-// 等一次 dom-ready（reload 后用），最多兜底 8 秒
-function waitDomReady(win: BrowserWindow): Promise<void> {
-  return new Promise((resolve) => {
-    const wc = win.webContents
-    const done = (): void => {
-      wc.removeListener('dom-ready', done)
-      resolve()
-    }
-    wc.once('dom-ready', done)
-    setTimeout(done, 8000)
-  })
-}
-
 type ReadyStatus = 'ready' | 'need-login' | 'unknown'
 
 /**
- * 确保上传控件就绪。Amazon STK 是 SPA，首次进入常出现「顶栏已登录、但上传区仍显示 Sign in」的
- * 登录态水合滞后——此时 reload 一次即可刷出真正的上传控件（reload 必须在装 CDP 拦截器之前，
- * 否则 setInterceptFileChooserDialog 会被导航清掉）。
+ * 确保上传控件就绪。Amazon STK 是 SPA，首次进入常出现「已登录、但上传区仍显示 Sign in」的水合滞后——
+ * 此时 reload 一次即可刷出真正的上传控件（reload 必须在装 CDP 拦截器之前，否则
+ * setInterceptFileChooserDialog 会被导航清掉）。
+ *
+ * 「是否真的没登录」只认 URL（looksLikeSignIn）：真没登录时 Amazon 会重定向到 /ap/signin。
+ * 页面正文的「已登录」启发式不可靠（顶栏账户 chrome 的水合比上传区慢，会把「水合滞后」误判成「没登录」），
+ * 故 URL 还停在 STK 站、只是上传区是 Sign in 时，一律按水合滞后处理：reload 后继续等上传控件。
  */
 async function ensureUploaderReady(win: BrowserWindow, allowReload: boolean): Promise<ReadyStatus> {
   let reloaded = false
-  const deadline = Date.now() + 7000
+  const deadline = Date.now() + 9000
   while (Date.now() < deadline) {
+    // 真正的登录页（URL 判定，最可靠）→ 让用户登录
+    if (looksLikeSignIn(win.webContents.getURL())) return 'need-login'
     const p = await probeFrames(win, false)
     if (p.hasUploader) return 'ready'
-    if (allowReload && !reloaded && p.hasSignin && p.loggedIn) {
-      // 已登录但上传区是 Sign in → 水合滞后，reload 刷新
+    // 在 STK 站但还没出上传控件（多半上传区显示 Sign in）→ 水合滞后，reload 一次刷新。
+    // 走 loadStkAndWait（带退避重试 + 等加载完成）而非裸 reload()，否则代理抖动（ERR_TUNNEL 等）会把这次刷新打成白屏。
+    if (allowReload && !reloaded && p.hasSignin) {
       reloaded = true
-      try {
-        win.webContents.reload()
-      } catch {
-        /* ignore */
-      }
-      await waitDomReady(win)
+      const reloadUrl = win.webContents.getURL() || DEFAULT_STK_URL
+      await loadStkAndWait(win, reloadUrl)
       await new Promise((r) => setTimeout(r, 600))
       showOverlay(win, '正在准备上传…')
       continue
     }
-    if (looksLikeSignIn(win.webContents.getURL()) || (p.hasSignin && !p.loggedIn))
-      return 'need-login'
     await new Promise((r) => setTimeout(r, 400))
   }
   return 'unknown'
@@ -483,6 +528,58 @@ async function armFileChooser(win: BrowserWindow, filePaths: string[]): Promise<
   }
 }
 
+/**
+ * 加载 STK 页面，等到真正加载完成（did-finish-load）才 resolve；失败（非 ERR_ABORTED）则退避重试。
+ * 关键：把「加载」做成可等待的，调用方等它完成再开始自动化，避免自动化在白屏/加载中抢跑、与重试互相打架
+ * （首次冷加载 Amazon 会重定向、偶发 ERR_FAILED，干净环境下退避重试通常能救回）。
+ */
+function loadStkAndWait(win: BrowserWindow, url: string): Promise<void> {
+  return new Promise((resolve) => {
+    const wc = win.webContents
+    let attempts = 0
+    let settled = false
+    const cleanup = (): void => {
+      wc.removeListener('did-finish-load', onOk)
+      wc.removeListener('did-fail-load', onFail)
+    }
+    const finish = (): void => {
+      if (settled) return
+      settled = true
+      cleanup()
+      resolve()
+    }
+    const onOk = (): void => finish()
+    const onFail = (
+      _e: unknown,
+      code: number,
+      desc: string,
+      _validatedURL: string,
+      isMainFrame: boolean
+    ): void => {
+      if (!isMainFrame || code === -3) return // ERR_ABORTED(-3) 是重定向/主动中断，正常
+      if (attempts >= 3) {
+        console.log(`[webpush] 加载失败(${code} ${desc})，已达重试上限，放弃`)
+        finish()
+        return
+      }
+      attempts++
+      const delay = 700 * attempts // 退避：0.7s / 1.4s / 2.1s
+      console.log(`[webpush] 加载失败(${code} ${desc})，第 ${attempts} 次重试（延时 ${delay}ms）`)
+      setTimeout(() => {
+        if (!settled && !win.isDestroyed()) {
+          wc.loadURL(url, { userAgent: DESKTOP_CHROME_UA }).catch(() => {})
+        }
+      }, delay)
+    }
+    wc.on('did-finish-load', onOk)
+    wc.on('did-fail-load', onFail)
+    setTimeout(finish, 25000) // 兜底超时，别永远等
+    wc.loadURL(url, { userAgent: DESKTOP_CHROME_UA }).catch(() => {
+      /* reject 交给 did-fail-load 处理 */
+    })
+  })
+}
+
 /** 打开/导航推送窗口到 STK 页面并显示。仅当尚未在该站点时才导航，保住已就绪/已登录的页面。 */
 async function showStkWindow(): Promise<BrowserWindow> {
   const win = getOrCreatePushWindow()
@@ -492,11 +589,8 @@ async function showStkWindow(): Promise<BrowserWindow> {
   win.focus()
   const current = win.webContents.getURL()
   if (!current || !current.startsWith(new URL(url).origin)) {
-    // loadURL 在「服务端 302 重定向到登录页」等情况下会 reject（ERR_ABORTED/ERR_FAILED），
-    // 但导航其实仍在继续，吞掉异常即可，让页面自己渲染出来。
-    await win.loadURL(url, { userAgent: DESKTOP_CHROME_UA }).catch(() => {
-      /* 重定向/中断导致的 reject 不致命，页面会继续加载 */
-    })
+    // 等页面真正加载完成再返回，调用方（armFileChooser）据此在加载好之后才开始自动化
+    await loadStkAndWait(win, url)
   }
   return win
 }
