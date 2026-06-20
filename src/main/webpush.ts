@@ -68,6 +68,10 @@ let interceptorInstalled = false
 let pendingFiles: string[] | null = null
 // 本轮武装是否已触发到文件选择框——自动点击的成功判定挂在这个真实事件上，而非「点到没点到」
 let armedChooserFired = false
+// 是否有已填入但（可能）未发送的文件——决定关窗时要不要弹确认。
+// 注入成功置 true；页面整页导航（多半已发完走开）或关窗清 false。点 Send 是否发完无法从主进程拿到干净信号，
+// 故偏保守：宁可多问一次，不漏掉「填了没发就关」。
+let hasStagedFiles = false
 
 function getOrCreatePushWindow(): BrowserWindow {
   if (pushWindow && !pushWindow.isDestroyed()) {
@@ -93,6 +97,8 @@ function getOrCreatePushWindow(): BrowserWindow {
   let confirming = false
   pushWindow.on('close', (e) => {
     if (confirming || !pushWindow) return
+    // 没有已填入的文件（纯登录/浏览）→ 直接关，不打扰
+    if (!hasStagedFiles) return
     e.preventDefault()
     confirming = true
     dialog
@@ -102,7 +108,7 @@ function getOrCreatePushWindow(): BrowserWindow {
         defaultId: 1,
         cancelId: 0,
         message: '关闭 Send to Kindle 窗口？',
-        detail: '关闭不影响已点击 Send 发送的内容；尚未发送的文件不会被发送。'
+        detail: '尚未点 Send 的文件不会发送。'
       })
       .then(({ response }) => {
         confirming = false
@@ -114,6 +120,12 @@ function getOrCreatePushWindow(): BrowserWindow {
     pushWindow = null
     interceptorInstalled = false
     pendingFiles = null
+    hasStagedFiles = false
+  })
+  // 整页导航（reload / 跳转，多半是发完走开或重新登录）→ 清掉暂存标志。
+  // SPA 内部路由走 did-navigate-in-page，不会误清，所以填了文件不点 Send 仍会被记住。
+  pushWindow.webContents.on('did-navigate', () => {
+    hasStagedFiles = false
   })
   // 外站里的 target=_blank / 弹窗在本窗口同 session 打开，保持登录态
   pushWindow.webContents.setWindowOpenHandler(({ url }) => {
@@ -434,6 +446,7 @@ async function armFileChooser(win: BrowserWindow, filePaths: string[]): Promise<
           .sendCommand('DOM.setFileInputFiles', { files, backendNodeId })
           .then(() => {
             console.log('[webpush] 已注入文件:', injectedNames)
+            hasStagedFiles = true
             finishOverlay(win, '已填入，点 Send 发送到 Kindle')
             showBanner(
               win,
