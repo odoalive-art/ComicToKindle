@@ -30,6 +30,13 @@ const api = {
     saveConfig: (cfg: unknown) => ipcRenderer.invoke('deliver:saveConfig', cfg),
     testSMTP: (cfg: unknown) => ipcRenderer.invoke('deliver:testSMTP', cfg),
     send: (artifactId: string) => ipcRenderer.invoke('deliver:send', artifactId)
+  },
+  webpush: {
+    getUrl: (): Promise<string> => ipcRenderer.invoke('webpush:getUrl'),
+    setUrl: (url: string) => ipcRenderer.invoke('webpush:setUrl', url),
+    openBlank: () => ipcRenderer.invoke('webpush:openBlank'),
+    open: (artifactId: string) => ipcRenderer.invoke('webpush:open', artifactId),
+    reveal: (artifactId: string) => ipcRenderer.invoke('webpush:reveal', artifactId)
   }
 }
 

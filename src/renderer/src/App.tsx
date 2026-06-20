@@ -460,7 +460,33 @@ const uiText = {
       delivering: '投递中…',
       delivered: (title: string) => `已投递：${title}`,
       deliverFailed: (title: string) => `投递失败：${title}`,
-      notConfigured: '尚未配置投递，请先到「设备与邮箱」填写 SMTP 和 Kindle 邮箱。'
+      notConfigured: '尚未配置投递，请先到「设备与邮箱」填写 SMTP 和 Kindle 邮箱。',
+      webPush: '网页推送',
+      webPushOpened: (title: string) =>
+        `「${title}」已就绪：在网页里点「选择文件 / Add file」会自动填入（不弹系统框），再点 Send`,
+      webPushErrors: {
+        'not-found': '找不到该产物。',
+        'no-outputs': '没有可推送的文件。',
+        'too-large': '文件超过网页通道 200MB 上限，无法推送。',
+        'not-signed-in': '请先在弹出的网页里登录 Amazon，登录后再点「网页推送」。',
+        'inject-failed': '没能自动填入文件，已在 Finder 中定位，请手动拖到网页里。',
+        unknown: '网页推送失败'
+      } as Record<string, string>
+    },
+    webPushView: {
+      title: '网页推送',
+      description:
+        '通过 Amazon「Send to Kindle」网页通道推送转换产物，单文件上限 200MB，适合体积偏大的漫画卷（SMTP 邮件附件通常仅 ~50MB）。',
+      howTitle: '怎么用',
+      step1: '首次点下方按钮打开网页并登录你的 Amazon 账号（登录态会被记住）。',
+      step2: '回到「归档」，点某卷的「网页推送」，应用会自动把文件填进网页。',
+      step3: '在弹出的网页窗口里点 Send 完成推送。',
+      openLogin: '打开 Send to Kindle（登录 / 管理）',
+      urlLabel: 'Send to Kindle 页面地址',
+      urlNote: '按你的 Amazon 商城调整，默认美区。例如日区：https://www.amazon.co.jp/sendtokindle',
+      save: '保存',
+      saved: '已保存网页地址',
+      gotoArchive: '前往归档选卷推送'
     },
     convertSettings: {
       title: '转换设置',
@@ -688,7 +714,35 @@ const uiText = {
       delivered: (title: string) => `Sent: ${title}`,
       deliverFailed: (title: string) => `Send failed: ${title}`,
       notConfigured:
-        'Delivery not configured. Set up SMTP and your Kindle email in Devices & Emails first.'
+        'Delivery not configured. Set up SMTP and your Kindle email in Devices & Emails first.',
+      webPush: 'Web push',
+      webPushOpened: (title: string) =>
+        `Ready for "${title}": click "Add file" on the page — it auto-fills (no system dialog), then Send`,
+      webPushErrors: {
+        'not-found': 'Artifact not found.',
+        'no-outputs': 'No file to push.',
+        'too-large': 'File exceeds the 200MB web-push limit.',
+        'not-signed-in': 'Sign in to Amazon in the popped-up window first, then click Web push again.',
+        'inject-failed':
+          "Couldn't auto-fill the file; revealed it in Finder — drag it onto the page manually.",
+        unknown: 'Web push failed'
+      } as Record<string, string>
+    },
+    webPushView: {
+      title: 'Web push',
+      description:
+        "Push converted files through Amazon's Send to Kindle web channel — up to 200MB per file, ideal for larger manga volumes (email attachments usually cap ~50MB).",
+      howTitle: 'How it works',
+      step1: 'Open the page below and sign in to your Amazon account once (the session is remembered).',
+      step2: 'Back in Archive, click "Web push" on a volume — the app auto-fills the file on the page.',
+      step3: 'Click Send in the popped-up web window to finish.',
+      openLogin: 'Open Send to Kindle (sign in / manage)',
+      urlLabel: 'Send to Kindle page URL',
+      urlNote:
+        'Adjust for your Amazon marketplace; defaults to the US. e.g. Japan: https://www.amazon.co.jp/sendtokindle',
+      save: 'Save',
+      saved: 'Page URL saved',
+      gotoArchive: 'Go to Archive to push a volume'
     },
     convertSettings: {
       title: 'Conversion',
@@ -1110,6 +1164,11 @@ function App(): React.JSX.Element {
                 </ScrollArea>
               ) : activeView === 'archive' ? (
                 <ArchiveView locale={languageMode} />
+              ) : activeView === 'web-push' ? (
+                <WebPushView
+                  locale={languageMode}
+                  onGotoArchive={() => setActiveView('archive')}
+                />
               ) : activeView === 'devices-emails' ? (
                 <DeliverySettingsView locale={languageMode} />
               ) : activeView === 'convert-settings' ? (
@@ -1723,6 +1782,28 @@ function ConvertActivityPopover({
     await window.api.artifacts.remove(id)
     await activity.refreshArtifacts()
   }
+  const [pushing, setPushing] = useState<Set<string>>(new Set())
+  const webPush = async (a: Artifact): Promise<void> => {
+    setPushing((p) => new Set(p).add(a.id))
+    try {
+      const res = await window.api.webpush.open(a.id)
+      if (res.success) {
+        toast.success(ta.webPushOpened(a.volumeTitle))
+      } else {
+        const msg = ta.webPushErrors[res.code ?? 'unknown'] ?? ta.webPushErrors.unknown
+        toast.error(`${a.volumeTitle} — ${msg}`)
+        if (res.code === 'inject-failed') await window.api.webpush.reveal(a.id)
+      }
+    } catch (err) {
+      toast.error(`${a.volumeTitle} — ${err}`)
+    } finally {
+      setPushing((p) => {
+        const n = new Set(p)
+        n.delete(a.id)
+        return n
+      })
+    }
+  }
 
   const active = activity.jobs
   const completed = activity.artifacts.slice(0, 8)
@@ -1870,6 +1951,20 @@ function ConvertActivityPopover({
                             <Loader2 className="size-3.5 animate-spin" />
                           ) : (
                             <Send className="size-3.5" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-7"
+                          title={ta.webPush}
+                          disabled={pushing.has(a.id)}
+                          onClick={() => webPush(a)}
+                        >
+                          {pushing.has(a.id) ? (
+                            <Loader2 className="size-3.5 animate-spin" />
+                          ) : (
+                            <Globe className="size-3.5" />
                           )}
                         </Button>
                         <Button
@@ -2861,6 +2956,30 @@ function ArchiveView({ locale }: { locale: LanguageMode }): React.JSX.Element {
     }
   }
 
+  const [pushing, setPushing] = useState<Set<string>>(new Set())
+  const webPush = async (a: Artifact): Promise<void> => {
+    setPushing((prev) => new Set(prev).add(a.id))
+    try {
+      const res = await window.api.webpush.open(a.id)
+      if (res.success) {
+        toast.success(t.webPushOpened(a.volumeTitle))
+      } else {
+        const msg = t.webPushErrors[res.code ?? 'unknown'] ?? t.webPushErrors.unknown
+        toast.error(`${a.volumeTitle} — ${msg}`)
+        // 自动填充失败时在 Finder 中定位文件，方便手动拖入
+        if (res.code === 'inject-failed') await window.api.webpush.reveal(a.id)
+      }
+    } catch (err) {
+      toast.error(`${a.volumeTitle} — ${err}`)
+    } finally {
+      setPushing((prev) => {
+        const next = new Set(prev)
+        next.delete(a.id)
+        return next
+      })
+    }
+  }
+
   const statusLabel = (status: Artifact['status']): string =>
     status === 'delivered'
       ? t.statusDelivered
@@ -2948,6 +3067,20 @@ function ArchiveView({ locale }: { locale: LanguageMode }): React.JSX.Element {
                         {delivering.has(a.id) ? t.delivering : t.deliver}
                       </span>
                     </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => webPush(a)}
+                      disabled={pushing.has(a.id)}
+                      title={t.webPush}
+                    >
+                      {pushing.has(a.id) ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <Globe className="size-4" />
+                      )}
+                      <span className="hidden lg:inline">{t.webPush}</span>
+                    </Button>
                     <Button variant="ghost" size="sm" onClick={() => reveal(a.id)}>
                       <FolderOpen className="size-4" />
                       <span className="hidden lg:inline">{t.reveal}</span>
@@ -2970,6 +3103,77 @@ function ArchiveView({ locale }: { locale: LanguageMode }): React.JSX.Element {
             })}
           </div>
         )}
+      </div>
+    </ScrollArea>
+  )
+}
+
+function WebPushView({
+  locale,
+  onGotoArchive
+}: {
+  locale: LanguageMode
+  onGotoArchive: () => void
+}): React.JSX.Element {
+  const t = uiText[locale].webPushView
+  const [url, setUrl] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    window.api.webpush.getUrl().then(setUrl)
+  }, [])
+
+  const save = async (): Promise<void> => {
+    setSaving(true)
+    try {
+      await window.api.webpush.setUrl(url.trim())
+      setUrl(await window.api.webpush.getUrl())
+      toast.success(t.saved)
+    } catch (err) {
+      toast.error(`${err}`)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <ScrollArea className="min-h-0 flex-1">
+      <div className="mx-auto w-full max-w-xl p-4 lg:p-6">
+        <p className="mb-5 text-sm text-muted-foreground">{t.description}</p>
+        <div className="space-y-5">
+          <div className="rounded-lg border bg-card p-4 text-card-foreground">
+            <h3 className="mb-2 text-sm font-medium">{t.howTitle}</h3>
+            <ol className="list-decimal space-y-1.5 pl-5 text-sm text-muted-foreground">
+              <li>{t.step1}</li>
+              <li>{t.step2}</li>
+              <li>{t.step3}</li>
+            </ol>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="stk-url">{t.urlLabel}</Label>
+            <Input
+              id="stk-url"
+              value={url}
+              placeholder="https://www.amazon.com/sendtokindle"
+              onChange={(e) => setUrl(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">{t.urlNote}</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <Button onClick={() => window.api.webpush.openBlank()}>
+              <Globe className="size-4" />
+              {t.openLogin}
+            </Button>
+            <Button variant="outline" onClick={save} disabled={saving}>
+              {saving ? <Loader2 className="size-4 animate-spin" /> : null}
+              {t.save}
+            </Button>
+            <Button variant="ghost" onClick={onGotoArchive}>
+              <Archive className="size-4" />
+              {t.gotoArchive}
+            </Button>
+          </div>
+        </div>
       </div>
     </ScrollArea>
   )

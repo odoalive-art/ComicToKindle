@@ -128,11 +128,29 @@ export interface DeliverAPI {
   send: (artifactId: string) => Promise<DeliveryResult>
 }
 
+export interface WebPushResult {
+  success: boolean
+  /** 稳定结果码，由 renderer 按语言翻译：not-found | no-outputs | too-large | inject-failed | unknown */
+  code?: string
+  detail?: string
+  /** 自动填充成功的文件名 */
+  injected?: string[]
+}
+
+export interface WebPushAPI {
+  getUrl: () => Promise<string>
+  setUrl: (url: string) => Promise<void>
+  openBlank: () => Promise<void>
+  open: (artifactId: string) => Promise<WebPushResult>
+  reveal: (artifactId: string) => Promise<void>
+}
+
 export interface CustomAPI {
   library: LibraryAPI
   convert: ConvertAPI
   artifacts: ArtifactsAPI
   deliver: DeliverAPI
+  webpush: WebPushAPI
 }
 
 declare global {

@@ -5,6 +5,7 @@ import icon from '../../resources/icon.png?asset'
 import { registerComicScheme, setupLibrary } from './library'
 import { setupArtifacts } from './artifacts'
 import { setupDelivery } from './deliver'
+import { setupWebPush } from './webpush'
 
 // 自定义 comic:// 协议必须在 app ready 之前注册
 registerComicScheme()
@@ -67,6 +68,9 @@ app.whenReady().then(() => {
 
   // Kindle 投递：SMTP 配置 + 发送 IPC
   setupDelivery()
+
+  // Send to Kindle 网页推送：内嵌网页通道 + 自动填文件 IPC
+  setupWebPush()
 
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
