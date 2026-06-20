@@ -66,6 +66,8 @@ let pushWindow: BrowserWindow | null = null
 // STK 页面点「选择文件」时才临时创建 input 并弹系统框，故改为拦截该选择框、把文件直接喂进去。
 let interceptorInstalled = false
 let pendingFiles: string[] | null = null
+// 本轮武装是否已触发到文件选择框——自动点击的成功判定挂在这个真实事件上，而非「点到没点到」
+let armedChooserFired = false
 
 function getOrCreatePushWindow(): BrowserWindow {
   if (pushWindow && !pushWindow.isDestroyed()) {
@@ -184,6 +186,202 @@ function showBanner(
 }
 
 /**
+ * 全屏黑色蒙层 + 进度提示——自动点击上传按钮期间挡住人为操作，显示「正在上传…」。
+ * 蒙层在主文档顶层（position:fixed inset:0），覆盖整页含 iframe；JS 触发的 click 不受其影响。
+ */
+function showOverlay(win: BrowserWindow, text: string): void {
+  const js = `(() => {
+    const ensure = () => {
+      if (!document.body) { return setTimeout(ensure, 100); }
+      if (!document.getElementById('c2k-ostyle')) {
+        const s = document.createElement('style');
+        s.id = 'c2k-ostyle';
+        s.textContent = [
+          "#c2k-overlay{position:fixed;inset:0;z-index:2147483646;display:flex;align-items:center;justify-content:center;background:oklch(0 0 0 / 0.55);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif}",
+          "#c2k-overlay .c2k-card{display:flex;align-items:center;gap:12px;padding:16px 22px;border-radius:8px;background:oklch(1 0 0);box-shadow:0 10px 40px oklch(0 0 0 / 0.3);font-size:14px;line-height:1.4;color:oklch(0.145 0 0)}",
+          "#c2k-overlay .c2k-spin{flex:none;width:18px;height:18px;border-radius:9999px;border:2px solid oklch(0.922 0 0);border-top-color:oklch(0.205 0 0);animation:c2k-spin .7s linear infinite}",
+          "#c2k-overlay[data-done='1'] .c2k-spin{border:none;animation:none;background:oklch(0.696 0.17 162.48);-webkit-mask:no-repeat center/12px url(\\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E\\")}",
+          "@keyframes c2k-spin{to{transform:rotate(360deg)}}"
+        ].join('');
+        document.head.appendChild(s);
+      }
+      let o = document.getElementById('c2k-overlay');
+      if (!o) {
+        o = document.createElement('div');
+        o.id = 'c2k-overlay';
+        o.innerHTML = '<div class="c2k-card"><span class="c2k-spin"></span><span class="c2k-otext"></span></div>';
+        document.body.appendChild(o);
+      }
+      o.removeAttribute('data-done');
+      o.querySelector('.c2k-otext').textContent = ${JSON.stringify(text)};
+    };
+    ensure();
+  })()`
+  win.webContents.executeJavaScript(js).catch(() => {})
+}
+
+/** 蒙层切到完成态（对勾 + 文案），短暂停留后淡出，把窗口交还给用户去点 Send。 */
+function finishOverlay(win: BrowserWindow, text: string): void {
+  const js = `(() => {
+    const o = document.getElementById('c2k-overlay');
+    if (!o) return;
+    o.setAttribute('data-done', '1');
+    const t = o.querySelector('.c2k-otext');
+    if (t) t.textContent = ${JSON.stringify(text)};
+    setTimeout(() => { o.style.transition = 'opacity .25s'; o.style.opacity = '0'; setTimeout(() => o.remove(), 300); }, 800);
+  })()`
+  win.webContents.executeJavaScript(js).catch(() => {})
+}
+
+function hideOverlay(win: BrowserWindow): void {
+  win.webContents
+    .executeJavaScript(
+      `(() => { const o = document.getElementById('c2k-overlay'); if (o) o.remove(); })()`
+    )
+    .catch(() => {})
+}
+
+/**
+ * 探测页面状态（可选顺带点击上传入口）：
+ *   - 找上传控件（add a file / select file / 选择文件…），排除「Sign in」字样；找到即（可选）点击。
+ *   - 上传入口只点 button/[role=button]/label，避开 <a> 以免误触发导航。
+ *   - 同时报告是否出现「Sign in」、是否已登录（页面含 sign out / 账户等），及可见候选元素文本（诊断用）。
+ * 返回值经 frame.executeJavaScript 序列化回主进程。
+ */
+function probeScript(doClick: boolean): string {
+  return `(() => {
+    const vis = (el) => el.getClientRects && el.getClientRects().length > 0;
+    const txt = (el) => (((el.getAttribute && el.getAttribute('aria-label')) || '') + ' ' + (el.textContent || '')).replace(/\\s+/g, ' ').trim();
+    const upRe = /add a file|add file|select.*file|choose.*file|browse|drag.*drop|drop.*here|选择文件|添加文件|上传/i;
+    const signRe = /\\bsign[ -]?in\\b|登录/i;
+    const nodes = Array.from(document.querySelectorAll("button,[role=button],label,a,[class*=upload i],[class*=drop i]"));
+    let clicked = false, hasUploader = false, hasSignin = false;
+    const cand = [];
+    for (const e of nodes) {
+      if (!vis(e)) continue;
+      const t = txt(e);
+      if (t && cand.length < 30) cand.push(e.tagName + '|' + t.slice(0, 48));
+      if (signRe.test(t)) hasSignin = true;
+      if (upRe.test(t) && !signRe.test(t)) {
+        hasUploader = true;
+        ${doClick ? "const tgt = e.closest('button,[role=button],label'); if (!clicked && tgt) { try { tgt.click(); clicked = true; } catch (_) {} }" : ''}
+      }
+    }
+    const body = (document.body && document.body.innerText) || '';
+    const loggedIn = /sign out|your account|hello,|你好|退出|账户/i.test(body);
+    return { clicked, hasUploader, hasSignin, loggedIn, cand };
+  })()`
+}
+
+interface ProbeResult {
+  clicked: boolean
+  hasUploader: boolean
+  hasSignin: boolean
+  loggedIn: boolean
+  cand: string[]
+}
+
+// 逐 frame 跑探测脚本并合并（STK 上传组件可能在 iframe，主文档 executeJavaScript 够不到）
+async function probeFrames(win: BrowserWindow, doClick: boolean): Promise<ProbeResult> {
+  const script = probeScript(doClick)
+  const merged: ProbeResult = {
+    clicked: false,
+    hasUploader: false,
+    hasSignin: false,
+    loggedIn: false,
+    cand: []
+  }
+  let frames: Electron.WebFrameMain[] = []
+  try {
+    frames = win.webContents.mainFrame?.framesInSubtree ?? []
+  } catch {
+    frames = []
+  }
+  for (const f of frames) {
+    try {
+      const r = (await f.executeJavaScript(script, true)) as ProbeResult | undefined
+      if (r) {
+        merged.clicked ||= r.clicked
+        merged.hasUploader ||= r.hasUploader
+        merged.hasSignin ||= r.hasSignin
+        merged.loggedIn ||= r.loggedIn
+        if (Array.isArray(r.cand)) merged.cand.push(...r.cand)
+      }
+    } catch {
+      /* frame 可能已销毁/跨域，忽略 */
+    }
+    if (armedChooserFired) break
+  }
+  return merged
+}
+
+// 等一次 dom-ready（reload 后用），最多兜底 8 秒
+function waitDomReady(win: BrowserWindow): Promise<void> {
+  return new Promise((resolve) => {
+    const wc = win.webContents
+    const done = (): void => {
+      wc.removeListener('dom-ready', done)
+      resolve()
+    }
+    wc.once('dom-ready', done)
+    setTimeout(done, 8000)
+  })
+}
+
+type ReadyStatus = 'ready' | 'need-login' | 'unknown'
+
+/**
+ * 确保上传控件就绪。Amazon STK 是 SPA，首次进入常出现「顶栏已登录、但上传区仍显示 Sign in」的
+ * 登录态水合滞后——此时 reload 一次即可刷出真正的上传控件（reload 必须在装 CDP 拦截器之前，
+ * 否则 setInterceptFileChooserDialog 会被导航清掉）。
+ */
+async function ensureUploaderReady(win: BrowserWindow, allowReload: boolean): Promise<ReadyStatus> {
+  let reloaded = false
+  const deadline = Date.now() + 7000
+  while (Date.now() < deadline) {
+    const p = await probeFrames(win, false)
+    if (p.hasUploader) return 'ready'
+    if (allowReload && !reloaded && p.hasSignin && p.loggedIn) {
+      // 已登录但上传区是 Sign in → 水合滞后，reload 刷新
+      reloaded = true
+      try {
+        win.webContents.reload()
+      } catch {
+        /* ignore */
+      }
+      await waitDomReady(win)
+      await new Promise((r) => setTimeout(r, 600))
+      showOverlay(win, '正在准备上传…')
+      continue
+    }
+    if (looksLikeSignIn(win.webContents.getURL()) || (p.hasSignin && !p.loggedIn))
+      return 'need-login'
+    await new Promise((r) => setTimeout(r, 400))
+  }
+  return 'unknown'
+}
+
+/**
+ * 反复点击上传入口，直到真实的 fileChooserOpened 触发（armedChooserFired）或超时 ~6 秒。
+ * 成功判定挂在事件上而非点击返回值，对选择器精度更宽容。超时则把可见候选元素打到主进程日志便于调参。
+ */
+async function clickUploadUntilChooser(win: BrowserWindow): Promise<boolean> {
+  const deadline = Date.now() + 6000
+  let lastCand: string[] = []
+  while (Date.now() < deadline) {
+    if (armedChooserFired) return true
+    const p = await probeFrames(win, true)
+    if (p.cand.length) lastCand = p.cand
+    if (armedChooserFired) return true
+    await new Promise((r) => setTimeout(r, 400))
+  }
+  if (!armedChooserFired) {
+    console.log('[webpush] 自动点击未触发文件框，可见候选元素:', JSON.stringify(lastCand))
+  }
+  return armedChooserFired
+}
+
+/**
  * 武装文件选择框拦截：STK 页面点「选择文件」时才即时创建 <input type=file> 并弹系统框，
  * 没有可预先注入的持久输入框。改用 CDP Page.setInterceptFileChooserDialog 拦截该选择框，
  * 用户一点「选择文件」，系统框不弹出、转而触发 Page.fileChooserOpened，我们把 EPUB 直接喂进去。
@@ -198,48 +396,75 @@ async function armFileChooser(win: BrowserWindow, filePaths: string[]): Promise<
   if (looksLikeSignIn(win.webContents.getURL())) return 'not-signed-in'
 
   pendingFiles = filePaths
-  showBanner(win, ARM_BANNER_LEAD, ARM_BANNER_DESC, 'info')
-
-  if (interceptorInstalled) return 'armed'
-
+  armedChooserFired = false
+  const names = filePaths.map((f) => f.split(/[\\/]/).pop() ?? f)
   const wc = win.webContents
+
+  showOverlay(win, `正在上传 ${names.join('、')}…`)
+
+  // 装拦截器之前先确保上传控件就绪（必要时 reload 一次解决登录态水合滞后）。
+  // 仅首次武装允许 reload——此后拦截器已装，reload 会把它清掉。
+  const ready = await ensureUploaderReady(win, !interceptorInstalled)
+  if (ready === 'need-login') {
+    hideOverlay(win)
+    return 'not-signed-in'
+  }
+
   try {
-    if (!wc.debugger.isAttached()) wc.debugger.attach('1.3')
+    // 拦截器在窗口生命周期内只装一次；后续推送只更新 pendingFiles 并重新自动点击。
+    if (!interceptorInstalled) {
+      if (!wc.debugger.isAttached()) wc.debugger.attach('1.3')
 
-    wc.debugger.on('message', (_e, method, params) => {
-      // 启用 Page 域后 JS 对话框（alert/confirm/beforeunload）改走 CDP，不处理会卡住页面/关闭，
-      // 一律放行（接受），避免「点关闭没反应」。
-      if (method === 'Page.javascriptDialogOpening') {
-        wc.debugger.sendCommand('Page.handleJavaScriptDialog', { accept: true }).catch(() => {})
-        return
-      }
-      // 文件选择框打开 → 用 pendingFiles 填入对应的 input（按 backendNodeId）
-      if (method !== 'Page.fileChooserOpened') return
-      const backendNodeId = (params as { backendNodeId?: number }).backendNodeId
-      if (!backendNodeId || !pendingFiles) return
-      const files = pendingFiles
-      pendingFiles = null
-      const names = files.map((f) => f.split('/').pop())
-      wc.debugger
-        .sendCommand('DOM.setFileInputFiles', { files, backendNodeId })
-        .then(() => {
-          console.log('[webpush] 已注入文件:', names)
-          showBanner(
-            win,
-            '已自动填入',
-            `${names.join('、')}，确认后点 Amazon 的 Send 发送到 Kindle。`,
-            'success'
-          )
-        })
-        .catch((err) => console.log('[webpush] 注入失败:', err?.message ?? err))
-    })
+      wc.debugger.on('message', (_e, method, params) => {
+        // 启用 Page 域后 JS 对话框（alert/confirm/beforeunload）改走 CDP，不处理会卡住页面/关闭，
+        // 一律放行（接受），避免「点关闭没反应」。
+        if (method === 'Page.javascriptDialogOpening') {
+          wc.debugger.sendCommand('Page.handleJavaScriptDialog', { accept: true }).catch(() => {})
+          return
+        }
+        // 文件选择框打开 → 用 pendingFiles 填入对应的 input（按 backendNodeId）
+        if (method !== 'Page.fileChooserOpened') return
+        armedChooserFired = true
+        const backendNodeId = (params as { backendNodeId?: number }).backendNodeId
+        if (!backendNodeId || !pendingFiles) return
+        const files = pendingFiles
+        pendingFiles = null
+        const injectedNames = files.map((f) => f.split(/[\\/]/).pop())
+        wc.debugger
+          .sendCommand('DOM.setFileInputFiles', { files, backendNodeId })
+          .then(() => {
+            console.log('[webpush] 已注入文件:', injectedNames)
+            finishOverlay(win, '已填入，点 Send 发送到 Kindle')
+            showBanner(
+              win,
+              '已自动填入',
+              `${injectedNames.join('、')}，确认后点 Amazon 的 Send 发送到 Kindle。`,
+              'success'
+            )
+          })
+          .catch((err) => {
+            hideOverlay(win)
+            console.log('[webpush] 注入失败:', err?.message ?? err)
+          })
+      })
 
-    await wc.debugger.sendCommand('Page.enable')
-    await wc.debugger.sendCommand('DOM.enable')
-    await wc.debugger.sendCommand('Page.setInterceptFileChooserDialog', { enabled: true })
-    interceptorInstalled = true
+      await wc.debugger.sendCommand('Page.enable')
+      await wc.debugger.sendCommand('DOM.enable')
+      await wc.debugger.sendCommand('Page.setInterceptFileChooserDialog', { enabled: true })
+      interceptorInstalled = true
+    }
+
+    // 全自动：蒙层挡住人为操作 + 程序点击上传按钮，触发文件框后由上面的 handler 喂入。
+    showOverlay(win, `正在上传 ${names.join('、')}…`)
+    const clicked = await clickUploadUntilChooser(win)
+    if (!clicked) {
+      // 没找到/点不动上传按钮（Amazon 改版等）——撤蒙层，退回半自动：引导用户自己点。
+      hideOverlay(win)
+      showBanner(win, ARM_BANNER_LEAD, ARM_BANNER_DESC, 'info')
+    }
     return 'armed'
   } catch (err) {
+    hideOverlay(win)
     console.log('[webpush] 武装拦截器失败:', (err as Error)?.message ?? err)
     return 'failed'
   }
