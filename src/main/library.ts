@@ -1,5 +1,5 @@
-import { app, dialog, ipcMain, protocol, BrowserWindow } from 'electron'
-import { join, extname } from 'path'
+import { app, dialog, ipcMain, protocol, BrowserWindow, shell } from 'electron'
+import { join, extname, resolve, dirname, basename, sep } from 'path'
 import { promises as fs } from 'fs'
 import { createHash } from 'crypto'
 import sharp from 'sharp'
@@ -331,6 +331,110 @@ export async function collectVolumeImagePaths(volumePath: string): Promise<strin
   return resolveVolumeImagePaths(volumePath)
 }
 
+// ---------- 文件整理（应用内本地文件操作） ----------
+// 在 app 内对本地库做重命名/移动/新建/删除，省去切到 Finder 手动整理。
+// 所有路径都必须落在当前库根目录内（assertWithinRoot），抛出的错误码供 renderer 翻译。
+
+/** 规范化并校验路径必须落在当前库根目录内（防越权/路径穿越），返回规范化绝对路径 */
+function assertWithinRoot(p: string): string {
+  if (!currentRoot) throw new Error('NO_ROOT')
+  const root = resolve(currentRoot)
+  const abs = resolve(p)
+  if (abs !== root && !abs.startsWith(root + sep)) throw new Error('OUT_OF_ROOT')
+  return abs
+}
+
+// 跨平台非法文件名字符（含路径分隔符），避免穿越/非法名（空格允许，漫画名常含空格）
+const INVALID_NAME = /[\\/:*?"<>|]/
+/** 校验并清洗用户输入的单段文件夹/文件名（不得含分隔符、. / .. / 过长） */
+function sanitizeName(name: string): string {
+  const trimmed = name.trim()
+  if (!trimmed || trimmed === '.' || trimmed === '..') throw new Error('INVALID_NAME')
+  if (INVALID_NAME.test(trimmed) || trimmed.length > 255) throw new Error('INVALID_NAME')
+  return trimmed
+}
+
+async function pathExists(p: string): Promise<boolean> {
+  try {
+    await fs.access(p)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/** 重命名一个部/卷（文件夹或单文件）。返回新绝对路径。 */
+async function renameEntry(targetPath: string, newNameRaw: string): Promise<string> {
+  const abs = assertWithinRoot(targetPath)
+  const root = resolve(currentRoot!)
+  if (abs === root) throw new Error('CANNOT_RENAME_ROOT')
+  const parent = dirname(abs)
+  const stat = await fs.stat(abs).catch(() => null)
+  if (!stat) throw new Error('NOT_FOUND')
+
+  let finalName = sanitizeName(newNameRaw)
+  // 单文件卷（cbz/zip…）若用户未带原扩展名，则补回，避免改没文件类型
+  if (stat.isFile()) {
+    const ext = extname(abs)
+    if (ext && extname(finalName).toLowerCase() !== ext.toLowerCase()) finalName += ext
+  }
+
+  const dest = join(parent, finalName)
+  if (resolve(dest) === abs) return abs // 名称未变
+  if (await pathExists(dest)) throw new Error('NAME_EXISTS')
+  await fs.rename(abs, dest)
+
+  // 重命名的是顶层「部」文件夹 → 迁移其 seriesMeta 覆盖键（键为文件夹名）
+  if (parent === root) {
+    const all = await readSeriesMeta()
+    const oldKey = basename(abs)
+    if (all[oldKey]) {
+      all[finalName] = all[oldKey]
+      delete all[oldKey]
+      await patchSettings({ seriesMeta: all })
+    }
+  }
+  return dest
+}
+
+/** 移动若干个部/卷到目标文件夹（同库内）。 */
+async function moveEntries(sourcePaths: string[], destDir: string): Promise<void> {
+  const root = resolve(currentRoot!)
+  const dest = assertWithinRoot(destDir)
+  const destStat = await fs.stat(dest).catch(() => null)
+  if (!destStat || !destStat.isDirectory()) throw new Error('DEST_NOT_DIR')
+  for (const src of sourcePaths) {
+    const absSrc = assertWithinRoot(src)
+    if (absSrc === root) throw new Error('CANNOT_MOVE_ROOT')
+    // 不能移进自身或自身子目录
+    if (dest === absSrc || dest.startsWith(absSrc + sep)) throw new Error('MOVE_INTO_SELF')
+    const target = join(dest, basename(absSrc))
+    if (resolve(target) === absSrc) continue // 已在目标目录，跳过
+    if (await pathExists(target)) throw new Error('NAME_EXISTS')
+    await fs.rename(absSrc, target)
+  }
+}
+
+/** 在指定父目录下新建文件夹。返回新文件夹绝对路径。 */
+async function createFolderIn(parentPath: string, nameRaw: string): Promise<string> {
+  const parent = assertWithinRoot(parentPath)
+  const name = sanitizeName(nameRaw)
+  const dest = join(parent, name)
+  if (await pathExists(dest)) throw new Error('NAME_EXISTS')
+  await fs.mkdir(dest)
+  return dest
+}
+
+/** 把若干个部/卷移入系统废纸篓（可在 Finder 还原）。 */
+async function trashEntries(paths: string[]): Promise<void> {
+  const root = resolve(currentRoot!)
+  for (const p of paths) {
+    const abs = assertWithinRoot(p)
+    if (abs === root) throw new Error('CANNOT_DELETE_ROOT')
+    await shell.trashItem(abs)
+  }
+}
+
 // ---------- comic:// 协议 ----------
 /** 必须在 app ready 之前调用 */
 export function registerComicScheme(): void {
@@ -428,4 +532,19 @@ export function setupLibrary(): void {
       return resolveSeriesMeta(name, all[name])
     }
   )
+
+  // ---------- 文件整理 IPC（应用内本地文件操作）----------
+  ipcMain.handle('library:rename', async (_event, targetPath: string, newName: string) =>
+    renameEntry(targetPath, newName)
+  )
+
+  ipcMain.handle('library:move', async (_event, sourcePaths: string[], destDir: string) =>
+    moveEntries(sourcePaths, destDir)
+  )
+
+  ipcMain.handle('library:createFolder', async (_event, parentPath: string, name: string) =>
+    createFolderIn(parentPath, name)
+  )
+
+  ipcMain.handle('library:trash', async (_event, paths: string[]) => trashEntries(paths))
 }

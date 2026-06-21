@@ -64,7 +64,8 @@ import {
   FileArchive,
   Eye,
   EyeOff,
-  Pencil
+  Pencil,
+  FolderInput
 } from 'lucide-react'
 
 import {
@@ -466,6 +467,33 @@ const uiText = {
       cancel: '取消',
       saved: '已更新漫画信息'
     },
+    fileops: {
+      rename: '重命名',
+      renameTitle: '重命名',
+      renameDesc: '修改本地文件夹/文件名（会改动磁盘上的文件）。',
+      move: '移动到…',
+      moveTitle: '移动到',
+      moveDesc: (n: number) => `将所选 ${n} 项移动到另一部。`,
+      noMoveTarget: '没有其他可移动到的部。',
+      delete: '删除',
+      deleteTitle: '移到废纸篓',
+      deleteDesc: (n: number) => `确定把所选 ${n} 项移到系统废纸篓吗？可在废纸篓中还原。`,
+      newFolder: '新建文件夹',
+      newFolderTitle: '新建文件夹',
+      newFolderDesc: '在当前位置创建一个新文件夹。',
+      newFolderPlaceholder: '文件夹名称',
+      namePlaceholder: '新名称',
+      confirm: '确定',
+      cancel: '取消',
+      renamed: '已重命名',
+      moved: (n: number) => `已移动 ${n} 项`,
+      deleted: (n: number) => `已移到废纸篓（${n} 项）`,
+      created: '已新建文件夹',
+      errNameExists: '同名文件已存在',
+      errInvalidName: '名称含非法字符或为空',
+      errMoveIntoSelf: '不能移动到自身或其子目录',
+      errGeneric: '操作失败'
+    },
     activity: {
       trigger: '转换活动',
       title: '转换活动',
@@ -766,6 +794,34 @@ const uiText = {
       save: 'Save',
       cancel: 'Cancel',
       saved: 'Series info updated'
+    },
+    fileops: {
+      rename: 'Rename',
+      renameTitle: 'Rename',
+      renameDesc: 'Rename the local folder/file (changes files on disk).',
+      move: 'Move to…',
+      moveTitle: 'Move to',
+      moveDesc: (n: number) => `Move ${n} selected item${n === 1 ? '' : 's'} into another series.`,
+      noMoveTarget: 'No other series to move into.',
+      delete: 'Delete',
+      deleteTitle: 'Move to Trash',
+      deleteDesc: (n: number) =>
+        `Move ${n} selected item${n === 1 ? '' : 's'} to the Trash? You can restore from Trash.`,
+      newFolder: 'New folder',
+      newFolderTitle: 'New folder',
+      newFolderDesc: 'Create a new folder at the current location.',
+      newFolderPlaceholder: 'Folder name',
+      namePlaceholder: 'New name',
+      confirm: 'OK',
+      cancel: 'Cancel',
+      renamed: 'Renamed',
+      moved: (n: number) => `Moved ${n} item${n === 1 ? '' : 's'}`,
+      deleted: (n: number) => `Moved ${n} item${n === 1 ? '' : 's'} to Trash`,
+      created: 'Folder created',
+      errNameExists: 'A file with that name already exists',
+      errInvalidName: 'Name is empty or contains invalid characters',
+      errMoveIntoSelf: 'Cannot move into itself or a subfolder',
+      errGeneric: 'Operation failed'
     },
     activity: {
       trigger: 'Conversion activity',
@@ -2303,6 +2359,18 @@ function LibraryView({
     busy: boolean
   } | null>(null)
 
+  // ---- 文件整理（真·本地文件操作）----
+  const [renameReq, setRenameReq] = useState<{ path: string; name: string; busy: boolean } | null>(
+    null
+  )
+  const [moveReq, setMoveReq] = useState<{ sources: string[]; busy: boolean } | null>(null)
+  const [deleteReq, setDeleteReq] = useState<{ paths: string[]; busy: boolean } | null>(null)
+  const [newFolderReq, setNewFolderReq] = useState<{
+    parent: string
+    name: string
+    busy: boolean
+  } | null>(null)
+
   React.useEffect(() => {
     return window.api.archive.onProgress(({ percent }) => {
       extractStartedRef.current = true
@@ -2452,6 +2520,101 @@ function LibraryView({
     toast.success(text.seriesMeta.saved)
   }
 
+  // Radix 右键菜单关闭那一帧会派发 pointerup/focus 事件，刚打开的 Dialog/AlertDialog 会把它
+  // 误判为「点击外部」而立即自关 → 表现为「点了菜单项没反应」。把开弹框延到下一宏任务
+  // （菜单已收起后）执行即可规避。新建文件夹用的是工具栏按钮，无此问题。
+  const deferOpen = (fn: () => void): void => {
+    setTimeout(fn, 0)
+  }
+
+  // ---- 文件整理：错误码翻译 + 统一刷新 + 各操作 ----
+  const fileopErr = (e: unknown): string => {
+    const m = `${e}`
+    if (m.includes('NAME_EXISTS')) return text.fileops.errNameExists
+    if (m.includes('INVALID_NAME')) return text.fileops.errInvalidName
+    if (m.includes('MOVE_INTO_SELF')) return text.fileops.errMoveIntoSelf
+    return text.fileops.errGeneric
+  }
+
+  // 操作后刷新：卷册视图刷卷，部视图重扫
+  const refreshAfterFileop = async (): Promise<void> => {
+    if (selected) await refreshVolumes()
+    else if (root) await loadSeries(root)
+  }
+
+  // 右键命中的卷：若它在多选集合内则对整组操作，否则只对它
+  const volTargets = (vol: LibraryVolume): string[] =>
+    selectedVols.has(vol.path) && selectedVols.size > 1 ? [...selectedVols] : [vol.path]
+
+  const submitRename = async (): Promise<void> => {
+    if (!renameReq || renameReq.busy || !renameReq.name.trim()) return
+    setRenameReq((s) => (s ? { ...s, busy: true } : s))
+    try {
+      await window.api.library.rename(renameReq.path, renameReq.name)
+      setRenameReq(null)
+      toast.success(text.fileops.renamed)
+      await refreshAfterFileop()
+    } catch (e) {
+      toast.error(fileopErr(e))
+      setRenameReq((s) => (s ? { ...s, busy: false } : s))
+    }
+  }
+
+  const submitMove = async (destDir: string): Promise<void> => {
+    if (!moveReq || moveReq.busy) return
+    setMoveReq((s) => (s ? { ...s, busy: true } : s))
+    try {
+      await window.api.library.move(moveReq.sources, destDir)
+      const n = moveReq.sources.length
+      setMoveReq(null)
+      exitSelect()
+      toast.success(text.fileops.moved(n))
+      await refreshAfterFileop()
+    } catch (e) {
+      toast.error(fileopErr(e))
+      setMoveReq((s) => (s ? { ...s, busy: false } : s))
+    }
+  }
+
+  const submitDelete = async (): Promise<void> => {
+    if (!deleteReq || deleteReq.busy) return
+    setDeleteReq((s) => (s ? { ...s, busy: true } : s))
+    try {
+      await window.api.library.trash(deleteReq.paths)
+      const n = deleteReq.paths.length
+      setDeleteReq(null)
+      exitSelect()
+      toast.success(text.fileops.deleted(n))
+      await refreshAfterFileop()
+    } catch (e) {
+      toast.error(fileopErr(e))
+      setDeleteReq((s) => (s ? { ...s, busy: false } : s))
+    }
+  }
+
+  const openNewFolder = (): void => {
+    const parent = selected ? selected.path : root
+    if (!parent) return
+    setNewFolderReq({ parent, name: '', busy: false })
+  }
+
+  const submitNewFolder = async (): Promise<void> => {
+    if (!newFolderReq || newFolderReq.busy || !newFolderReq.name.trim()) return
+    setNewFolderReq((s) => (s ? { ...s, busy: true } : s))
+    try {
+      await window.api.library.createFolder(newFolderReq.parent, newFolderReq.name)
+      setNewFolderReq(null)
+      toast.success(text.fileops.created)
+      await refreshAfterFileop()
+    } catch (e) {
+      toast.error(fileopErr(e))
+      setNewFolderReq((s) => (s ? { ...s, busy: false } : s))
+    }
+  }
+
+  // 移动目标 = 其他「部」文件夹（移动卷册到另一部）
+  const moveTargets = (): LibrarySeries[] => series.filter((s) => s.path !== selected?.path)
+
   const exitSelect = (): void => {
     setSelectMode(false)
     setSelectedVols(new Set())
@@ -2533,9 +2696,13 @@ function LibraryView({
   const onWrapPointerDown = (e: React.PointerEvent<HTMLDivElement>): void => {
     if (e.button !== 0) return
     const el = e.target as HTMLElement
-    if (el.closest('[data-vol-card],[data-series-card]')) return
     const wrap = gridWrapRef.current
     if (!wrap) return
+    // Radix 右键菜单/弹框的内容被 portal 到 document.body，但 React 事件仍沿组件树冒泡到此处。
+    // 这类事件的 DOM target 不在 wrap 内——若不剔除，点击菜单项会被误判为「空白处按下」从而
+    // 起框选 + setPointerCapture，吞掉点击，导致菜单项点了没反应、菜单也不收起。
+    if (!wrap.contains(el)) return
+    if (el.closest('[data-vol-card],[data-series-card]')) return
     const wrapRect = wrap.getBoundingClientRect()
     marqueeDrag.current = {
       startX: e.clientX - wrapRect.left,
@@ -3022,6 +3189,160 @@ function LibraryView({
         ) : null}
       </DialogContent>
     </Dialog>
+    {/* 文件整理：重命名（真·改本地文件名） */}
+    <Dialog
+      open={renameReq !== null}
+      onOpenChange={(o) => (!o && !renameReq?.busy ? setRenameReq(null) : undefined)}
+    >
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>{text.fileops.renameTitle}</DialogTitle>
+          <DialogDescription>{text.fileops.renameDesc}</DialogDescription>
+        </DialogHeader>
+        {renameReq ? (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              void submitRename()
+            }}
+            className="space-y-3"
+          >
+            <Input
+              autoFocus
+              value={renameReq.name}
+              placeholder={text.fileops.namePlaceholder}
+              onChange={(e) => setRenameReq((s) => (s ? { ...s, name: e.target.value } : s))}
+            />
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setRenameReq(null)}
+                disabled={renameReq.busy}
+              >
+                {text.fileops.cancel}
+              </Button>
+              <Button type="submit" disabled={!renameReq.name.trim() || renameReq.busy}>
+                {text.fileops.confirm}
+              </Button>
+            </DialogFooter>
+          </form>
+        ) : null}
+      </DialogContent>
+    </Dialog>
+    {/* 文件整理：新建文件夹 */}
+    <Dialog
+      open={newFolderReq !== null}
+      onOpenChange={(o) => (!o && !newFolderReq?.busy ? setNewFolderReq(null) : undefined)}
+    >
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>{text.fileops.newFolderTitle}</DialogTitle>
+          <DialogDescription>{text.fileops.newFolderDesc}</DialogDescription>
+        </DialogHeader>
+        {newFolderReq ? (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              void submitNewFolder()
+            }}
+            className="space-y-3"
+          >
+            <Input
+              autoFocus
+              value={newFolderReq.name}
+              placeholder={text.fileops.newFolderPlaceholder}
+              onChange={(e) => setNewFolderReq((s) => (s ? { ...s, name: e.target.value } : s))}
+            />
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setNewFolderReq(null)}
+                disabled={newFolderReq.busy}
+              >
+                {text.fileops.cancel}
+              </Button>
+              <Button type="submit" disabled={!newFolderReq.name.trim() || newFolderReq.busy}>
+                {text.fileops.confirm}
+              </Button>
+            </DialogFooter>
+          </form>
+        ) : null}
+      </DialogContent>
+    </Dialog>
+    {/* 文件整理：移动到另一部 */}
+    <Dialog
+      open={moveReq !== null}
+      onOpenChange={(o) => (!o && !moveReq?.busy ? setMoveReq(null) : undefined)}
+    >
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>{text.fileops.moveTitle}</DialogTitle>
+          <DialogDescription>
+            {moveReq ? text.fileops.moveDesc(moveReq.sources.length) : ''}
+          </DialogDescription>
+        </DialogHeader>
+        {moveReq ? (
+          moveTargets().length === 0 ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              {text.fileops.noMoveTarget}
+            </p>
+          ) : (
+            <div className="max-h-72 space-y-1 overflow-y-auto">
+              {moveTargets().map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  disabled={moveReq.busy}
+                  onClick={() => void submitMove(t.path)}
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-accent disabled:opacity-50"
+                >
+                  <FolderInput className="size-4 shrink-0 text-muted-foreground" />
+                  <span className="min-w-0 flex-1 truncate">{t.title}</span>
+                </button>
+              ))}
+            </div>
+          )
+        ) : null}
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => setMoveReq(null)}
+            disabled={moveReq?.busy}
+          >
+            {text.fileops.cancel}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    {/* 文件整理：删除到废纸篓 */}
+    <AlertDialog
+      open={deleteReq !== null}
+      onOpenChange={(o) => (!o && !deleteReq?.busy ? setDeleteReq(null) : undefined)}
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{text.fileops.deleteTitle}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {deleteReq ? text.fileops.deleteDesc(deleteReq.paths.length) : ''}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={deleteReq?.busy}>{text.fileops.cancel}</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={(e) => {
+              e.preventDefault()
+              void submitDelete()
+            }}
+            disabled={deleteReq?.busy}
+          >
+            {text.fileops.delete}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     <div className="flex min-h-0 flex-1 flex-col bg-background">
       {/* 合并后的顶栏：侧栏开关 + 标题/面包屑 + 操作 */}
       <header
@@ -3119,6 +3440,15 @@ function LibraryView({
                     <TooltipContent>{text.seriesMeta.edit}</TooltipContent>
                   </Tooltip>
                 ) : null}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" onClick={openNewFolder}>
+                      <FolderPlus className="size-4" />
+                      <span className="sr-only">{text.fileops.newFolder}</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{text.fileops.newFolder}</TooltipContent>
+                </Tooltip>
                 <ConvertActivityPopover
                   activity={activity}
                   locale={locale}
@@ -3210,8 +3540,9 @@ function LibraryView({
                     const job = jobByPath.get(vol.path)
                     const picked = selectedVols.has(vol.path)
                     return (
+                      <ContextMenu key={vol.id}>
+                        <ContextMenuTrigger asChild>
                       <div
-                        key={vol.id}
                         data-vol-card
                         data-vol-path={vol.path}
                         onClick={(e) => onVolumeClick(vol, e)}
@@ -3327,6 +3658,43 @@ function LibraryView({
                           </div>
                         </div>
                       </div>
+                        </ContextMenuTrigger>
+                        <ContextMenuContent>
+                          <ContextMenuItem
+                            onSelect={() =>
+                              deferOpen(() =>
+                                setRenameReq({ path: vol.path, name: vol.name, busy: false })
+                              )
+                            }
+                          >
+                            <Pencil className="size-4" />
+                            {text.fileops.rename}
+                          </ContextMenuItem>
+                          <ContextMenuItem
+                            disabled={moveTargets().length === 0}
+                            onSelect={() =>
+                              deferOpen(() =>
+                                setMoveReq({ sources: volTargets(vol), busy: false })
+                              )
+                            }
+                          >
+                            <FolderInput className="size-4" />
+                            {text.fileops.move}
+                          </ContextMenuItem>
+                          <ContextMenuSeparator />
+                          <ContextMenuItem
+                            variant="destructive"
+                            onSelect={() =>
+                              deferOpen(() =>
+                                setDeleteReq({ paths: volTargets(vol), busy: false })
+                              )
+                            }
+                          >
+                            <Trash2 className="size-4" />
+                            {text.fileops.delete}
+                          </ContextMenuItem>
+                        </ContextMenuContent>
+                      </ContextMenu>
                     )
                   })}
                 </div>
@@ -3384,9 +3752,29 @@ function LibraryView({
                       </button>
                     </ContextMenuTrigger>
                     <ContextMenuContent>
-                      <ContextMenuItem onSelect={() => openSeriesMeta(item)}>
+                      <ContextMenuItem onSelect={() => deferOpen(() => openSeriesMeta(item))}>
                         <Pencil className="size-4" />
                         {text.seriesMeta.edit}
+                      </ContextMenuItem>
+                      <ContextMenuItem
+                        onSelect={() =>
+                          deferOpen(() =>
+                            setRenameReq({ path: item.path, name: item.name, busy: false })
+                          )
+                        }
+                      >
+                        <FolderInput className="size-4" />
+                        {text.fileops.rename}
+                      </ContextMenuItem>
+                      <ContextMenuSeparator />
+                      <ContextMenuItem
+                        variant="destructive"
+                        onSelect={() =>
+                          deferOpen(() => setDeleteReq({ paths: [item.path], busy: false }))
+                        }
+                      >
+                        <Trash2 className="size-4" />
+                        {text.fileops.delete}
                       </ContextMenuItem>
                     </ContextMenuContent>
                   </ContextMenu>

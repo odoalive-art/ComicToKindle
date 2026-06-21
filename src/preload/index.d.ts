@@ -33,6 +33,14 @@ export interface LibraryAPI {
     name: string,
     meta: { title: string; author: string | null }
   ) => Promise<{ title: string; author: string | null }>
+  /** 重命名部/卷（文件夹或单文件，库内），返回新绝对路径 */
+  rename: (targetPath: string, newName: string) => Promise<string>
+  /** 把若干部/卷移动到目标文件夹（同库内） */
+  move: (sourcePaths: string[], destDir: string) => Promise<void>
+  /** 在父目录下新建文件夹，返回新绝对路径 */
+  createFolder: (parentPath: string, name: string) => Promise<string>
+  /** 把若干部/卷移入系统废纸篓 */
+  trash: (paths: string[]) => Promise<void>
 }
 
 export type ArchivePrepareStatus = 'ready' | 'needs-password' | 'error'
