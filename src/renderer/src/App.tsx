@@ -57,10 +57,9 @@ import {
   BookUp,
   FileDown,
   Trash2,
-  ListChecks,
+  ArrowDownUp,
   RotateCcw,
   X,
-  CheckSquare,
   Lock,
   FileArchive,
   Eye,
@@ -2021,7 +2020,7 @@ function ConvertActivityPopover({
               ) : onlyInterrupted ? (
                 <AlertCircle className="size-4 text-amber-500" />
               ) : (
-                <ListChecks className="size-4" />
+                <ArrowDownUp className="size-4" />
               )}
               {badgeCount > 0 ? (
                 <span
@@ -2243,6 +2242,8 @@ function LibraryView({
   // 多选模式：先勾选若干卷再批量转换（替代「转换整部」入口）
   const [selectMode, setSelectMode] = useState(false)
   const [selectedVols, setSelectedVols] = useState<Set<string>>(new Set())
+  // 部（series）层单击选中：纯视觉高亮，给「可双击进入」的预期反馈（暂无批量动作，故单选）
+  const [selectedSeriesPath, setSelectedSeriesPath] = useState<string | null>(null)
   // 框选（橡皮筋）：在空白处按下拖动进入多选
   const gridWrapRef = React.useRef<HTMLDivElement>(null)
   const [marquee, setMarquee] = useState<{
@@ -2416,6 +2417,7 @@ function LibraryView({
     if (!convertReq) return
     const { vol, seriesPathName, seriesTitle, author, volumeTitle } = convertReq
     setConvertReq(null)
+    exitSelect() // 从选择态走单本转换后退出多选
     if (!(await ensureArchiveReady(vol))) return
     enqueue({
       sourceVolumePath: vol.path,
@@ -2455,13 +2457,21 @@ function LibraryView({
     setSelectedVols(new Set())
   }
 
-  const toggleVol = (path: string): void => {
-    setSelectedVols((prev) => {
-      const next = new Set(prev)
-      if (next.has(path)) next.delete(path)
-      else next.add(path)
-      return next
-    })
+  // 文件管理器式单击选中：普通点 = 只选这一卷；Cmd/Ctrl 点或已在多选模式 = 累加/切换。
+  // （已在多选模式里点击累加，保留「选择」按钮 + 连点多选的既有流程）
+  const onVolumeClick = (vol: LibraryVolume, e: React.MouseEvent): void => {
+    const additive = e.metaKey || e.ctrlKey || selectMode
+    const next = new Set(additive ? selectedVols : [])
+    if (additive && next.has(vol.path)) next.delete(vol.path)
+    else next.add(vol.path)
+    setSelectedVols(next)
+    setSelectMode(next.size > 0)
+  }
+
+  // 双击打开阅读器：先清掉选择态再进入（解压/解锁仍在 openVolume 内处理）
+  const onVolumeOpen = async (vol: LibraryVolume): Promise<void> => {
+    exitSelect()
+    await openVolume(vol)
   }
 
   const allSelected = volumes.length > 0 && selectedVols.size === volumes.length
@@ -2469,10 +2479,14 @@ function LibraryView({
     setSelectedVols(allSelected ? new Set() : new Set(volumes.map((v) => v.path)))
   }
 
-  // 多选转换：先弹批量确认框（共享漫画名/作者 + 各卷书名预览），确认后再解压入队
+  // 转换所选：单本走单本确认弹窗（含封面预览），多本走批量确认弹窗
   const convertSelected = (): void => {
     if (!selected || selectedVols.size === 0) return
     const picked = volumes.filter((v) => selectedVols.has(v.path))
+    if (picked.length === 1) {
+      enqueueVolume(picked[0])
+      return
+    }
     setBatchConvertReq({
       seriesPathName: selected.name,
       seriesTitle: selected.title,
@@ -2514,11 +2528,12 @@ function LibraryView({
     moved: boolean
   } | null>(null)
 
-  // 空白处按下：仅记录起点并抓取指针；拖动超过阈值才真正进入框选
+  // 空白处按下：记录起点并抓取指针。两级都生效——卷册层拖动进入框选，部层仅用于
+  // 「空白单击取消选中」。命中卡片则不处理（交给卡片自身 onClick）。
   const onWrapPointerDown = (e: React.PointerEvent<HTMLDivElement>): void => {
-    if (e.button !== 0 || selected === null || volumes.length === 0) return
+    if (e.button !== 0) return
     const el = e.target as HTMLElement
-    if (el.closest('[data-vol-card]')) return // 命中卡片则不框选
+    if (el.closest('[data-vol-card],[data-series-card]')) return
     const wrap = gridWrapRef.current
     if (!wrap) return
     const wrapRect = wrap.getBoundingClientRect()
@@ -2536,6 +2551,8 @@ function LibraryView({
   const onWrapPointerMove = (e: React.PointerEvent<HTMLDivElement>): void => {
     const d = marqueeDrag.current
     if (!d) return
+    // 框选橡皮筋仅在卷册层有意义（部层无批量动作）
+    if (selected === null || volumes.length === 0) return
     const x = e.clientX - d.wrapRect.left
     const y = e.clientY - d.wrapRect.top
     if (!d.moved && Math.hypot(x - d.startX, y - d.startY) < 6) return
@@ -2544,8 +2561,15 @@ function LibraryView({
     const top = Math.min(d.startY, y)
     const width = Math.abs(x - d.startX)
     const height = Math.abs(y - d.startY)
-    setMarquee({ left, top, width, height })
-    // 命中测试（视口坐标）
+    // 框选框是容器内 absolute 定位，容器自身是滚动区 → 叠加 scroll 偏移对齐内容
+    const wrap = gridWrapRef.current
+    setMarquee({
+      left: left + (wrap?.scrollLeft ?? 0),
+      top: top + (wrap?.scrollTop ?? 0),
+      width,
+      height
+    })
+    // 命中测试（视口坐标，无需 scroll 偏移）
     const sel = {
       left: d.wrapRect.left + left,
       top: d.wrapRect.top + top,
@@ -2571,8 +2595,14 @@ function LibraryView({
   }
 
   const onWrapPointerUp = (e: React.PointerEvent<HTMLDivElement>): void => {
+    const d = marqueeDrag.current
     const wrap = gridWrapRef.current
     if (wrap?.hasPointerCapture(e.pointerId)) wrap.releasePointerCapture(e.pointerId)
+    // 空白处按下未拖动 = 单击空白 → 取消两级选中（marqueeDrag 仅在按到非卡片区时才有值）
+    if (d && !d.moved) {
+      exitSelect()
+      setSelectedSeriesPath(null)
+    }
     marqueeDrag.current = null
     setMarquee(null)
   }
@@ -2622,8 +2652,14 @@ function LibraryView({
     if (root) await loadSeries(root)
   }
 
+  // 部卡单击 = 选中高亮（单选，纯视觉反馈）；双击才 openSeries 进入
+  const onSeriesClick = (item: LibrarySeries): void => {
+    setSelectedSeriesPath((prev) => (prev === item.path ? prev : item.path))
+  }
+
   const openSeries = async (item: LibrarySeries): Promise<void> => {
     exitSelect()
+    setSelectedSeriesPath(null)
     setSelected(item)
     setLoading(true)
     try {
@@ -2899,17 +2935,13 @@ function LibraryView({
               </label>
               <ScrollArea className="max-h-52 rounded-lg border bg-card">
                 <div className="divide-y">
-                  {batchConvertReq.vols.map((vol, i) => (
-                    <div key={vol.path} className="flex items-center gap-2 px-3 py-2">
-                      <span className="w-5 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
-                        {i + 1}
-                      </span>
-                      <span
-                        className="min-w-0 flex-1 truncate text-sm"
-                        title={composeBookTitle(batchConvertReq.seriesTitle, vol.title)}
-                      >
-                        {composeBookTitle(batchConvertReq.seriesTitle, vol.title)}
-                      </span>
+                  {batchConvertReq.vols.map((vol) => (
+                    <div
+                      key={vol.path}
+                      className="truncate px-3 py-1.5 text-sm"
+                      title={composeBookTitle(batchConvertReq.seriesTitle, vol.title)}
+                    >
+                      {composeBookTitle(batchConvertReq.seriesTitle, vol.title)}
                     </div>
                   ))}
                 </div>
@@ -3076,26 +3108,16 @@ function LibraryView({
             ) : (
               <>
                 {showVolumes ? (
-                  <>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" onClick={() => openSeriesMeta(selected)}>
-                          <Pencil className="size-4" />
-                          <span className="sr-only">{text.seriesMeta.edit}</span>
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>{text.seriesMeta.edit}</TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" onClick={() => setSelectMode(true)}>
-                          <CheckSquare className="size-4" />
-                          <span className="sr-only">{text.activity.select}</span>
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>{text.activity.select}</TooltipContent>
-                    </Tooltip>
-                  </>
+                  // 多选入口已并入卡片单击/框选，顶栏不再需要独立「选择」按钮
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" onClick={() => openSeriesMeta(selected)}>
+                        <Pencil className="size-4" />
+                        <span className="sr-only">{text.seriesMeta.edit}</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{text.seriesMeta.edit}</TooltipContent>
+                  </Tooltip>
                 ) : null}
                 <ConvertActivityPopover
                   activity={activity}
@@ -3145,14 +3167,16 @@ function LibraryView({
           </Empty>
         </div>
       ) : (
-        <ScrollArea className="min-h-0 flex-1">
-          <div
-            ref={gridWrapRef}
-            onPointerDown={onWrapPointerDown}
-            onPointerMove={onWrapPointerMove}
-            onPointerUp={onWrapPointerUp}
-            className={`relative p-4 lg:p-6 ${marquee ? 'select-none' : ''}`}
-          >
+        // 用原生滚动容器而非 Radix ScrollArea：后者 Viewport 内层 display:table 使
+        // min-h-full 失效、内容下方空白不在容器内（空白单击取消选择会失灵）。容器自身
+        // 即滚动区 + 指针目标，撑满 flex 高度，下方空白也能命中。
+        <div
+          ref={gridWrapRef}
+          onPointerDown={onWrapPointerDown}
+          onPointerMove={onWrapPointerMove}
+          onPointerUp={onWrapPointerUp}
+          className="relative min-h-0 flex-1 overflow-y-auto p-4 select-none lg:p-6"
+        >
             {marquee ? (
               <div
                 className="pointer-events-none absolute z-10 rounded-sm border border-primary bg-primary/15"
@@ -3190,24 +3214,20 @@ function LibraryView({
                         key={vol.id}
                         data-vol-card
                         data-vol-path={vol.path}
-                        className="group flex flex-col gap-2 text-left"
+                        onClick={(e) => onVolumeClick(vol, e)}
+                        onDoubleClick={() => void onVolumeOpen(vol)}
+                        className="group flex cursor-default flex-col gap-2 text-left"
                       >
                         <div className="relative">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              selectMode ? toggleVol(vol.path) : void openVolume(vol)
-                            }
-                            className="block w-full text-left"
-                          >
+                          <div className="block w-full text-left">
                             <AspectRatio
                               ratio={3 / 4}
                               className={`overflow-hidden rounded-lg bg-muted transition-all ${
-                                selectMode
-                                  ? picked
-                                    ? 'ring-2 ring-primary'
-                                    : 'brightness-[0.7] dark:brightness-[0.82]'
-                                  : ''
+                                picked
+                                  ? 'ring-2 ring-primary ring-offset-2 ring-offset-background'
+                                  : selectMode
+                                    ? 'brightness-[0.7] dark:brightness-[0.82]'
+                                    : ''
                               }`}
                             >
                               <CoverImage
@@ -3240,7 +3260,7 @@ function LibraryView({
                                 )
                               })()}
                             </AspectRatio>
-                          </button>
+                          </div>
                           {/* 已转换角标：小封面下用图标圆点，避免文字撑破封面 */}
                           {isConverted && !job ? (
                             <Tooltip>
@@ -3263,10 +3283,9 @@ function LibraryView({
                                 className="size-6 border-2 bg-background/85 backdrop-blur data-[state=checked]:bg-primary"
                               />
                             </div>
-                          ) : (
-                            /* 转换按钮（hover 显示）/ 队列状态 */
+                          ) : job ? (
+                            /* 队列状态角标（转换入口已并入选中 + 顶栏「转换所选」，封面不再放单独转换按钮） */
                             <div className="absolute top-1.5 right-1.5 flex max-w-[calc(100%-0.75rem)] justify-end">
-                              {job ? (
                               <Badge
                                 variant="secondary"
                                 className="pointer-events-none max-w-full gap-1 truncate bg-background/85 backdrop-blur"
@@ -3284,29 +3303,14 @@ function LibraryView({
                                   <span className="text-destructive">{text.activity.failed}</span>
                                 )}
                               </Badge>
-                            ) : (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="secondary"
-                                    size="icon"
-                                    className="size-7 bg-background/85 opacity-0 backdrop-blur transition-opacity group-hover:opacity-100"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      void enqueueVolume(vol)
-                                    }}
-                                  >
-                                    <BookUp className="size-3.5" />
-                                    <span className="sr-only">{text.convert.action}</span>
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>{text.convert.action}</TooltipContent>
-                              </Tooltip>
-                              )}
                             </div>
-                          )}
+                          ) : null}
                         </div>
-                        <div className="min-w-0">
+                        <div
+                          className={`min-w-0 rounded-md px-1.5 py-0.5 ${
+                            picked ? 'bg-accent text-accent-foreground' : ''
+                          }`}
+                        >
                           <div className="truncate text-sm font-medium" title={vol.title}>
                             {vol.title}
                           </div>
@@ -3333,18 +3337,27 @@ function LibraryView({
               </p>
             ) : (
               <div className={LIBRARY_GRID}>
-                {series.map((item) => (
+                {series.map((item) => {
+                  const picked = selectedSeriesPath === item.path
+                  return (
                   <ContextMenu key={item.id}>
                     <ContextMenuTrigger asChild>
                       <button
                         type="button"
-                        onClick={() => openSeries(item)}
-                        className="group flex flex-col gap-2 text-left"
+                        data-series-card
+                        onClick={() => onSeriesClick(item)}
+                        onDoubleClick={() => void openSeries(item)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') void openSeries(item)
+                        }}
+                        className="group flex cursor-default flex-col gap-2 text-left"
                       >
                         <div className="group relative">
                           <AspectRatio
                             ratio={3 / 4}
-                            className="overflow-hidden rounded-lg bg-muted"
+                            className={`overflow-hidden rounded-lg bg-muted transition-all ${
+                              picked ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''
+                            }`}
                           >
                             <CoverImage src={item.coverUrl} alt={item.title} />
                             <div className="pointer-events-none absolute inset-0 rounded-lg border border-foreground/10" />
@@ -3356,7 +3369,11 @@ function LibraryView({
                             {text.library.volumeUnit(item.volumeCount)}
                           </Badge>
                         </div>
-                        <div className="min-w-0">
+                        <div
+                          className={`min-w-0 rounded-md px-1.5 py-0.5 ${
+                            picked ? 'bg-accent text-accent-foreground' : ''
+                          }`}
+                        >
                           <div className="truncate text-sm font-medium" title={item.title}>
                             {item.title}
                           </div>
@@ -3373,11 +3390,11 @@ function LibraryView({
                       </ContextMenuItem>
                     </ContextMenuContent>
                   </ContextMenu>
-                ))}
+                  )
+                })}
               </div>
             )}
-          </div>
-        </ScrollArea>
+        </div>
       )}
     </div>
     </TooltipProvider>
