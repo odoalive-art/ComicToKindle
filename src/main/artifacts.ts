@@ -110,6 +110,13 @@ export function setupArtifacts(): void {
 
   ipcMain.handle('convert:volume', async (event, req: ConvertRequest): Promise<Artifact> => {
     const sender = event.sender
+    // 发起转换的窗口被销毁（关窗/重载）即取消这一卷——否则它会变成后台孤儿，
+    // 续跑到完成、写出产物，重开窗口时与重新入队的同卷形成双跑。引擎在下一张图/
+    // 下一卷边界处通过 checkCancelled 中止。
+    const onSenderGone = (): void => {
+      cancelledPaths.add(req.sourceVolumePath)
+    }
+    sender.once('destroyed', onSenderGone)
     const emitProgress = (percent: number, message: string): void => {
       if (!sender.isDestroyed()) {
         sender.send('convert:progress', {
@@ -144,6 +151,7 @@ export function setupArtifacts(): void {
       throw err
     } finally {
       cancelledPaths.delete(req.sourceVolumePath)
+      if (!sender.isDestroyed()) sender.off('destroyed', onSenderGone)
     }
 
     const artifact: Artifact = {

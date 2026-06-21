@@ -38,7 +38,6 @@ ComicToKindle 目前是一个桌面应用工作台，已打通核心闭环:**本
 - 图像处理或 AI 放大
 - 本地 AZW3 导出（原型曾用 Calibre，已移除；无线投递发 EPUB）
 - 自动投递（转换完成即发；当前只支持归档手动投递）
-- 队列持久化（当前转换队列是 renderer 内存态，重启应用未完成的排队会丢失）
 
 ## 运行层
 
@@ -47,7 +46,8 @@ Electron main process
   src/main/index.ts
   负责 BrowserWindow 创建、应用生命周期、外部链接打开行为和 main-process IPC。
   处理自定义交通灯的 window-close / window-minimize / window-maximize IPC 事件。
-  app ready 前调用 registerComicScheme()，ready 后调用 setupLibrary() / setupArtifacts() / setupDelivery() / setupWebPush()。
+  window-all-closed 统一 app.quit()（含 macOS）：关窗即退，让转换队列持久化的「关窗==重启」前提成立。
+  app ready 前调用 registerComicScheme()，ready 后调用 setupLibrary() / setupArchive() / setupArtifacts() / setupQueue() / setupDelivery() / setupWebPush()。
 
   src/main/library.ts
   漫画库数据层：comic:// 协议（含封面缩略图通道）、目录扫描、库根目录持久化、每部名称/作者覆盖。
@@ -66,6 +66,10 @@ Electron main process
   产物清单数据层：artifacts.json 读写、转换编排（调用 convert.ts）、转换/产物 IPC。
   导出 getArtifactById / setArtifactStatus 供投递层更新状态。
 
+  src/main/queue.ts
+  转换队列持久化层：queue.json 读写、启动恢复（未完成任务 → interrupted，等用户确认）、孤儿 tmp 清扫、queue:load/save IPC。
+  调度仍在 renderer 的 useConvertActivity hook 内，main 不持调度器。
+
   src/main/deliver.ts
   Kindle 投递层：SMTP 配置存储（密码经 safeStorage 加密）、nodemailer 发送、投递 IPC。
 
@@ -75,8 +79,8 @@ Electron main process
 
 Preload process
   src/preload/index.ts
-  将安全的 Electron API 桥接给 renderer，暴露 window.api.library.* / convert.* / artifacts.* / deliver.* / webpush.*。
-  类型定义在 src/preload/index.d.ts（LibrarySeries / LibraryVolume / Artifact / DeliveryConfig* / WebPushResult / 各 API 接口）。
+  将安全的 Electron API 桥接给 renderer，暴露 window.api.library.* / archive.* / convert.* / artifacts.* / queue.* / deliver.* / webpush.*。
+  类型定义在 src/preload/index.d.ts（LibrarySeries / LibraryVolume / Artifact / PersistedConvertJob / DeliveryConfig* / WebPushResult / 各 API 接口）。
 
 Renderer process
   src/renderer/src/
@@ -190,6 +194,34 @@ Artifact       id, sourceVolumePath, seriesName, seriesTitle, volumeTitle, autho
                // seriesTitle 为解析后的部标题；旧产物无此字段时 UI 回退 seriesName
 ```
 
+## 转换队列持久化层
+
+`src/main/queue.ts`，把 renderer 的 `useConvertActivity` 队列状态落到磁盘，解决"重启丢未完成排队"的问题。
+
+- **权威源仍在 renderer**：调度（顺序处理、进度订阅、cancel 标志）由 hook 持有；main 只做读写盘 + 启动恢复 + 孤儿清扫。这样改动量最小，状态机不分裂。
+- **关窗即退是前提**：转换跑在 main、调度在 renderer，若窗口能关了又开而 main 仍活着，会产生孤儿转换 + 重复入队。故 `index.ts` 的 `window-all-closed` 统一 `app.quit()`（含 macOS），让「关窗 == 进程重启」成立，持久化模型才自洽。
+- **落盘**：`userData/queue.json`，`{ version: 1, jobs: ConvertJob[] }`。每次队列结构变化（enqueue / 状态转移 / cancel / dismiss / clearAll / resume / discard）写一次；**进度（percent）不写盘**——renderer 在 save effect 里用 id/status/error 拼 signature 守门，仅 percent 变化不触发写盘。
+- **入队冻结 options**：renderer 在 `enqueue` 时把 `loadConvertOptions()` 快照到 `job.options`，调度时取 `job.options ?? loadConvertOptions()`。后续设置页变更不影响已排队任务；持久化恢复的旧 job 无快照时回退当前设置。
+- **恢复不依赖进程是否重启（关键）**：`queue:load` handler **每次**都把未完成任务（`'queued'`/`'converting'`）标为 **`'interrupted'`**（percent 清零、清错误）、写回盘再返回（恢复折叠进 load 而非独立异步，也顺带杜绝了与 renderer load-read 的抢跑）。**不能**用「只首次回退」的进程级守卫——因为 macOS 下 Cmd+W 关窗不退应用（`window-all-closed→app.quit()` 在打包态生效，但 dev/webpush 窗口吊着等情况进程仍可能存活），同一进程内重开窗口必须照样拿到 interrupted 才能重弹确认。配套：**artifacts.ts 在发起转换的 `event.sender` 被销毁（关窗/重载）时把该卷加入 `cancelledPaths`**，引擎在下一边界处中止——这样「每次都回退」不会误伤真在跑的转换，也不留后台孤儿转换（否则孤儿续跑写出产物 + 重开同卷重新入队 = 双跑）。
+- **interrupted 不自动跑，等用户确认**：renderer hook 启动 `await window.api.queue.load()` 回填——**interrupted 不被调度器拾取**（调度只跑 `queued`），改由 UI 提示用户：启动弹一次 toast「上次关闭时有 N 个转换被中断，是否继续？」（继续 = interrupted→queued 交给调度器；不继续 = 移除），活动浮窗触发按钮显示警示色角标（含 interrupted 计数）、列表内每条 interrupted 带「继续」按钮。
+- **孤儿 tmp 清扫**：`setupQueue()` 里异步扫 `userData/converted/<部>/tmp_<id>/` 全部递归 rm（`convert.ts` 的 `tempDir` 命名约定 `tmp_<taskId>`，正常 finally 里清，但上次会话被强制退出会留下）。失败不抛错、不阻塞启动。
+- **不做的事**：不做断点续转（已处理的图片/已打包的卷不能跳过）——一卷耗时分钟级，整卷重跑比维护断点状态简单太多。继续 = 整卷从 0 重跑。不做并发，保持 1 路顺序。
+
+**IPC 频道**：
+
+```txt
+queue:load   renderer 启动时拉一次（含首次启动恢复 converting/queued→interrupted）→ PersistedConvertJob[]
+queue:save   每次结构变化推一份（payload 是当前 jobs 数组）
+```
+
+**数据模型**（`src/preload/index.d.ts` 为单一事实来源）：
+
+```txt
+PersistedConvertJob  id, sourceVolumePath, seriesPathName, seriesTitle, volumeTitle, author,
+                     status('queued'|'converting'|'interrupted'|'failed'), percent, error?,
+                     options?(ConvertOptions 快照), enqueuedAt?
+```
+
 ## 投递层
 
 `src/main/deliver.ts`，技术实现移植自原型 quirky-planck/sender.js（nodemailer）。
@@ -249,7 +281,9 @@ webpush:reveal      兜底：在 Finder 定位产物，方便手动拖入
 
 转换活动（队列）
   转换状态由 App 层 hook `useConvertActivity` 管理（队列顺序处理、进度订阅、产物刷新），
-  上提到 App 层因此切换视图时队列不中断。库顶栏右上角「转换活动」浮窗（ConvertActivityPopover）
+  上提到 App 层因此切换视图时队列不中断；队列经 `window.api.queue.load/save` 持久化到
+  `userData/queue.json`，重启后自动恢复（详见「转换队列持久化层」）。
+  库顶栏右上角「转换活动」浮窗（ConvertActivityPopover）
   合并展示进行中（排队/进度/失败可重试，每条可取消、顶部可「清空」）+ 最近完成（投递/在 Finder 显示/删除），底部「查看全部归档」跳归档页。
   产物显示用「部标题 · 卷」（artifactLabel）。取消的任务静默移除（不弹失败 toast）。
 
@@ -363,7 +397,7 @@ renderer alias：
 
 转换领域（已实现首切）
   规范化页面、处理图像、生成固定版式 EPUB（convert.ts）；产物由 artifacts.ts 托管编排。
-  压缩包来源（CBZ/ZIP/CBR/7z）已接入；待做：PDF 来源、队列持久化、自动投递。
+  压缩包来源（CBZ/ZIP/CBR/7z）已接入；队列持久化（queue.ts）已实现；待做：PDF 来源、自动投递。
 
 投递领域（已实现首切）
   SMTP 投递（deliver.ts）+ Send to Kindle 网页推送（webpush.ts）+ 归档手动投递 + 本地导出副本均已实现。
@@ -382,6 +416,7 @@ Electron main 或专门的服务模块应负责本地文件系统和进程执行
 - **库根目录**：main 进程写入 `app.getPath('userData')/settings.json` 的 `libraryRoot` 字段。
 - **每部名称/作者覆盖**：`settings.json` 的 `seriesMeta`（`{ <部文件夹名>: { title, author } }`），覆盖 `[作者]标题` 解析，不改本地文件夹名。
 - **转换产物**：EPUB 文件落在 `app.getPath('userData')/converted/<部>/`；清单 `app.getPath('userData')/artifacts.json`（`{ version, artifacts: Artifact[] }`）。同一源卷重转会覆盖旧清单条目，删除产物会同时删文件和条目。
+- **转换队列**：`app.getPath('userData')/queue.json`（`{ version, jobs: PersistedConvertJob[] }`）。每次队列结构变化由 renderer 经 `queue:save` 推送；启动时 `queue.ts` 把未完成任务（queued/converting）标为 `'interrupted'`（不自动跑，等用户在 UI 确认继续/不继续），并扫 `userData/converted/<部>/tmp_<id>/` 清孤儿临时目录。详见「转换队列持久化层」。
 - **投递配置**：`settings.json` 的 `delivery` 字段（host/port/user/kindleEmail + `passEncrypted` 或 `passPlain`）。密码经 `safeStorage` 系统钥匙串加密，不明文落盘。
 - **压缩包解压缓存**：`app.getPath('userData')/extracted/<hash>/`（图片 + `.manifest.json`），按所有分卷的 路径+mtime+size 哈希。
 - **封面缩略图缓存**：`app.getPath('userData')/thumbs/<hash>.webp`（480px），按封面源图 路径+mtime+size 哈希；可安全清空（再开自动重建）。

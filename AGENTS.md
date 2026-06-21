@@ -2,7 +2,7 @@
 
 ## 项目状态
 
-ComicToKindle 是一个桌面应用项目，用于本地漫画库管理、Kindle 转换流程和投递工具。核心闭环已打通：应用壳、真实本地漫画库浏览（部 / 卷册两级）、卷册阅读器、卷册（图片目录 + CBZ/ZIP/CBR/RAR/7z 压缩包，含加密 zip 与多卷分卷）转 Kindle 固定版式 EPUB（sharp + archiver，书名「漫画名+卷册」+ 作者元数据 + 转换确认弹窗）、产物归档、投递到 Kindle（SMTP 邮件 nodemailer + safeStorage 加密凭据 / Send to Kindle 网页通道 ≤200MB 二选一）。尚未实现：元数据存储/索引、PDF/EPUB 来源、图像放大、队列持久化、转换后自动投递。数据层与压缩包/转换/投递/网页推送层（comic:// 协议含封面缩略图、7zip-bin 解压、IPC、数据模型、存储键、产物清单、凭据安全、CDP 自动填文件）详见 `docs/architecture.md`。
+ComicToKindle 是一个桌面应用项目，用于本地漫画库管理、Kindle 转换流程和投递工具。核心闭环已打通：应用壳、真实本地漫画库浏览（部 / 卷册两级）、卷册阅读器、卷册（图片目录 + CBZ/ZIP/CBR/RAR/7z 压缩包，含加密 zip 与多卷分卷）转 Kindle 固定版式 EPUB（sharp + archiver，书名「漫画名+卷册」+ 作者元数据 + 转换确认弹窗）、转换队列持久化（`userData/queue.json`，关窗即退；重启后未完成任务标为 interrupted 等用户确认继续 + 孤儿 tmp 清扫）、产物归档、投递到 Kindle（SMTP 邮件 nodemailer + safeStorage 加密凭据 / Send to Kindle 网页通道 ≤200MB 二选一）。尚未实现：元数据存储/索引、PDF/EPUB 来源、图像放大、转换后自动投递。数据层与压缩包/转换/队列持久化/投递/网页推送层（comic:// 协议含封面缩略图、7zip-bin 解压、IPC、数据模型、存储键、产物清单、凭据安全、CDP 自动填文件）详见 `docs/architecture.md`。
 
 当前仓库路径：
 
@@ -106,14 +106,13 @@ src/renderer/src/data/design-tokens.ts
 
 ## 当前产品边界
 
-已实现：本地漫画目录扫描与「部 / 卷册」浏览（含每部名称/作者覆盖 `seriesMeta`、封面缩略图缓存 `userData/thumbs/`）、卷册阅读器、库根目录持久化（`userData/settings.json`）、压缩包来源（`src/main/archive.ts`，7zip-bin 解 CBZ/ZIP/CBR/RAR/7z + 加密 zip + 多卷分卷到 `userData/extracted/`，safeStorage 加密的共享密码池，解压进度）、卷册转 Kindle 固定版式 EPUB（`src/main/convert.ts`，书名「漫画名+卷册」+ 作者）、产物清单与归档（`src/main/artifacts.ts`，`userData/artifacts.json` + `userData/converted/`）、SMTP 投递（`src/main/deliver.ts`，凭据 safeStorage 加密）、Send to Kindle 网页推送（`src/main/webpush.ts`，内嵌网页 + CDP 自动填文件，≤200MB）、App 层转换队列（`useConvertActivity`，renderer 内存态）。
+已实现：本地漫画目录扫描与「部 / 卷册」浏览（含每部名称/作者覆盖 `seriesMeta`、封面缩略图缓存 `userData/thumbs/`）、卷册阅读器、库根目录持久化（`userData/settings.json`）、压缩包来源（`src/main/archive.ts`，7zip-bin 解 CBZ/ZIP/CBR/RAR/7z + 加密 zip + 多卷分卷到 `userData/extracted/`，safeStorage 加密的共享密码池，解压进度）、卷册转 Kindle 固定版式 EPUB（`src/main/convert.ts`，书名「漫画名+卷册」+ 作者）、产物清单与归档（`src/main/artifacts.ts`，`userData/artifacts.json` + `userData/converted/`）、**转换队列持久化**（`src/main/queue.ts`，`userData/queue.json`；关窗即退出应用使「关窗==重启」成立；重启后未完成任务（queued/converting）标为 `'interrupted'`、不自动跑，由启动 toast +活动浮窗角标提示用户「继续/不继续」，继续=整卷从 0 重跑；孤儿 `tmp_*` 清扫；options 入队时冻结）、SMTP 投递（`src/main/deliver.ts`，凭据 safeStorage 加密）、Send to Kindle 网页推送（`src/main/webpush.ts`，内嵌网页 + CDP 自动填文件，≤200MB）、App 层转换队列调度（`useConvertActivity` hook）。
 
 应用尚未实现：
 
 - 漫画元数据存储 / 索引（当前每次进入实时扫描，无数据库）
 - PDF / EPUB 单文件卷册的读取与转换逻辑（压缩包来源已覆盖 CBZ/ZIP/CBR/RAR/7z；PDF 需光栅化）
 - 图像增强或 AI 放大
-- 转换队列持久化（重启会丢未完成排队）
 - 转换后自动投递
 
 除非代码已经实现，否则不要把这些写成现有功能。

@@ -125,6 +125,31 @@ export interface ArtifactsAPI {
   remove: (id: string) => Promise<void>
 }
 
+export type ConvertJobStatus = 'queued' | 'converting' | 'interrupted' | 'failed'
+
+/**
+ * 转换队列持久化记录。renderer 的 ConvertJob 与之同形（双方独立声明）。
+ * options 是入队时冻结的 ConvertOptionsState 快照（设置页后续变更不影响已排队任务）。
+ */
+export interface PersistedConvertJob {
+  id: string
+  sourceVolumePath: string
+  seriesPathName: string
+  seriesTitle: string
+  volumeTitle: string
+  author: string | null
+  status: ConvertJobStatus
+  percent: number
+  error?: string
+  options?: ConvertOptions
+  enqueuedAt?: string
+}
+
+export interface QueueAPI {
+  load: () => Promise<PersistedConvertJob[]>
+  save: (jobs: PersistedConvertJob[]) => Promise<void>
+}
+
 export interface DeliveryConfigInput {
   host: string
   port: number
@@ -183,6 +208,7 @@ export interface CustomAPI {
   archive: ArchiveAPI
   convert: ConvertAPI
   artifacts: ArtifactsAPI
+  queue: QueueAPI
   deliver: DeliverAPI
   webpush: WebPushAPI
 }

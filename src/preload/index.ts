@@ -37,6 +37,10 @@ const api = {
     export: (id: string): Promise<boolean> => ipcRenderer.invoke('artifacts:export', id),
     remove: (id: string) => ipcRenderer.invoke('artifacts:remove', id)
   },
+  queue: {
+    load: () => ipcRenderer.invoke('queue:load'),
+    save: (jobs: unknown) => ipcRenderer.invoke('queue:save', jobs)
+  },
   deliver: {
     getConfig: () => ipcRenderer.invoke('deliver:getConfig'),
     saveConfig: (cfg: unknown) => ipcRenderer.invoke('deliver:saveConfig', cfg),

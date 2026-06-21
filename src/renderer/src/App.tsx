@@ -452,7 +452,10 @@ const uiText = {
       volumePlaceholder: '如 第01卷',
       previewLabel: '预览',
       start: '开始转换',
-      cancel: '取消'
+      cancel: '取消',
+      batchTitle: '确认转换信息',
+      batchCount: (n: number) => `共 ${n} 卷`,
+      batchVolumes: '卷册（书名预览）'
     },
     seriesMeta: {
       edit: '编辑漫画信息',
@@ -471,9 +474,14 @@ const uiText = {
       completed: '最近完成',
       queued: '排队中',
       converting: '转换中',
+      interrupted: '已中断',
       failed: '失败',
       empty: '暂无转换活动。在漫画库里点卷册的「转换为 Kindle」即可开始。',
       retry: '重试',
+      resume: '继续',
+      interruptedToast: (n: number) => `上次关闭时有 ${n} 个转换被中断，是否继续？`,
+      interruptedResume: '继续',
+      interruptedDiscard: '不继续',
       dismiss: '移除',
       cancel: '取消',
       clearAll: '清空',
@@ -745,7 +753,10 @@ const uiText = {
       volumePlaceholder: 'e.g. Vol. 1',
       previewLabel: 'Preview',
       start: 'Convert',
-      cancel: 'Cancel'
+      cancel: 'Cancel',
+      batchTitle: 'Confirm conversion',
+      batchCount: (n: number) => `${n} volume${n === 1 ? '' : 's'}`,
+      batchVolumes: 'Volumes (title preview)'
     },
     seriesMeta: {
       edit: 'Edit series info',
@@ -764,9 +775,15 @@ const uiText = {
       completed: 'Recently completed',
       queued: 'Queued',
       converting: 'Converting',
+      interrupted: 'Interrupted',
       failed: 'Failed',
       empty: 'No conversion activity yet. Hit “Convert for Kindle” on a volume to start.',
       retry: 'Retry',
+      resume: 'Resume',
+      interruptedToast: (n: number) =>
+        `${n} conversion${n === 1 ? '' : 's'} ${n === 1 ? 'was' : 'were'} interrupted last time. Resume?`,
+      interruptedResume: 'Resume',
+      interruptedDiscard: 'Discard',
       dismiss: 'Dismiss',
       cancel: 'Cancel',
       clearAll: 'Clear all',
@@ -1414,7 +1431,9 @@ function loadConvertOptions(): ConvertOptionsState {
 }
 
 // ---------- 转换活动（队列）：上提到 App 层，跨视图保活 ----------
-type ConvertJobStatus = 'queued' | 'converting' | 'failed'
+// 持久化到 userData/queue.json（main 端 queue.ts），重启后恢复；converting 回退为 queued 整卷重跑。
+// 'interrupted'：上次会话被强制退出时未完成的任务，重启后不自动跑、等用户确认继续
+type ConvertJobStatus = 'queued' | 'converting' | 'interrupted' | 'failed'
 interface ConvertJob {
   id: string
   sourceVolumePath: string
@@ -1425,6 +1444,9 @@ interface ConvertJob {
   status: ConvertJobStatus
   percent: number
   error?: string
+  // 入队时冻结的转换选项快照：设置页后续变更不影响已排队任务
+  options?: ConvertOptionsState
+  enqueuedAt?: string
 }
 interface ConvertEnqueueInput {
   sourceVolumePath: string
@@ -1437,6 +1459,7 @@ interface ConvertActivity {
   jobs: ConvertJob[]
   artifacts: Artifact[]
   activeCount: number
+  interruptedCount: number
   convertedPaths: Set<string>
   jobByPath: Map<string, ConvertJob>
   enqueue: (input: ConvertEnqueueInput) => void
@@ -1451,6 +1474,8 @@ function useConvertActivity(locale: LanguageMode): ConvertActivity {
   const text = uiText[locale]
   const [jobs, setJobs] = useState<ConvertJob[]>([])
   const [artifacts, setArtifacts] = useState<Artifact[]>([])
+  // 持久化 hydration 完成前不写盘，避免空 state 覆盖磁盘上的旧队列
+  const [hydrated, setHydrated] = useState(false)
   const runningRef = useRef(false)
   // 已取消任务的 id：用于在转换 promise 落定时静默处理（不标失败、不弹 toast）
   const cancelledIdsRef = useRef<Set<string>>(new Set())
@@ -1466,6 +1491,34 @@ function useConvertActivity(locale: LanguageMode): ConvertActivity {
   useEffect(() => {
     refreshArtifacts()
   }, [refreshArtifacts])
+
+  // 启动时从 main 拉回上次会话的队列；main 已把未完成任务标为 'interrupted'（不自动跑）。
+  useEffect(() => {
+    let active = true
+    void (async () => {
+      try {
+        const loaded = (await window.api.queue.load()) as ConvertJob[]
+        if (active && Array.isArray(loaded)) setJobs(loaded)
+      } catch {
+        /* 读盘失败 → 视作空队列 */
+      } finally {
+        if (active) setHydrated(true)
+      }
+    })()
+    return () => {
+      active = false
+    }
+  }, [])
+
+  // 结构 signature：只看 id/status/error；percent 改变（高频）不触发写盘。
+  const lastSigRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!hydrated) return
+    const sig = jobs.map((j) => `${j.id}:${j.status}:${j.error ?? ''}`).join('|')
+    if (sig === lastSigRef.current) return
+    lastSigRef.current = sig
+    void window.api.queue.save(jobs)
+  }, [jobs, hydrated])
 
   // 进度订阅：更新对应 converting 任务的百分比
   useEffect(() => {
@@ -1496,7 +1549,8 @@ function useConvertActivity(locale: LanguageMode): ConvertActivity {
         seriesTitle: next.seriesTitle,
         volumeTitle: next.volumeTitle,
         author: next.author,
-        options: loadConvertOptions()
+        // 入队时快照过 options 就用它；持久化恢复的旧 job 无快照时回退到当前设置
+        options: next.options ?? loadConvertOptions()
       })
       .then(async () => {
         await refreshArtifacts()
@@ -1526,6 +1580,9 @@ function useConvertActivity(locale: LanguageMode): ConvertActivity {
           id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
           status: 'queued',
           percent: 0,
+          // 入队时冻结当前转换设置，免得设置页一改就影响已排队任务
+          options: loadConvertOptions(),
+          enqueuedAt: new Date().toISOString(),
           ...input
         }
       ]
@@ -1549,7 +1606,7 @@ function useConvertActivity(locale: LanguageMode): ConvertActivity {
     setJobs((prev) => prev.filter((j) => j.id !== job.id))
   }, [])
 
-  // 清空：取消进行中的那卷 + 清掉全部排队/失败
+  // 清空：取消进行中的那卷 + 清掉全部排队/失败/中断
   const clearAll = React.useCallback(() => {
     setJobs((prev) => {
       prev.forEach((j) => {
@@ -1559,6 +1616,34 @@ function useConvertActivity(locale: LanguageMode): ConvertActivity {
       return []
     })
   }, [])
+
+  // 中断任务「继续」：标回 queued，调度器随即接手
+  const resumeAll = React.useCallback(() => {
+    setJobs((prev) =>
+      prev.map((j) =>
+        j.status === 'interrupted' ? { ...j, status: 'queued', percent: 0, error: undefined } : j
+      )
+    )
+  }, [])
+
+  // 中断任务「不继续」：从队列移除
+  const discardInterrupted = React.useCallback(() => {
+    setJobs((prev) => prev.filter((j) => j.status !== 'interrupted'))
+  }, [])
+
+  // 启动后若有被中断的任务，弹一次 toast 让用户选「继续 / 不继续」（只弹一次）
+  const interruptedPromptRef = useRef(false)
+  useEffect(() => {
+    if (!hydrated || interruptedPromptRef.current) return
+    const n = jobs.filter((j) => j.status === 'interrupted').length
+    if (n === 0) return
+    interruptedPromptRef.current = true
+    toast.warning(text.activity.interruptedToast(n), {
+      duration: Infinity,
+      action: { label: text.activity.interruptedResume, onClick: () => resumeAll() },
+      cancel: { label: text.activity.interruptedDiscard, onClick: () => discardInterrupted() }
+    })
+  }, [hydrated, jobs, text, resumeAll, discardInterrupted])
 
   const convertedPaths = useMemo(
     () => new Set(artifacts.map((a) => a.sourceVolumePath)),
@@ -1573,11 +1658,16 @@ function useConvertActivity(locale: LanguageMode): ConvertActivity {
     () => jobs.filter((j) => j.status === 'queued' || j.status === 'converting').length,
     [jobs]
   )
+  const interruptedCount = useMemo(
+    () => jobs.filter((j) => j.status === 'interrupted').length,
+    [jobs]
+  )
 
   return {
     jobs,
     artifacts,
     activeCount,
+    interruptedCount,
     convertedPaths,
     jobByPath,
     enqueue,
@@ -1911,6 +2001,9 @@ function ConvertActivityPopover({
   const active = activity.jobs
   const completed = activity.artifacts.slice(0, 8)
   const hasAny = active.length > 0 || activity.artifacts.length > 0
+  // 角标：进行中(queued/converting) + 中断 都计入；只有中断时用警示色 + 警示图标
+  const badgeCount = activity.activeCount + activity.interruptedCount
+  const onlyInterrupted = activity.activeCount === 0 && activity.interruptedCount > 0
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -1925,12 +2018,20 @@ function ConvertActivityPopover({
             >
               {activity.activeCount > 0 ? (
                 <Loader2 className="size-4 animate-spin" />
+              ) : onlyInterrupted ? (
+                <AlertCircle className="size-4 text-amber-500" />
               ) : (
                 <ListChecks className="size-4" />
               )}
-              {activity.activeCount > 0 ? (
-                <span className="absolute -top-1 -right-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] leading-none text-primary-foreground">
-                  {activity.activeCount}
+              {badgeCount > 0 ? (
+                <span
+                  className={`absolute -top-1 -right-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] leading-none ${
+                    onlyInterrupted
+                      ? 'bg-amber-500 text-white'
+                      : 'bg-primary text-primary-foreground'
+                  }`}
+                >
+                  {badgeCount}
                 </span>
               ) : null}
               <span className="sr-only">{t.trigger}</span>
@@ -1942,7 +2043,7 @@ function ConvertActivityPopover({
       <PopoverContent align="end" className="w-96 p-0">
         <div className="flex items-center justify-between border-b px-3 py-2">
           <span className="text-sm font-medium">{t.title}</span>
-          {activity.activeCount > 0 ? (
+          {active.length > 0 ? (
             <Button
               variant="ghost"
               size="sm"
@@ -1973,20 +2074,28 @@ function ConvertActivityPopover({
                         </span>
                         <span className="flex shrink-0 items-center gap-1">
                           <span
-                            className={`text-xs ${j.status === 'failed' ? 'text-destructive' : 'text-muted-foreground'}`}
+                            className={`text-xs ${
+                              j.status === 'failed'
+                                ? 'text-destructive'
+                                : j.status === 'interrupted'
+                                  ? 'text-amber-500'
+                                  : 'text-muted-foreground'
+                            }`}
                           >
                             {j.status === 'converting'
                               ? `${Math.max(0, j.percent)}%`
                               : j.status === 'queued'
                                 ? t.queued
-                                : t.failed}
+                                : j.status === 'interrupted'
+                                  ? t.interrupted
+                                  : t.failed}
                           </span>
-                          {j.status === 'failed' ? (
+                          {j.status === 'failed' || j.status === 'interrupted' ? (
                             <Button
                               variant="ghost"
                               size="icon"
                               className="size-6"
-                              title={t.retry}
+                              title={j.status === 'interrupted' ? t.resume : t.retry}
                               onClick={() => activity.retry(j.id)}
                             >
                               <RotateCcw className="size-3.5" />
@@ -2176,6 +2285,15 @@ function LibraryView({
     volumeTitle: string
   } | null>(null)
 
+  // 多选批量转换前确认：共享漫画名 + 作者（改一次对全部生效），列出各卷书名预览
+  const [batchConvertReq, setBatchConvertReq] = useState<{
+    seriesPathName: string
+    seriesTitle: string
+    author: string
+    vols: LibraryVolume[]
+    busy: boolean
+  } | null>(null)
+
   // 编辑某部漫画的名称/作者（持久化覆盖，不改本地文件夹名）
   const [seriesMetaReq, setSeriesMetaReq] = useState<{
     name: string
@@ -2351,24 +2469,39 @@ function LibraryView({
     setSelectedVols(allSelected ? new Set() : new Set(volumes.map((v) => v.path)))
   }
 
-  const convertSelected = async (): Promise<void> => {
+  // 多选转换：先弹批量确认框（共享漫画名/作者 + 各卷书名预览），确认后再解压入队
+  const convertSelected = (): void => {
     if (!selected || selectedVols.size === 0) return
     const picked = volumes.filter((v) => selectedVols.has(v.path))
+    setBatchConvertReq({
+      seriesPathName: selected.name,
+      seriesTitle: selected.title,
+      author: selected.author ?? '',
+      vols: picked,
+      busy: false
+    })
+  }
+
+  const submitBatchConvert = async (): Promise<void> => {
+    if (!batchConvertReq || batchConvertReq.busy) return
+    const { seriesPathName, seriesTitle, author, vols } = batchConvertReq
+    setBatchConvertReq((s) => (s ? { ...s, busy: true } : s))
     // 压缩包逐个确保解出（密码池命中或弹框；共享密码池下多为一次输入）
     const ready: LibraryVolume[] = []
-    for (const vol of picked) {
+    for (const vol of vols) {
       if (await ensureArchiveReady(vol)) ready.push(vol)
     }
     ready.forEach((vol) =>
       enqueue({
         sourceVolumePath: vol.path,
-        seriesPathName: selected.name,
-        seriesTitle: selected.title,
+        seriesPathName,
+        seriesTitle: seriesTitle.trim(),
         volumeTitle: vol.title,
-        author: selected.author
+        author: author.trim() || null
       })
     )
     if (ready.length > 0) toast.success(text.activity.enqueued(ready.length))
+    setBatchConvertReq(null)
     exitSelect()
   }
 
@@ -2712,6 +2845,96 @@ function LibraryView({
         ) : null}
       </DialogContent>
     </Dialog>
+    {/* 多选批量转换前：确认共享漫画名/作者 + 各卷书名预览 */}
+    <Dialog
+      open={batchConvertReq !== null}
+      onOpenChange={(o) =>
+        !o && !batchConvertReq?.busy ? setBatchConvertReq(null) : undefined
+      }
+    >
+      <DialogContent className="sm:max-w-md" aria-describedby={undefined}>
+        <DialogHeader>
+          <DialogTitle>
+            {text.convertMeta.batchTitle}
+            {batchConvertReq ? (
+              <span className="ml-2 text-xs font-normal text-muted-foreground">
+                {text.convertMeta.batchCount(batchConvertReq.vols.length)}
+              </span>
+            ) : null}
+          </DialogTitle>
+        </DialogHeader>
+        {batchConvertReq ? (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              void submitBatchConvert()
+            }}
+            className="space-y-3"
+          >
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground">{text.convertMeta.series}</label>
+              <Input
+                autoFocus
+                value={batchConvertReq.seriesTitle}
+                disabled={batchConvertReq.busy}
+                onChange={(e) =>
+                  setBatchConvertReq((s) => (s ? { ...s, seriesTitle: e.target.value } : s))
+                }
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground">{text.convertMeta.author}</label>
+              <Input
+                value={batchConvertReq.author}
+                placeholder={text.convertMeta.authorPlaceholder}
+                disabled={batchConvertReq.busy}
+                onChange={(e) =>
+                  setBatchConvertReq((s) => (s ? { ...s, author: e.target.value } : s))
+                }
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground">
+                {text.convertMeta.batchVolumes}
+              </label>
+              <ScrollArea className="max-h-52 rounded-lg border bg-card">
+                <div className="divide-y">
+                  {batchConvertReq.vols.map((vol, i) => (
+                    <div key={vol.path} className="flex items-center gap-2 px-3 py-2">
+                      <span className="w-5 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
+                        {i + 1}
+                      </span>
+                      <span
+                        className="min-w-0 flex-1 truncate text-sm"
+                        title={composeBookTitle(batchConvertReq.seriesTitle, vol.title)}
+                      >
+                        {composeBookTitle(batchConvertReq.seriesTitle, vol.title)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={batchConvertReq.busy}
+                onClick={() => setBatchConvertReq(null)}
+              >
+                {text.convertMeta.cancel}
+              </Button>
+              <Button
+                type="submit"
+                disabled={batchConvertReq.busy || batchConvertReq.vols.length === 0}
+              >
+                {text.convertMeta.start}
+              </Button>
+            </DialogFooter>
+          </form>
+        ) : null}
+      </DialogContent>
+    </Dialog>
     {/* 编辑某部漫画的名称/作者（持久化，不改本地文件夹） */}
     <Dialog
       open={seriesMetaReq !== null}
@@ -2835,7 +3058,7 @@ function LibraryView({
                 <Button
                   size="sm"
                   disabled={selectedVols.size === 0}
-                  onClick={() => void convertSelected()}
+                  onClick={() => convertSelected()}
                 >
                   <BookUp className="size-4" />
                   {text.activity.convertSelected(selectedVols.size)}
@@ -3055,6 +3278,8 @@ function LibraryView({
                                   </>
                                 ) : job.status === 'queued' ? (
                                   text.activity.queued
+                                ) : job.status === 'interrupted' ? (
+                                  <span className="text-amber-500">{text.activity.interrupted}</span>
                                 ) : (
                                   <span className="text-destructive">{text.activity.failed}</span>
                                 )}
