@@ -3004,22 +3004,22 @@ function LibraryView({
           />
         ) : null}
         {selectMode ? (
-          <span
-            className="min-w-0 flex-1 truncate text-sm font-medium"
-            style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-          >
+          // 文本标签：保持可拖动（不加 no-drag），让占满的空白区也能拖窗
+          <span className="min-w-0 flex-1 truncate text-sm font-medium">
             {text.activity.selectedCount(selectedVols.size)}
           </span>
         ) : (
-          <Breadcrumb
-            className="min-w-0 flex-1"
-            style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-          >
+          // 容器不设 no-drag：flex-1 撑满的空白区随顶栏可拖；只有内部可点链接单独 no-drag
+          <Breadcrumb className="min-w-0 flex-1">
             <BreadcrumbList className="flex-nowrap">
               <BreadcrumbItem className="shrink-0">
                 {showVolumes ? (
                   <BreadcrumbLink asChild>
-                    <button type="button" onClick={backToSeries}>
+                    <button
+                      type="button"
+                      onClick={backToSeries}
+                      style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+                    >
                       {text.nav.library}
                     </button>
                   </BreadcrumbLink>
