@@ -16,8 +16,10 @@ ComicToKindle 目前是一个桌面应用工作台，已打通核心闭环:**本
 - 构建和打包脚本
 - `src/renderer/src/App.tsx` 中的侧边栏工作台壳
 - **真实漫画库浏览**：扫描本地目录，按「部 / 卷册」两级展示（详见「漫画库数据层」）
-- **卷册阅读器**：单页 / 双页、左右阅读方向、记住每卷续读进度
-- **转换流水线**：图片卷册 → Kindle 固定版式 EPUB3（详见「转换与产物层」）
+- **压缩包来源**：CBZ/ZIP/CBR/RAR/7z 卷册（含加密 zip、多卷分卷，共享密码池，解压进度）解出图片供阅读 + 转换（详见「压缩包来源层」）
+- **卷册阅读器**：单页 / 双页、左右阅读方向、记住每卷续读进度；网格封面走缩略图缓存
+- **转换流水线**：图片卷册 → Kindle 固定版式 EPUB3，书名「漫画名 + 卷册」+ 作者元数据、转换前确认弹窗（详见「转换与产物层」）
+- **漫画信息编辑**：在应用内改每部的名称/作者（持久化覆盖，不改本地文件夹名）
 - **归档视图**：列出转换产物，支持在 Finder 显示 / 导出副本 / 删除 / 投递到 Kindle
 - **Kindle 投递**：SMTP 配置页（设备与邮箱）+ 归档手动投递（详见「投递层」）
 - **Send to Kindle 网页推送**：应用内嵌 Amazon 网页通道（≤200MB 单文件），自动填入产物、半自动发送（详见「网页推送层」）
@@ -27,10 +29,12 @@ ComicToKindle 目前是一个桌面应用工作台，已打通核心闭环:**本
 - 开发期使用的 shadcn 组件索引和本地文档镜像
 - 开发期使用的基础规范页，覆盖颜色、字体、字号和间距
 
+- **压缩包来源**：CBZ/ZIP/CBR/7z 卷册（含加密 zip）解出图片供阅读 + 转换（详见「压缩包来源层」）
+
 未实现：
 
 - 元数据持久化（数据库 / 索引；漫画库当前每次进入实时扫描）
-- 压缩包卷册读取（CBZ/CBR/PDF；转换目前只吃图片目录）
+- PDF / EPUB 卷册读取（压缩包来源目前覆盖 CBZ/ZIP/CBR/7z；PDF 需光栅化，留后续）
 - 图像处理或 AI 放大
 - 本地 AZW3 导出（原型曾用 Calibre，已移除；无线投递发 EPUB）
 - 自动投递（转换完成即发；当前只支持归档手动投递）
@@ -46,8 +50,14 @@ Electron main process
   app ready 前调用 registerComicScheme()，ready 后调用 setupLibrary() / setupArtifacts() / setupDelivery() / setupWebPush()。
 
   src/main/library.ts
-  漫画库数据层：comic:// 协议、目录扫描、库根目录持久化。
+  漫画库数据层：comic:// 协议（含封面缩略图通道）、目录扫描、库根目录持久化、每部名称/作者覆盖。
   导出 collectVolumeImagePaths() 供转换流水线按阅读顺序取图（支持嵌套单话子文件夹）。
+
+  src/main/archive.ts
+  压缩包来源层：内置 7-Zip（7zip-bin）解 CBZ/ZIP/CBR/RAR/7z（含加密 zip、多卷分卷）到
+  userData/extracted/<hash>/，共享密码池（safeStorage 加密存 settings.json），解压进度流式回传。
+  导出 prepareArchive/unlockArchive/getCachedImages/inspectArchive/extractedRoot/isArchiveFile/
+  isSplitContinuation 供 library 与 IPC 使用。
 
   src/main/convert.ts
   转换引擎：图片 → Kindle 固定版式 EPUB3。无 IPC、无 electron 依赖，纯函数 convertMangaToEPUB。
@@ -84,7 +94,8 @@ Renderer process
 ```
 
 - **部（series）**= 顶层文件夹，命名通常为 `[作者] 标题`，解析出作者与标题。
-- **卷册（volume）**= 第二层；文件夹封面取首图、递归统计页数，遇到「单话」子文件夹会下钻取图；预留 `kind: 'folder' | 'file'` 给将来的 cbz/pdf 单文件卷册。
+- **卷册（volume）**= 第二层；文件夹封面取首图、递归统计页数，遇到「单话」子文件夹会下钻取图。`kind: 'folder' | 'file'`，file 卷为压缩包（见「压缩包来源层」），分卷只展示入口卷。
+- **每部名称/作者覆盖**：默认从 `[作者] 标题` 解析；用户可在应用内改写，覆盖存 `settings.json` 的 `seriesMeta`（按部文件夹名为键），扫描时叠加，**不改本地文件夹名**。
 - 文件名一律按**自然排序**（`2.jpg` 在 `10.jpg` 前）。
 
 **IPC 频道**（`ipcMain.handle` ↔ `ipcRenderer.invoke`）：
@@ -95,15 +106,44 @@ library:getSavedRoot  读取已保存的库根目录（不存在/失效则返回
 library:scan          扫描库根 → LibrarySeries[]（含封面 URL、卷数）
 library:listVolumes   扫描某部 → LibraryVolume[]（含封面 URL、页数、kind）
 library:listPages     按阅读顺序递归收集一卷所有页 → comic:// URL[]
+library:setSeriesMeta 写某部名称/作者覆盖到 settings.json 的 seriesMeta → 叠加后的 {title, author}
 ```
 
-**comic:// 协议**：`registerComicScheme()` 在 app ready 前注册为 privileged scheme，`setupLibrary()` 内 `protocol.handle('comic', …)` 服务图片。URL 形如 `comic://img/?p=<encodeURIComponent(绝对路径)>`；返回前做**越权校验**——必须是图片扩展名且位于当前库根目录内，否则 403。`src/renderer/index.html` 的 CSP `img-src` 已放行 `comic:`。
+**comic:// 协议**：`registerComicScheme()` 在 app ready 前注册为 privileged scheme，`setupLibrary()` 内 `protocol.handle('comic', …)` 服务图片。URL 形如 `comic://img/?p=<encodeURIComponent(绝对路径)>`；返回前做**越权校验**——必须是图片扩展名且位于当前库根目录或解压缓存目录内，否则 403。带 `&thumb=1` 走**封面缩略图通道**：sharp 把原图降到 480px webp、按 路径+mtime+size 缓存到 `userData/thumbs/`（网格封面用，避免解全图卡顿；阅读器仍走原图）。`src/renderer/index.html` 的 CSP `img-src` 已放行 `comic:`。
 
 **数据模型**（`src/preload/index.d.ts` 为单一事实来源）：
 
 ```txt
 LibrarySeries  id, path, name, title, author, volumeCount, coverUrl
 LibraryVolume  id, path, name, title, kind('folder'|'file'), pageCount, coverUrl
+```
+
+## 压缩包来源层
+
+`src/main/archive.ts`，把压缩包卷册（`kind: 'file'`）解出图片供阅读器、封面、转换流水线共用。
+
+- **后端**：内置 7-Zip（`7zip-bin` 打包各平台 `7za` 二进制），支持加密 zip（ZipCrypto/AES）、CBR(rar)、7z。所有 7za 调用经统一 `run7za` 封装并**主动关闭子进程 stdin**——否则加密包会打印 "Enter password:" 阻塞读 stdin 导致永久挂起；列举/测试另加超时兜底。**打包关键**：`electron-builder.yml` 的 `asarUnpack` 放行 `node_modules/7zip-bin/**`，运行时把 `path7za` 里的 `app.asar` 替换成 `app.asar.unpacked`。
+- **分卷**：支持多卷压缩包——数字分卷（`name.7z.001/.002…`）、RAR 新式（`name.partN.rar`）、RAR 旧式（`name.rar + name.r00…`）。库视图只展示**入口卷**（`.001`/`.part1.rar`/`.rar`），续卷由 `isSplitContinuation` 隐藏；解压只把入口路径喂给 7za 自动拼接其余分卷。
+- **缓存**：解出的图片落 `userData/extracted/<hash>/`，`hash = sha1(所有分卷的 路径+mtime+size)`（任一分卷变更即失效）；完成后写 `.manifest.json`（按阅读顺序的相对路径），存在即视为缓存完整，避免重复解压。`comic://` 协议放行该缓存目录（与库根并列）。
+- **密码（共享密码池）**：每个密码经 `safeStorage` 加密存 `settings.json` 的 `archivePasswords`（base64 数组）。解加密包时逐个密码**直接尝试解压**（不再先 `7za t` 整包校验那一遍，进度立即开始），命中即提到队首；全不中返回 `needs-password`，由 renderer 弹框补录（可勾选记住；密码框用 `-webkit-text-security` 掩码以支持中文输入法）。**标准 zip 加密不加密文件头**，故扫描时 `7za l -slt` 不带密码即可拿到图片数 + 加密标志（`Encrypted = +`），库网格据此标 `locked`。
+- **进度**：解压用 `7za x -bsp1` 把百分比流式写到 stdout，逐块解析末位 `NN%` 经 `archive:progress` IPC 回传，renderer 在解锁框进度条 / toast 实时显示（带卷册名 + 完成/失败提示）。
+- **图片顺序**：解出后递归收集图片，按相对路径自然排序（与文件夹卷一致）。
+- **数据流接入**：`library.collectVolumeImagePaths` / `listPages` 对 file 卷改走缓存（缺则用密码池尝试解，仍需密码则抛 `NEEDS_PASSWORD`）；`listVolumes` 的 file 卷补 `pageCount`/`locked`，已解出则用缓存首图作封面。renderer 在阅读/转换前先调 `archive:prepare`，遇 `needs-password` 弹框走 `archive:unlock`。
+- **范围**：当前覆盖 CBZ/ZIP/CBR/RAR/7z（含分卷）；PDF/EPUB 仍按 file 卷显示但不解析（renderer 提示暂不支持）。
+
+**IPC 频道**：
+
+```txt
+archive:prepare   确保压缩包已解出缓存（幂等，自动试密码池）→ ArchivePrepareResult
+archive:unlock    用用户输入的密码解锁（可记住）→ ArchivePrepareResult
+archive:progress  解压进度推送（main → renderer）：{ filePath, percent }
+```
+
+**数据模型**（`src/preload/index.d.ts` 为单一事实来源）：
+
+```txt
+ArchivePrepareResult  status('ready'|'needs-password'|'error'), message?, pageCount?
+LibraryVolume         ... + locked?(加密且未解锁缓存)
 ```
 
 ## 转换与产物层
@@ -126,6 +166,7 @@ LibraryVolume  id, path, name, title, kind('folder'|'file'), pageCount, coverUrl
 
 - 产物**由应用托管**，落在 `userData/converted/<部>/`，用户无需指定路径。
 - 清单 `userData/artifacts.json` 记录「源卷 → N 个产物文件」映射（一个源卷可能因分卷产出多个 EPUB，故 `outputs` 是数组），用于库内角标命中和归档视图。
+- **书籍元数据**：EPUB 的 `dc:title` 与文件名 = `composeBookTitle(seriesTitle, volumeTitle)` =「漫画名 + 卷册」（如「朱音落语 第01卷」，卷册名已含漫画名时去重）；`dc:creator` = 作者。单卷转换前 renderer 弹「确认书籍信息」框预填漫画名/卷册名/作者，可改后再转。
 
 **IPC 频道**：
 
@@ -318,11 +359,11 @@ renderer alias：
 
 ```txt
 漫画库领域（浏览/阅读已实现，元数据存储待做）
-  扫描本地目录、图片文件夹已实现；压缩包读取与元数据存储待做。
+  扫描本地目录、图片文件夹、压缩包卷册（archive.ts）已实现；元数据存储待做。
 
 转换领域（已实现首切）
   规范化页面、处理图像、生成固定版式 EPUB（convert.ts）；产物由 artifacts.ts 托管编排。
-  待做：压缩包来源、队列持久化、自动投递。
+  压缩包来源（CBZ/ZIP/CBR/7z）已接入；待做：PDF 来源、队列持久化、自动投递。
 
 投递领域（已实现首切）
   SMTP 投递（deliver.ts）+ Send to Kindle 网页推送（webpush.ts）+ 归档手动投递 + 本地导出副本均已实现。
@@ -339,8 +380,12 @@ Electron main 或专门的服务模块应负责本地文件系统和进程执行
 漫画库本身没有数据库 / 索引（每次进入实时扫描目录）。已有的持久化：
 
 - **库根目录**：main 进程写入 `app.getPath('userData')/settings.json` 的 `libraryRoot` 字段。
+- **每部名称/作者覆盖**：`settings.json` 的 `seriesMeta`（`{ <部文件夹名>: { title, author } }`），覆盖 `[作者]标题` 解析，不改本地文件夹名。
 - **转换产物**：EPUB 文件落在 `app.getPath('userData')/converted/<部>/`；清单 `app.getPath('userData')/artifacts.json`（`{ version, artifacts: Artifact[] }`）。同一源卷重转会覆盖旧清单条目，删除产物会同时删文件和条目。
 - **投递配置**：`settings.json` 的 `delivery` 字段（host/port/user/kindleEmail + `passEncrypted` 或 `passPlain`）。密码经 `safeStorage` 系统钥匙串加密，不明文落盘。
+- **压缩包解压缓存**：`app.getPath('userData')/extracted/<hash>/`（图片 + `.manifest.json`），按所有分卷的 路径+mtime+size 哈希。
+- **封面缩略图缓存**：`app.getPath('userData')/thumbs/<hash>.webp`（480px），按封面源图 路径+mtime+size 哈希；可安全清空（再开自动重建）。
+- **压缩包密码池**：`settings.json` 的 `archivePasswords`（`safeStorage` 加密的 base64 数组），不明文落盘、不回传 renderer。
 - **renderer localStorage 键**：
   - `comic-to-kindle-theme` 深浅模式
   - `comic-to-kindle-language` 中英语言

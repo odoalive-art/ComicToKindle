@@ -2,7 +2,7 @@
 
 ## 项目状态
 
-ComicToKindle 是一个桌面应用项目，用于本地漫画库管理、Kindle 转换流程和投递工具。核心闭环已打通：应用壳、真实本地漫画库浏览（部 / 卷册两级）、卷册阅读器、卷册转 Kindle 固定版式 EPUB（sharp + archiver）、产物归档、投递到 Kindle（SMTP 邮件 nodemailer + safeStorage 加密凭据 / Send to Kindle 网页通道 ≤200MB 二选一）。尚未实现：元数据存储/索引、压缩包（CBZ/CBR/PDF）来源、图像放大、队列持久化、转换后自动投递。数据层与转换/投递/网页推送层（comic:// 协议、IPC、数据模型、存储键、产物清单、凭据安全、CDP 自动填文件）详见 `docs/architecture.md`。
+ComicToKindle 是一个桌面应用项目，用于本地漫画库管理、Kindle 转换流程和投递工具。核心闭环已打通：应用壳、真实本地漫画库浏览（部 / 卷册两级）、卷册阅读器、卷册（图片目录 + CBZ/ZIP/CBR/RAR/7z 压缩包，含加密 zip 与多卷分卷）转 Kindle 固定版式 EPUB（sharp + archiver，书名「漫画名+卷册」+ 作者元数据 + 转换确认弹窗）、产物归档、投递到 Kindle（SMTP 邮件 nodemailer + safeStorage 加密凭据 / Send to Kindle 网页通道 ≤200MB 二选一）。尚未实现：元数据存储/索引、PDF/EPUB 来源、图像放大、队列持久化、转换后自动投递。数据层与压缩包/转换/投递/网页推送层（comic:// 协议含封面缩略图、7zip-bin 解压、IPC、数据模型、存储键、产物清单、凭据安全、CDP 自动填文件）详见 `docs/architecture.md`。
 
 当前仓库路径：
 
@@ -78,7 +78,7 @@ src/renderer/src/components/ui/
 归档
 ```
 
-`漫画库` 是真实功能：扫描本地目录、按「部 / 卷册」两级浏览，点卷册进入阅读器（单页/双页、左右方向、续读）；卷册可单本或多选/框选批量转 Kindle EPUB。文件访问全部走 main 进程 + preload（`window.api.library/convert/artifacts/deliver.*`），数据层细节见 `docs/architecture.md`。`归档`（产物管理 + 投递）、`设备与邮箱`（SMTP 配置）、`转换设置`、`网页推送`（Send to Kindle 网页通道着陆/设置页，对应 `src/main/webpush.ts`）均已是真实 UI，挂在侧边栏「Kindle 推送」组（注意：侧边栏渲染用 `sidebarGroups` 而非 `primaryNav`）。`导入收件箱` 仍是导航占位。`设计组件 / 基础规范` 是开发期工具页。
+`漫画库` 是真实功能：扫描本地目录、按「部 / 卷册」两级浏览，点卷册进入阅读器（单页/双页、左右方向、续读）；卷册可单本或多选/框选批量转 Kindle EPUB（单卷转换前弹「确认书籍信息」框）。卷册除图片文件夹外，也支持 CBZ/ZIP/CBR/RAR/7z 压缩包（含加密 zip 与分卷，共享密码池，解压进度），阅读/转换前经 `window.api.archive.prepare/unlock` 解出到缓存。每部名称/作者可在应用内编辑（右键网格 / 顶栏铅笔，存 `settings.json` 的 `seriesMeta`，不改本地文件夹名）。文件访问全部走 main 进程 + preload（`window.api.library/archive/convert/artifacts/deliver/webpush.*`），数据层细节见 `docs/architecture.md`。`归档`（产物管理 + 投递）、`设备与邮箱`（SMTP 配置）、`转换设置`、`网页推送`（Send to Kindle 网页通道着陆/设置页，对应 `src/main/webpush.ts`）均已是真实 UI，挂在侧边栏「Kindle 推送」组（注意：侧边栏渲染用 `sidebarGroups` 而非 `primaryNav`）。`导入收件箱` 仍是导航占位。`设计组件 / 基础规范` 是开发期工具页。
 
 顶栏有应用级深浅模式切换按钮，会在 `document.documentElement` 上切换 `.dark` class，并把选择保存到 `localStorage` 的 `comic-to-kindle-theme`。
 
@@ -106,12 +106,12 @@ src/renderer/src/data/design-tokens.ts
 
 ## 当前产品边界
 
-已实现：本地漫画目录扫描与「部 / 卷册」浏览、卷册阅读器、库根目录持久化（`userData/settings.json`）、卷册转 Kindle 固定版式 EPUB（`src/main/convert.ts`）、产物清单与归档（`src/main/artifacts.ts`，`userData/artifacts.json` + `userData/converted/`）、SMTP 投递（`src/main/deliver.ts`，凭据 safeStorage 加密）、Send to Kindle 网页推送（`src/main/webpush.ts`，内嵌网页 + CDP 自动填文件，≤200MB）、App 层转换队列（`useConvertActivity`，renderer 内存态）。
+已实现：本地漫画目录扫描与「部 / 卷册」浏览（含每部名称/作者覆盖 `seriesMeta`、封面缩略图缓存 `userData/thumbs/`）、卷册阅读器、库根目录持久化（`userData/settings.json`）、压缩包来源（`src/main/archive.ts`，7zip-bin 解 CBZ/ZIP/CBR/RAR/7z + 加密 zip + 多卷分卷到 `userData/extracted/`，safeStorage 加密的共享密码池，解压进度）、卷册转 Kindle 固定版式 EPUB（`src/main/convert.ts`，书名「漫画名+卷册」+ 作者）、产物清单与归档（`src/main/artifacts.ts`，`userData/artifacts.json` + `userData/converted/`）、SMTP 投递（`src/main/deliver.ts`，凭据 safeStorage 加密）、Send to Kindle 网页推送（`src/main/webpush.ts`，内嵌网页 + CDP 自动填文件，≤200MB）、App 层转换队列（`useConvertActivity`，renderer 内存态）。
 
 应用尚未实现：
 
 - 漫画元数据存储 / 索引（当前每次进入实时扫描，无数据库）
-- CBZ、CBR、EPUB 或 PDF 等压缩/单文件卷册的读取与转换逻辑（仅支持图片文件夹）
+- PDF / EPUB 单文件卷册的读取与转换逻辑（压缩包来源已覆盖 CBZ/ZIP/CBR/RAR/7z；PDF 需光栅化）
 - 图像增强或 AI 放大
 - 转换队列持久化（重启会丢未完成排队）
 - 转换后自动投递
