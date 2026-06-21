@@ -4,19 +4,20 @@
 
 日期：2026-06-21
 
-ComicToKindle **核心闭环已打通**：漫画库浏览 → 阅读器 → 卷册转 Kindle 固定版式 EPUB → 归档 → 投递到 Kindle（SMTP 邮件 / Send to Kindle 网页通道二选一）。最近一轮（2026-06-21）补齐**转换队列持久化 + 中断恢复**、**漫画库文件管理器式交互**（双击进入/单击选中/整卡框选）、**压缩包来源**、**封面缩略图缓存**、**书籍元数据**与**每部信息编辑**。
+ComicToKindle **核心闭环已打通**：漫画库浏览 → 阅读器 → 卷册转 Kindle 固定版式 EPUB → 归档 → 投递到 Kindle（SMTP 邮件 / Send to Kindle 网页通道二选一）。最近一轮（2026-06-21）补齐**应用内文件整理**（右键重命名/移动到另一部/删除到废纸篓 + 新建文件夹，真·本地文件操作，文件管理器化第一片）、**转换队列持久化 + 中断恢复**、**漫画库文件管理器式交互**（双击进入/单击选中/整卡框选）、**压缩包来源**、**封面缩略图缓存**、**书籍元数据**与**每部信息编辑**。
 
 ## 已完成
 
 ### 2026-06-21 阶段（应用内文件整理 — 文件管理器化第一片）
 
-分支 `feat/archive-source-layer`，commit `f242484`（功能 + 本段文档）、`9e808d1`（前一轮文档同步）。**未 push**（本机 git push 走 TLS 被环境中断，待用户自行 push）。
+分支 `feat/archive-source-layer`，commit `c68d762`（功能 + 本段文档，已 push）、`9e808d1`（前一轮文档同步）。注：本机 git push 在 sandbox 内连不上 GitHub（LibreSSL SSL_ERROR_SYSCALL），由用户在终端 `! git push` 手动推成功。
 
 - **main 文件操作（`src/main/library.ts` 末段 + IPC）**：`rename` / `move` / `createFolder` / `trash` 四个真·本地文件操作。统一越权校验 `assertWithinRoot`（规范化后必须落在 `currentRoot` 内，防路径穿越）+ `sanitizeName`（禁分隔符/`.`/`..`/超长，**空格放行**——漫画名常含空格）。删除走 `shell.trashItem`（进系统废纸篓，可还原）。重命名顶层「部」时迁移其 `seriesMeta` 覆盖键；单文件卷重命名自动补回原扩展名。
 - **preload + 类型**：`window.api.library.rename/move/createFolder/trash`（`index.ts` + `index.d.ts`）。
 - **renderer（App.tsx LibraryView）**：卷册卡片右键菜单（重命名 / 移动到… / 删除），部卡片右键菜单补（重命名 / 删除，与既有「编辑信息」并列——注意「编辑信息」是改 `seriesMeta` 覆盖不动文件，「重命名」才真改文件夹名）；顶栏加「新建文件夹」按钮（部视图建子文件夹、库根视图建新「部」）。多选时右键命中已选卷 → 对整组移动/删除。移动目标 = 其他「部」（弹框列表点选）。删除走 AlertDialog 二次确认。操作后 `refreshAfterFileop`（部视图重扫 / 卷视图刷卷）。错误码经 `fileopErr` 翻译，新增 `uiText.*.fileops` 中英文案。
-- 验证：`npm run typecheck` + `npm run build` 通过，改动区无新增 lint 错误。**未手测**（涉及真实文件移动/删除，需用户在真库验证后再 commit/push）。
-- 待办（第二片）：拖拽移动；移动框里「新建文件夹并移入」；批量重命名；移动到任意层级（当前仅「卷→其他部」）。
+- **交互踩坑（重要）**：卡片右键 `ContextMenu` 在带框选逻辑的 `gridWrap` 内，Radix 把菜单内容 portal 到 body，但 **React 合成事件按组件树冒泡**回 `onWrapPointerDown`，被误判为「点空白」→ 起框选 + `setPointerCapture` 吞掉点击 → 菜单项点了没反应、菜单不收起（只有「新建文件夹」工具栏按钮正常）。修法：`onWrapPointerDown` 开头加 `if (!wrap.contains(e.target)) return` 放行 portal 事件（对所有 portal 内容通用）。另留 `deferOpen`（菜单关闭那帧延一拍开弹框）作双保险。
+- 验证：`npm run typecheck` + `npm run build` 通过，改动区无新增 lint 错误；**用户已手测通过**（重命名/移动/删除/新建文件夹）。
+- 待办（第二片，backlog）：拖拽移动；移动框里「新建文件夹并移入」；批量重命名；移动到任意层级（当前仅「卷→其他部」）。**用户要求：下次开工前先逐项对清交互细节再实现，别直接开做。**
 
 ### 2026-06-21 阶段（队列持久化 + 中断恢复 + 文件管理器式交互）
 
@@ -126,7 +127,7 @@ Codex、Claude Code、Antigravity 接力开发前应先读 `docs/agent-collabora
 
 ## 下一步建议
 
-1. **应用内本地文件夹整理**：第一片已落地（重命名/移动/删除到废纸篓/新建文件夹，见上「文件管理器化第一片」，待手测）。第二片：拖拽移动、批量重命名、移动到任意层级。详见记忆 `library-file-manager-direction`。
+1. **应用内本地文件夹整理**：第一片已落地并手测通过（重命名/移动/删除到废纸篓/新建文件夹，见上「文件管理器化第一片」）。第二片（backlog）：拖拽移动、批量重命名、移动到任意层级、移动框内「新建并移入」——**下次开工前先把交互细节逐项对清楚再实现**。详见记忆 `library-file-manager-direction`。
 2. 转换后自动投递（可选开关）。
 3. PDF/EPUB 来源（需光栅化，依赖更重）；压缩包来源已覆盖 CBZ/ZIP/CBR/7z。
 4. 压缩包来源打磨：解压缓存 + 缩略图缓存的清理/容量上限；设置页管理已记住的密码池；扫描时为非加密包补封面（当前压缩包封面仍在首次打开后才出现）。

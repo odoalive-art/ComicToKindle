@@ -106,7 +106,7 @@ src/renderer/src/data/design-tokens.ts
 
 ## 当前产品边界
 
-已实现：本地漫画目录扫描与「部 / 卷册」浏览（含每部名称/作者覆盖 `seriesMeta`、封面缩略图缓存 `userData/thumbs/`）、卷册阅读器、库根目录持久化（`userData/settings.json`）、压缩包来源（`src/main/archive.ts`，7zip-bin 解 CBZ/ZIP/CBR/RAR/7z + 加密 zip + 多卷分卷到 `userData/extracted/`，safeStorage 加密的共享密码池，解压进度）、卷册转 Kindle 固定版式 EPUB（`src/main/convert.ts`，书名「漫画名+卷册」+ 作者）、产物清单与归档（`src/main/artifacts.ts`，`userData/artifacts.json` + `userData/converted/`）、**转换队列持久化**（`src/main/queue.ts`，`userData/queue.json`；关窗即退出应用使「关窗==重启」成立；重启后未完成任务（queued/converting）标为 `'interrupted'`、不自动跑，由启动 toast +活动浮窗角标提示用户「继续/不继续」，继续=整卷从 0 重跑；孤儿 `tmp_*` 清扫；options 入队时冻结）、SMTP 投递（`src/main/deliver.ts`，凭据 safeStorage 加密）、Send to Kindle 网页推送（`src/main/webpush.ts`，内嵌网页 + CDP 自动填文件，≤200MB）、App 层转换队列调度（`useConvertActivity` hook）。
+已实现：本地漫画目录扫描与「部 / 卷册」浏览（含每部名称/作者覆盖 `seriesMeta`、封面缩略图缓存 `userData/thumbs/`）、应用内文件整理（`library:rename/move/createFolder/trash`，越权校验 + 名称清洗，删除走系统废纸篓）、卷册阅读器、库根目录持久化（`userData/settings.json`）、压缩包来源（`src/main/archive.ts`，7zip-bin 解 CBZ/ZIP/CBR/RAR/7z + 加密 zip + 多卷分卷到 `userData/extracted/`，safeStorage 加密的共享密码池，解压进度）、卷册转 Kindle 固定版式 EPUB（`src/main/convert.ts`，书名「漫画名+卷册」+ 作者）、产物清单与归档（`src/main/artifacts.ts`，`userData/artifacts.json` + `userData/converted/`）、**转换队列持久化**（`src/main/queue.ts`，`userData/queue.json`；关窗即退出应用使「关窗==重启」成立；重启后未完成任务（queued/converting）标为 `'interrupted'`、不自动跑，由启动 toast +活动浮窗角标提示用户「继续/不继续」，继续=整卷从 0 重跑；孤儿 `tmp_*` 清扫；options 入队时冻结）、SMTP 投递（`src/main/deliver.ts`，凭据 safeStorage 加密）、Send to Kindle 网页推送（`src/main/webpush.ts`，内嵌网页 + CDP 自动填文件，≤200MB）、App 层转换队列调度（`useConvertActivity` hook）。
 
 应用尚未实现：
 
