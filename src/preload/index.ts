@@ -10,6 +10,16 @@ const api = {
     listVolumes: (seriesPath: string) => ipcRenderer.invoke('library:listVolumes', seriesPath),
     listPages: (volumePath: string) => ipcRenderer.invoke('library:listPages', volumePath)
   },
+  archive: {
+    prepare: (filePath: string) => ipcRenderer.invoke('archive:prepare', filePath),
+    unlock: (filePath: string, password: string, remember: boolean) =>
+      ipcRenderer.invoke('archive:unlock', filePath, password, remember),
+    onProgress: (cb: (payload: unknown) => void): (() => void) => {
+      const listener = (_e: unknown, payload: unknown): void => cb(payload)
+      ipcRenderer.on('archive:progress', listener)
+      return () => ipcRenderer.removeListener('archive:progress', listener)
+    }
+  },
   convert: {
     volume: (req: unknown) => ipcRenderer.invoke('convert:volume', req),
     cancel: (sourceVolumePath: string) => ipcRenderer.invoke('convert:cancel', sourceVolumePath),

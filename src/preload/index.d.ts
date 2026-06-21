@@ -18,6 +18,8 @@ export interface LibraryVolume {
   kind: 'folder' | 'file'
   pageCount: number
   coverUrl: string | null
+  /** 压缩包卷册：加密且尚未解锁缓存（需密码） */
+  locked?: boolean
 }
 
 export interface LibraryAPI {
@@ -26,6 +28,32 @@ export interface LibraryAPI {
   scan: (root: string) => Promise<LibrarySeries[]>
   listVolumes: (seriesPath: string) => Promise<LibraryVolume[]>
   listPages: (volumePath: string) => Promise<string[]>
+}
+
+export type ArchivePrepareStatus = 'ready' | 'needs-password' | 'error'
+
+export interface ArchivePrepareResult {
+  status: ArchivePrepareStatus
+  /** error/needs-password 时的稳定码：WRONG_PASSWORD | NO_IMAGES | INSPECT_FAILED | EXTRACT_FAILED */
+  message?: string
+  /** ready 时回传页数 */
+  pageCount?: number
+}
+
+/** 解压进度：filePath = 入口卷路径，percent = 0–100 */
+export interface ArchiveProgress {
+  filePath: string
+  percent: number
+}
+
+export interface ArchiveAPI {
+  prepare: (filePath: string) => Promise<ArchivePrepareResult>
+  unlock: (
+    filePath: string,
+    password: string,
+    remember: boolean
+  ) => Promise<ArchivePrepareResult>
+  onProgress: (cb: (payload: ArchiveProgress) => void) => () => void
 }
 
 export type DeviceProfile = 'pw3' | 'pw5' | 'pw6' | 'ko3' | 'oasis' | 'scribe' | 'original'
@@ -147,6 +175,7 @@ export interface WebPushAPI {
 
 export interface CustomAPI {
   library: LibraryAPI
+  archive: ArchiveAPI
   convert: ConvertAPI
   artifacts: ArtifactsAPI
   deliver: DeliverAPI

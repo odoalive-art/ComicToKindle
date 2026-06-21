@@ -3,6 +3,7 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { registerComicScheme, setupLibrary } from './library'
+import { setupArchive } from './archive'
 import { setupArtifacts } from './artifacts'
 import { setupDelivery } from './deliver'
 import { setupWebPush } from './webpush'
@@ -62,6 +63,9 @@ app.whenReady().then(() => {
 
   // 漫画库数据层：comic:// 协议 + 扫描/选择目录 IPC
   setupLibrary()
+
+  // 压缩包来源：解压/解锁 IPC（CBZ/ZIP/CBR/7z）
+  setupArchive()
 
   // 转换产物清单 + 转换 IPC
   setupArtifacts()

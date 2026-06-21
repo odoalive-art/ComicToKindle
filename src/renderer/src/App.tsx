@@ -60,7 +60,11 @@ import {
   ListChecks,
   RotateCcw,
   X,
-  CheckSquare
+  CheckSquare,
+  Lock,
+  FileArchive,
+  Eye,
+  EyeOff
 } from 'lucide-react'
 
 import {
@@ -406,9 +410,28 @@ const uiText = {
       noSeries: '这个文件夹里没有找到漫画作品。',
       noVolumes: '这个作品下没有可识别的卷册。',
       unknownAuthor: '未知作者',
-      fileVolume: '单文件',
+      fileVolume: '压缩包',
       volumeUnit: (n: number) => `${n} 卷`,
       pageUnit: (n: number) => `${n} 页`
+    },
+    archive: {
+      locked: '已加密',
+      preparing: '正在解压…',
+      preparingNamed: (name: string) => `正在解压「${name}」…`,
+      extracting: (pct: number) => `解压中 ${pct}%`,
+      extractingNamed: (name: string, pct: number) => `解压「${name}」 ${pct}%`,
+      done: (name: string) => `解压完成：${name}`,
+      extractFailed: '解压失败',
+      noImages: '压缩包里没有可用的图片',
+      unsupported: '暂不支持该格式（仅支持图片文件夹与 CBZ/ZIP/CBR/7z 压缩包）',
+      dialogTitle: '需要解压密码',
+      dialogDesc: (name: string) => `「${name}」已加密，请输入解压密码。`,
+      placeholder: '解压密码',
+      remember: '记住此密码（下次自动尝试）',
+      wrongPassword: '密码不正确，请重试',
+      unlock: '解锁',
+      unlocking: '解锁中…',
+      cancel: '取消'
     },
     convert: {
       action: '转换为 Kindle',
@@ -659,9 +682,28 @@ const uiText = {
       noSeries: 'No comic series found in this folder.',
       noVolumes: 'No recognizable volumes under this series.',
       unknownAuthor: 'Unknown author',
-      fileVolume: 'Single file',
+      fileVolume: 'Archive',
       volumeUnit: (n: number) => `${n} vol${n === 1 ? '' : 's'}`,
       pageUnit: (n: number) => `${n} page${n === 1 ? '' : 's'}`
+    },
+    archive: {
+      locked: 'Encrypted',
+      preparing: 'Extracting…',
+      preparingNamed: (name: string) => `Extracting "${name}"…`,
+      extracting: (pct: number) => `Extracting ${pct}%`,
+      extractingNamed: (name: string, pct: number) => `Extracting "${name}" ${pct}%`,
+      done: (name: string) => `Extracted: ${name}`,
+      extractFailed: 'Extraction failed',
+      noImages: 'No usable images in this archive',
+      unsupported: 'Format not supported yet (image folders and CBZ/ZIP/CBR/7z archives only)',
+      dialogTitle: 'Password required',
+      dialogDesc: (name: string) => `"${name}" is encrypted. Enter the password to extract it.`,
+      placeholder: 'Archive password',
+      remember: 'Remember this password (auto-try next time)',
+      wrongPassword: 'Incorrect password, please try again',
+      unlock: 'Unlock',
+      unlocking: 'Unlocking…',
+      cancel: 'Cancel'
     },
     convert: {
       action: 'Convert for Kindle',
@@ -1248,12 +1290,21 @@ type LibrarySeries = Awaited<ReturnType<Window['api']['library']['scan']>>[numbe
 type LibraryVolume = Awaited<ReturnType<Window['api']['library']['listVolumes']>>[number]
 type Artifact = Awaited<ReturnType<Window['api']['artifacts']['list']>>[number]
 
-function CoverImage({ src, alt }: { src: string | null; alt: string }): React.JSX.Element {
+function CoverImage({
+  src,
+  alt,
+  quiet = false
+}: {
+  src: string | null
+  alt: string
+  /** 由父级负责画占位图标（如压缩包的锁/归档图标）时置 true，避免叠一个 ImageOff */
+  quiet?: boolean
+}): React.JSX.Element {
   const [failed, setFailed] = useState(false)
   if (!src || failed) {
     return (
       <div className="flex h-full w-full items-center justify-center bg-muted text-muted-foreground">
-        <ImageOff className="size-7" />
+        {quiet ? null : <ImageOff className="size-7" />}
       </div>
     )
   }
@@ -2042,8 +2093,129 @@ function LibraryView({
   // 转换活动（队列 + 产物 + 进度）由 App 层 hook 提供，跨视图保活
   const { convertedPaths, jobByPath, enqueue } = activity
 
-  const enqueueVolume = (vol: LibraryVolume): void => {
+  // ---- 压缩包来源：解压/解锁前置 ----
+  // 末尾允许 .NNN 数字分卷（如 .7z.001）；.partN.rar / 旧式 .rar 由 .rar$ 覆盖
+  const ARCHIVE_RE = /\.(cbz|zip|cbr|rar|7z)(\.\d{2,})?$/i
+  const isUnsupportedVol = (v: LibraryVolume): boolean =>
+    v.kind === 'file' && !ARCHIVE_RE.test(v.path)
+
+  // 解锁对话框：用 Promise + ref 让阅读/转换流程能 await 用户输入密码
+  const [unlockReq, setUnlockReq] = useState<{
+    vol: LibraryVolume
+    password: string
+    error: string | null
+    remember: boolean
+    busy: boolean
+    show: boolean
+  } | null>(null)
+  const unlockResolve = React.useRef<((ok: boolean) => void) | null>(null)
+  // 解压进度（0–100，null = 未在解压）
+  const [extractPct, setExtractPct] = useState<number | null>(null)
+  const prepareToastRef = React.useRef<string | number | null>(null) // 解压中的 toast id（实时更新文案）
+  const extractNameRef = React.useRef<string>('') // 当前解压卷册名，供 toast/进度文案使用
+  const extractStartedRef = React.useRef(false) // 是否真的开始了解压（缓存命中则不触发，用于决定是否提示“完成”）
+
+  React.useEffect(() => {
+    return window.api.archive.onProgress(({ percent }) => {
+      extractStartedRef.current = true
+      setExtractPct(percent)
+      if (prepareToastRef.current != null) {
+        toast.loading(text.archive.extractingNamed(extractNameRef.current, percent), {
+          id: prepareToastRef.current
+        })
+      }
+    })
+  }, [text])
+
+  const refreshVolumes = React.useCallback(async () => {
     if (!selected) return
+    try {
+      setVolumes(await window.api.library.listVolumes(selected.path))
+    } catch {
+      /* 刷新失败保持原状 */
+    }
+  }, [selected])
+
+  const requestUnlock = (vol: LibraryVolume): Promise<boolean> =>
+    new Promise((resolve) => {
+      unlockResolve.current = resolve
+      setUnlockReq({ vol, password: '', error: null, remember: true, busy: false, show: false })
+    })
+
+  /** 确保压缩包卷册已解出缓存；需要密码时弹框。返回是否可继续 */
+  const ensureArchiveReady = async (vol: LibraryVolume): Promise<boolean> => {
+    if (vol.kind !== 'file') return true
+    if (isUnsupportedVol(vol)) {
+      toast.error(text.archive.unsupported)
+      return false
+    }
+    const tid = toast.loading(text.archive.preparingNamed(vol.title))
+    prepareToastRef.current = tid
+    extractNameRef.current = vol.title
+    extractStartedRef.current = false
+    setExtractPct(null)
+    const r = await window.api.archive.prepare(vol.path)
+    prepareToastRef.current = null
+    setExtractPct(null)
+    if (r.status === 'ready') {
+      // 真正解压过才提示“完成”；缓存命中（瞬间 ready）则静默收起 toast
+      if (extractStartedRef.current) toast.success(text.archive.done(vol.title), { id: tid })
+      else toast.dismiss(tid)
+      if (!vol.coverUrl) void refreshVolumes()
+      return true
+    }
+    toast.dismiss(tid)
+    if (r.status === 'error') {
+      toast.error(r.message === 'NO_IMAGES' ? text.archive.noImages : text.archive.extractFailed)
+      return false
+    }
+    return requestUnlock(vol)
+  }
+
+  const submitUnlock = async (): Promise<void> => {
+    if (!unlockReq || unlockReq.busy || !unlockReq.password) return
+    const name = unlockReq.vol.title
+    extractNameRef.current = name
+    setUnlockReq({ ...unlockReq, busy: true, error: null })
+    setExtractPct(0)
+    const r = await window.api.archive.unlock(
+      unlockReq.vol.path,
+      unlockReq.password,
+      unlockReq.remember
+    )
+    setExtractPct(null)
+    if (r.status === 'ready') {
+      toast.success(text.archive.done(name))
+      const resolve = unlockResolve.current
+      unlockResolve.current = null
+      setUnlockReq(null)
+      await refreshVolumes()
+      resolve?.(true)
+    } else if (r.status === 'needs-password') {
+      setUnlockReq((s) => (s ? { ...s, busy: false, error: text.archive.wrongPassword } : s))
+    } else {
+      toast.error(text.archive.extractFailed)
+      const resolve = unlockResolve.current
+      unlockResolve.current = null
+      setUnlockReq(null)
+      resolve?.(false)
+    }
+  }
+
+  const cancelUnlock = (): void => {
+    const resolve = unlockResolve.current
+    unlockResolve.current = null
+    setUnlockReq(null)
+    resolve?.(false)
+  }
+
+  const openVolume = async (vol: LibraryVolume): Promise<void> => {
+    if (await ensureArchiveReady(vol)) setReadingVolume(vol)
+  }
+
+  const enqueueVolume = async (vol: LibraryVolume): Promise<void> => {
+    if (!selected) return
+    if (!(await ensureArchiveReady(vol))) return
     enqueue({
       sourceVolumePath: vol.path,
       seriesPathName: selected.name,
@@ -2072,10 +2244,15 @@ function LibraryView({
     setSelectedVols(allSelected ? new Set() : new Set(volumes.map((v) => v.path)))
   }
 
-  const convertSelected = (): void => {
+  const convertSelected = async (): Promise<void> => {
     if (!selected || selectedVols.size === 0) return
     const picked = volumes.filter((v) => selectedVols.has(v.path))
-    picked.forEach((vol) =>
+    // 压缩包逐个确保解出（密码池命中或弹框；共享密码池下多为一次输入）
+    const ready: LibraryVolume[] = []
+    for (const vol of picked) {
+      if (await ensureArchiveReady(vol)) ready.push(vol)
+    }
+    ready.forEach((vol) =>
       enqueue({
         sourceVolumePath: vol.path,
         seriesPathName: selected.name,
@@ -2084,7 +2261,7 @@ function LibraryView({
         author: selected.author
       })
     )
-    toast.success(text.activity.enqueued(picked.length))
+    if (ready.length > 0) toast.success(text.activity.enqueued(ready.length))
     exitSelect()
   }
 
@@ -2261,6 +2438,94 @@ function LibraryView({
 
   return (
     <TooltipProvider delayDuration={300}>
+    {/* 压缩包解锁对话框：阅读/转换前置遇加密包时弹出 */}
+    <Dialog open={unlockReq !== null} onOpenChange={(o) => (!o ? cancelUnlock() : undefined)}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>{text.archive.dialogTitle}</DialogTitle>
+          {unlockReq ? (
+            <DialogDescription>{text.archive.dialogDesc(unlockReq.vol.title)}</DialogDescription>
+          ) : null}
+        </DialogHeader>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            void submitUnlock()
+          }}
+          className="space-y-3"
+        >
+          {/* 用 text + CSS 遮罩而非 type=password：后者在 macOS/Chromium 下会强制英文输入法，
+              无法输入中文密码。-webkit-text-security 既能掩码又保留 IME 输入。 */}
+          <div className="relative">
+            <Input
+              type="text"
+              autoFocus
+              autoComplete="off"
+              spellCheck={false}
+              className="pr-10"
+              style={
+                unlockReq?.show
+                  ? undefined
+                  : ({ WebkitTextSecurity: 'disc' } as React.CSSProperties)
+              }
+              value={unlockReq?.password ?? ''}
+              placeholder={text.archive.placeholder}
+              onChange={(e) =>
+                setUnlockReq((s) => (s ? { ...s, password: e.target.value, error: null } : s))
+              }
+            />
+            <button
+              type="button"
+              tabIndex={-1}
+              onClick={() => setUnlockReq((s) => (s ? { ...s, show: !s.show } : s))}
+              className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground"
+            >
+              {unlockReq?.show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+            </button>
+          </div>
+          {unlockReq?.error ? (
+            <p className="text-xs text-destructive">{unlockReq.error}</p>
+          ) : null}
+          <label className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Checkbox
+              checked={unlockReq?.remember ?? true}
+              onCheckedChange={(c) =>
+                setUnlockReq((s) => (s ? { ...s, remember: c === true } : s))
+              }
+            />
+            {text.archive.remember}
+          </label>
+          {unlockReq?.busy ? (
+            <div className="space-y-1">
+              <div className="h-1.5 w-full overflow-hidden rounded bg-muted">
+                <div
+                  className="h-full bg-primary transition-all"
+                  style={{ width: `${extractPct ?? 0}%` }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {text.archive.extracting(extractPct ?? 0)}
+              </p>
+            </div>
+          ) : null}
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={cancelUnlock}>
+              {text.archive.cancel}
+            </Button>
+            <Button type="submit" disabled={!unlockReq?.password || unlockReq?.busy}>
+              {unlockReq?.busy ? (
+                <>
+                  <Loader2 className="size-3.5 animate-spin" />
+                  {text.archive.unlocking}
+                </>
+              ) : (
+                text.archive.unlock
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
     <div className="flex min-h-0 flex-1 flex-col bg-background">
       {/* 合并后的顶栏：侧栏开关 + 标题/面包屑 + 操作 */}
       <header
@@ -2326,7 +2591,11 @@ function LibraryView({
                 <Button variant="ghost" size="sm" onClick={toggleAll}>
                   {allSelected ? text.activity.selectNone : text.activity.selectAll}
                 </Button>
-                <Button size="sm" disabled={selectedVols.size === 0} onClick={convertSelected}>
+                <Button
+                  size="sm"
+                  disabled={selectedVols.size === 0}
+                  onClick={() => void convertSelected()}
+                >
                   <BookUp className="size-4" />
                   {text.activity.convertSelected(selectedVols.size)}
                 </Button>
@@ -2452,7 +2721,7 @@ function LibraryView({
                           <button
                             type="button"
                             onClick={() =>
-                              selectMode ? toggleVol(vol.path) : setReadingVolume(vol)
+                              selectMode ? toggleVol(vol.path) : void openVolume(vol)
                             }
                             className="block w-full text-left"
                           >
@@ -2466,7 +2735,21 @@ function LibraryView({
                                   : ''
                               }`}
                             >
-                              <CoverImage src={vol.coverUrl} alt={vol.title} />
+                              <CoverImage
+                                src={vol.coverUrl}
+                                alt={vol.title}
+                                quiet={vol.kind === 'file'}
+                              />
+                              {/* 压缩包卷册尚无封面：占位图标（加密则用锁） */}
+                              {!vol.coverUrl && vol.kind === 'file' ? (
+                                <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-muted-foreground">
+                                  {vol.locked ? (
+                                    <Lock className="size-8" />
+                                  ) : (
+                                    <FileArchive className="size-8" />
+                                  )}
+                                </div>
+                              ) : null}
                               <div className="pointer-events-none absolute inset-0 rounded-lg border border-foreground/10" />
                               {(() => {
                                 const prog = getProgress(vol.path)
@@ -2533,7 +2816,7 @@ function LibraryView({
                                     className="size-7 bg-background/85 opacity-0 backdrop-blur transition-opacity group-hover:opacity-100"
                                     onClick={(e) => {
                                       e.stopPropagation()
-                                      enqueueVolume(vol)
+                                      void enqueueVolume(vol)
                                     }}
                                   >
                                     <BookUp className="size-3.5" />

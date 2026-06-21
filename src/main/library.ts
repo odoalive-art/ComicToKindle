@@ -1,6 +1,16 @@
 import { app, dialog, ipcMain, protocol, BrowserWindow } from 'electron'
 import { join, extname } from 'path'
 import { promises as fs } from 'fs'
+import { createHash } from 'crypto'
+import sharp from 'sharp'
+import {
+  getCachedImages,
+  prepareArchive,
+  inspectArchive,
+  extractedRoot,
+  isArchiveFile,
+  isSplitContinuation
+} from './archive'
 
 /**
  * 漫画库数据层：目录扫描 + 封面/图片服务 + 库根目录持久化。
@@ -11,8 +21,8 @@ import { promises as fs } from 'fs'
  */
 
 const IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif', '.avif', '.bmp'])
-// 预留给将来的单文件卷册（暂未在库中出现）
-const ARCHIVE_EXTS = new Set(['.cbz', '.cbr', '.zip', '.pdf', '.epub'])
+// 显示但暂不解析的单文件卷册；可解压归档（cbz/zip/cbr/rar/7z 及分卷）交由 archive.isArchiveFile 判定
+const VIEW_ONLY_EXTS = new Set(['.pdf', '.epub'])
 
 const MIME: Record<string, string> = {
   '.jpg': 'image/jpeg',
@@ -42,6 +52,8 @@ export interface LibraryVolume {
   kind: 'folder' | 'file'
   pageCount: number
   coverUrl: string | null
+  /** 压缩包卷册：加密且尚未解锁缓存（需密码） */
+  locked?: boolean
 }
 
 // 自然排序：2.jpg 排在 10.jpg 前面
@@ -49,7 +61,9 @@ const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'bas
 const naturalSort = (a: string, b: string): number => collator.compare(a, b)
 
 const isImage = (name: string): boolean => IMAGE_EXTS.has(extname(name).toLowerCase())
-const isArchive = (name: string): boolean => ARCHIVE_EXTS.has(extname(name).toLowerCase())
+/** 可作为一卷展示的单文件：可解压归档（含分卷入口）或显示型 pdf/epub */
+const isVolumeFile = (name: string): boolean =>
+  isArchiveFile(name) || VIEW_ONLY_EXTS.has(extname(name).toLowerCase())
 const isHidden = (name: string): boolean => name.startsWith('.')
 
 // 当前库根目录，用于 comic:// 协议的越权访问校验
@@ -115,6 +129,34 @@ async function countImages(dir: string, depth = 4): Promise<number> {
 }
 
 const toComicUrl = (absPath: string): string => `comic://img/?p=${encodeURIComponent(absPath)}`
+/** 封面用缩略图通道：comic:// 协议据 thumb=1 返回降采样 webp（见 handleComicProtocol） */
+const toThumbUrl = (absPath: string): string =>
+  `comic://img/?p=${encodeURIComponent(absPath)}&thumb=1`
+
+// ---------- 封面缩略图缓存 ----------
+// 漫画原图常达数 MB（本库单页约 4MB），网格里 10+ 张封面若直接解全图会拖慢加载并造成交互卡顿。
+// 这里用 sharp 把封面降到 ~480px webp，按 路径+mtime+size 缓存到 userData/thumbs，源图变更自动失效。
+const THUMB_WIDTH = 480
+const thumbsRoot = (): string => join(app.getPath('userData'), 'thumbs')
+
+async function buildThumb(absPath: string): Promise<string> {
+  const stat = await fs.stat(absPath)
+  const key = `${absPath}:${stat.mtimeMs}:${stat.size}:w${THUMB_WIDTH}`
+  const out = join(thumbsRoot(), `${createHash('sha1').update(key).digest('hex')}.webp`)
+  try {
+    await fs.access(out)
+    return out // 命中缓存
+  } catch {
+    /* 未生成 */
+  }
+  await fs.mkdir(thumbsRoot(), { recursive: true })
+  await sharp(absPath, { failOn: 'none' })
+    .rotate() // 尊重 EXIF 方向
+    .resize({ width: THUMB_WIDTH, withoutEnlargement: true })
+    .webp({ quality: 72 })
+    .toFile(out)
+  return out
+}
 
 /** 从 `[作者] 标题` 解析出作者与标题 */
 function parseSeriesName(name: string): { title: string; author: string | null } {
@@ -124,7 +166,9 @@ function parseSeriesName(name: string): { title: string; author: string | null }
 }
 
 const isVolumeEntry = (e: import('fs').Dirent): boolean =>
-  !isHidden(e.name) && (e.isDirectory() || (e.isFile() && isArchive(e.name)))
+  !isHidden(e.name) &&
+  !isSplitContinuation(e.name) && // 隐藏分卷续卷（.002…/.rNN），只保留入口卷
+  (e.isDirectory() || (e.isFile() && isVolumeFile(e.name)))
 
 // ---------- 扫描实现 ----------
 async function scanLibrary(root: string): Promise<LibrarySeries[]> {
@@ -149,7 +193,7 @@ async function scanLibrary(root: string): Promise<LibrarySeries[]> {
       title,
       author,
       volumeCount,
-      coverUrl: cover ? toComicUrl(cover) : null
+      coverUrl: cover ? toThumbUrl(cover) : null
     })
   }
   return result
@@ -171,18 +215,33 @@ async function listVolumes(seriesPath: string): Promise<LibraryVolume[]> {
         title: entry.name,
         kind: 'folder',
         pageCount,
-        coverUrl: cover ? toComicUrl(cover) : null
+        coverUrl: cover ? toThumbUrl(cover) : null
       })
     } else {
-      result.push({
+      const base = {
         id: path,
         path,
         name: entry.name,
         title: entry.name.replace(/\.[^.]+$/, ''),
-        kind: 'file',
-        pageCount: 0,
-        coverUrl: null
-      })
+        kind: 'file' as const
+      }
+      // 已解出缓存 → 用缓存首图作封面、缓存页数
+      const cached = isArchiveFile(entry.name) ? await getCachedImages(path) : null
+      if (cached && cached.length > 0) {
+        result.push({ ...base, pageCount: cached.length, coverUrl: toThumbUrl(cached[0]) })
+      } else if (isArchiveFile(entry.name)) {
+        // 未解出 → 轻量列表拿页数 + 加密状态（封面待首次打开后出现）
+        const info = await inspectArchive(path).catch(() => null)
+        result.push({
+          ...base,
+          pageCount: info?.imageCount ?? 0,
+          coverUrl: null,
+          locked: info?.encrypted ?? false
+        })
+      } else {
+        // pdf/epub 等暂不支持解析
+        result.push({ ...base, pageCount: 0, coverUrl: null })
+      }
     }
   }
   return result
@@ -208,17 +267,42 @@ async function collectPages(dir: string, depth = 5): Promise<string[]> {
   return pages
 }
 
+/** 卷册路径是否为压缩包单文件 */
+async function isArchiveVolume(volumePath: string): Promise<boolean> {
+  if (!isArchiveFile(volumePath)) return false
+  try {
+    return (await fs.stat(volumePath)).isFile()
+  } catch {
+    return false
+  }
+}
+
+/**
+ * 解出一卷的图片绝对路径（按阅读顺序）。
+ * 文件夹卷 → 递归收图；压缩包卷 → 读缓存，缺则尝试用密码池解；
+ * 仍需密码时抛 'NEEDS_PASSWORD'，由 renderer 走解锁流程后重试。
+ */
+async function resolveVolumeImagePaths(volumePath: string): Promise<string[]> {
+  if (!(await isArchiveVolume(volumePath))) return collectPages(volumePath)
+  const cached = await getCachedImages(volumePath)
+  if (cached) return cached
+  const result = await prepareArchive(volumePath)
+  if (result.status === 'ready') return (await getCachedImages(volumePath)) ?? []
+  if (result.status === 'needs-password') throw new Error('NEEDS_PASSWORD')
+  throw new Error(result.message ?? 'EXTRACT_FAILED')
+}
+
 async function listPages(volumePath: string): Promise<string[]> {
-  const pages = await collectPages(volumePath)
+  const pages = await resolveVolumeImagePaths(volumePath).catch(() => [] as string[])
   return pages.map(toComicUrl)
 }
 
 /**
  * 按阅读顺序收集一卷的所有图片**绝对路径**（不含 comic:// 包装）。
- * 供转换流水线使用，能正确处理「单话子文件夹」的嵌套结构。
+ * 供转换流水线使用，能正确处理「单话子文件夹」与压缩包卷册。
  */
 export async function collectVolumeImagePaths(volumePath: string): Promise<string[]> {
-  return collectPages(volumePath)
+  return resolveVolumeImagePaths(volumePath)
 }
 
 // ---------- comic:// 协议 ----------
@@ -234,17 +318,27 @@ export function registerComicScheme(): void {
 
 function handleComicProtocol(): void {
   protocol.handle('comic', async (request) => {
-    const filePath = new URL(request.url).searchParams.get('p')
-    // 安全校验：必须是图片、且位于当前库根目录内
-    if (
-      !filePath ||
-      !isImage(filePath) ||
-      !currentRoot ||
-      !join(filePath).startsWith(join(currentRoot))
-    ) {
+    const params = new URL(request.url).searchParams
+    const filePath = params.get('p')
+    const wantThumb = params.get('thumb') === '1'
+    // 安全校验：必须是图片、且位于当前库根目录或压缩包解压缓存目录内
+    const norm = filePath ? join(filePath) : null
+    const inRoot = !!(norm && currentRoot && norm.startsWith(join(currentRoot)))
+    const inCache = !!(norm && norm.startsWith(join(extractedRoot())))
+    if (!filePath || !isImage(filePath) || (!inRoot && !inCache)) {
       return new Response('Forbidden', { status: 403 })
     }
     try {
+      // 封面走缩略图通道：返回降采样 webp，避免解全图拖慢网格；失败则回退原图
+      if (wantThumb) {
+        try {
+          const thumb = await buildThumb(filePath)
+          const tData = await fs.readFile(thumb)
+          return new Response(new Uint8Array(tData), { headers: { 'content-type': 'image/webp' } })
+        } catch {
+          /* 缩略图生成失败 → 回退原图 */
+        }
+      }
       const data = await fs.readFile(filePath)
       const mime = MIME[extname(filePath).toLowerCase()] ?? 'application/octet-stream'
       return new Response(new Uint8Array(data), { headers: { 'content-type': mime } })
