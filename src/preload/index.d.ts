@@ -28,6 +28,11 @@ export interface LibraryAPI {
   scan: (root: string) => Promise<LibrarySeries[]>
   listVolumes: (seriesPath: string) => Promise<LibraryVolume[]>
   listPages: (volumePath: string) => Promise<string[]>
+  /** 保存某部漫画的名称/作者覆盖（按部文件夹名为键），返回叠加后的结果 */
+  setSeriesMeta: (
+    name: string,
+    meta: { title: string; author: string | null }
+  ) => Promise<{ title: string; author: string | null }>
 }
 
 export type ArchivePrepareStatus = 'ready' | 'needs-password' | 'error'

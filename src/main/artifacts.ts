@@ -41,6 +41,18 @@ function sanitize(name: string): string {
   return name.replace(/[/\\?%*:|"<>]/g, '_').trim() || 'untitled'
 }
 
+/**
+ * EPUB 书名/文件名 = 「漫画名 + 卷册」（Kindle 上据此显示与归档）。
+ * 卷册名已含漫画名或漫画名缺失时退化，避免重复。
+ */
+function composeBookTitle(seriesTitle: string, volumeTitle: string): string {
+  const s = (seriesTitle ?? '').trim()
+  const v = (volumeTitle ?? '').trim()
+  if (!s) return v || 'Untitled'
+  if (!v || v === s || v.startsWith(s)) return v || s
+  return `${s} ${v}`
+}
+
 async function readManifest(): Promise<Manifest> {
   try {
     const data = JSON.parse(await fs.readFile(manifestFile(), 'utf-8')) as Manifest
@@ -120,7 +132,7 @@ export function setupArtifacts(): void {
       result = await convertMangaToEPUB({
         imagePaths,
         outputDir,
-        title: req.volumeTitle,
+        title: composeBookTitle(req.seriesTitle, req.volumeTitle),
         author: req.author ?? 'Unknown',
         options: req.options,
         onProgress: emitProgress,

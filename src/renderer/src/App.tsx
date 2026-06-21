@@ -64,7 +64,8 @@ import {
   Lock,
   FileArchive,
   Eye,
-  EyeOff
+  EyeOff,
+  Pencil
 } from 'lucide-react'
 
 import {
@@ -442,6 +443,27 @@ const uiText = {
       failed: (title: string) => `转换失败：${title}`,
       progress: (pct: number) => `转换中 ${pct}%`
     },
+    convertMeta: {
+      title: '确认书籍信息',
+      series: '漫画名',
+      author: '作者',
+      volume: '卷册名',
+      authorPlaceholder: '未知作者',
+      volumePlaceholder: '如 第01卷',
+      previewLabel: '预览',
+      start: '开始转换',
+      cancel: '取消'
+    },
+    seriesMeta: {
+      edit: '编辑漫画信息',
+      desc: '改名称与作者用于应用内显示和转换默认值，不会改动本地文件夹。',
+      name: '漫画名',
+      author: '作者',
+      authorPlaceholder: '未知作者',
+      save: '保存',
+      cancel: '取消',
+      saved: '已更新漫画信息'
+    },
     activity: {
       trigger: '转换活动',
       title: '转换活动',
@@ -713,6 +735,27 @@ const uiText = {
       done: (title: string) => `Converted: ${title}`,
       failed: (title: string) => `Conversion failed: ${title}`,
       progress: (pct: number) => `Converting ${pct}%`
+    },
+    convertMeta: {
+      title: 'Confirm book info',
+      series: 'Series',
+      author: 'Author',
+      volume: 'Volume',
+      authorPlaceholder: 'Unknown author',
+      volumePlaceholder: 'e.g. Vol. 1',
+      previewLabel: 'Preview',
+      start: 'Convert',
+      cancel: 'Cancel'
+    },
+    seriesMeta: {
+      edit: 'Edit series info',
+      desc: 'Used for in-app display and conversion defaults. Does not rename the local folder.',
+      name: 'Series',
+      author: 'Author',
+      authorPlaceholder: 'Unknown author',
+      save: 'Save',
+      cancel: 'Cancel',
+      saved: 'Series info updated'
     },
     activity: {
       trigger: 'Conversion activity',
@@ -1322,6 +1365,15 @@ function CoverImage({
 
 const LIBRARY_GRID =
   'grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'
+
+/** EPUB 书名 = 「漫画名 + 卷册」（与 main/artifacts.ts composeBookTitle 保持一致，用于预览） */
+function composeBookTitle(seriesTitle: string, volumeTitle: string): string {
+  const s = seriesTitle.trim()
+  const v = volumeTitle.trim()
+  if (!s) return v || 'Untitled'
+  if (!v || v === s || v.startsWith(s)) return v || s
+  return `${s} ${v}`
+}
 
 // ---------- 阅读偏好与进度（持久化于 localStorage） ----------
 type ReadingDirection = 'ltr' | 'rtl'
@@ -2115,6 +2167,23 @@ function LibraryView({
   const extractNameRef = React.useRef<string>('') // 当前解压卷册名，供 toast/进度文案使用
   const extractStartedRef = React.useRef(false) // 是否真的开始了解压（缓存命中则不触发，用于决定是否提示“完成”）
 
+  // 转换前确认书籍信息（单卷册）：预填漫画名/作者/卷册名，可改后再转
+  const [convertReq, setConvertReq] = useState<{
+    vol: LibraryVolume
+    seriesPathName: string
+    seriesTitle: string
+    author: string
+    volumeTitle: string
+  } | null>(null)
+
+  // 编辑某部漫画的名称/作者（持久化覆盖，不改本地文件夹名）
+  const [seriesMetaReq, setSeriesMetaReq] = useState<{
+    name: string
+    title: string
+    author: string
+    busy: boolean
+  } | null>(null)
+
   React.useEffect(() => {
     return window.api.archive.onProgress(({ percent }) => {
       extractStartedRef.current = true
@@ -2213,16 +2282,54 @@ function LibraryView({
     if (await ensureArchiveReady(vol)) setReadingVolume(vol)
   }
 
-  const enqueueVolume = async (vol: LibraryVolume): Promise<void> => {
+  // 单卷册转换：先弹窗确认书籍信息，确认后解出（如需）再入队
+  const enqueueVolume = (vol: LibraryVolume): void => {
     if (!selected) return
+    setConvertReq({
+      vol,
+      seriesPathName: selected.name,
+      seriesTitle: selected.title,
+      author: selected.author ?? '',
+      volumeTitle: vol.title
+    })
+  }
+
+  const submitConvert = async (): Promise<void> => {
+    if (!convertReq) return
+    const { vol, seriesPathName, seriesTitle, author, volumeTitle } = convertReq
+    setConvertReq(null)
     if (!(await ensureArchiveReady(vol))) return
     enqueue({
       sourceVolumePath: vol.path,
-      seriesPathName: selected.name,
-      seriesTitle: selected.title,
-      volumeTitle: vol.title,
-      author: selected.author
+      seriesPathName,
+      seriesTitle: seriesTitle.trim(),
+      volumeTitle: volumeTitle.trim(),
+      author: author.trim() || null
     })
+  }
+
+  const openSeriesMeta = (item: LibrarySeries | null): void => {
+    if (!item) return
+    setSeriesMetaReq({
+      name: item.name,
+      title: item.title,
+      author: item.author ?? '',
+      busy: false
+    })
+  }
+
+  const submitSeriesMeta = async (): Promise<void> => {
+    if (!seriesMetaReq || seriesMetaReq.busy) return
+    const { name, title, author } = seriesMetaReq
+    setSeriesMetaReq({ ...seriesMetaReq, busy: true })
+    const updated = await window.api.library.setSeriesMeta(name, {
+      title,
+      author: author.trim() || null
+    })
+    setSeries((prev) => prev.map((s) => (s.name === name ? { ...s, ...updated } : s)))
+    setSelected((prev) => (prev && prev.name === name ? { ...prev, ...updated } : prev))
+    setSeriesMetaReq(null)
+    toast.success(text.seriesMeta.saved)
   }
 
   const exitSelect = (): void => {
@@ -2526,6 +2633,140 @@ function LibraryView({
         </form>
       </DialogContent>
     </Dialog>
+    {/* 单卷册转换前：确认书籍信息 */}
+    <Dialog open={convertReq !== null} onOpenChange={(o) => (!o ? setConvertReq(null) : undefined)}>
+      <DialogContent className="sm:max-w-sm" aria-describedby={undefined}>
+        <DialogHeader>
+          <DialogTitle>{text.convertMeta.title}</DialogTitle>
+        </DialogHeader>
+        {convertReq ? (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              void submitConvert()
+            }}
+            className="space-y-3"
+          >
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground">{text.convertMeta.series}</label>
+              <Input
+                autoFocus
+                value={convertReq.seriesTitle}
+                onChange={(e) =>
+                  setConvertReq((s) => (s ? { ...s, seriesTitle: e.target.value } : s))
+                }
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground">{text.convertMeta.volume}</label>
+              <Input
+                value={convertReq.volumeTitle}
+                placeholder={text.convertMeta.volumePlaceholder}
+                onChange={(e) =>
+                  setConvertReq((s) => (s ? { ...s, volumeTitle: e.target.value } : s))
+                }
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground">{text.convertMeta.author}</label>
+              <Input
+                value={convertReq.author}
+                placeholder={text.convertMeta.authorPlaceholder}
+                onChange={(e) => setConvertReq((s) => (s ? { ...s, author: e.target.value } : s))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground">
+                {text.convertMeta.previewLabel}
+              </label>
+              <div className="flex items-center gap-3 rounded-lg border bg-card p-3 shadow-sm">
+                <div className="flex h-16 w-12 shrink-0 items-center justify-center overflow-hidden rounded bg-muted text-muted-foreground">
+                  {convertReq.vol.coverUrl ? (
+                    <CoverImage src={convertReq.vol.coverUrl} alt="" quiet />
+                  ) : (
+                    <BookText className="size-5" />
+                  )}
+                </div>
+                <div className="min-w-0 space-y-0.5">
+                  <div
+                    className="line-clamp-2 text-sm font-medium"
+                    title={composeBookTitle(convertReq.seriesTitle, convertReq.volumeTitle)}
+                  >
+                    {composeBookTitle(convertReq.seriesTitle, convertReq.volumeTitle)}
+                  </div>
+                  <div className="truncate text-xs text-muted-foreground">
+                    {convertReq.author.trim() || text.convertMeta.authorPlaceholder}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={() => setConvertReq(null)}>
+                {text.convertMeta.cancel}
+              </Button>
+              <Button type="submit" disabled={!convertReq.volumeTitle.trim() && !convertReq.seriesTitle.trim()}>
+                {text.convertMeta.start}
+              </Button>
+            </DialogFooter>
+          </form>
+        ) : null}
+      </DialogContent>
+    </Dialog>
+    {/* 编辑某部漫画的名称/作者（持久化，不改本地文件夹） */}
+    <Dialog
+      open={seriesMetaReq !== null}
+      onOpenChange={(o) => (!o && !seriesMetaReq?.busy ? setSeriesMetaReq(null) : undefined)}
+    >
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>{text.seriesMeta.edit}</DialogTitle>
+          <DialogDescription>{text.seriesMeta.desc}</DialogDescription>
+        </DialogHeader>
+        {seriesMetaReq ? (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              void submitSeriesMeta()
+            }}
+            className="space-y-3"
+          >
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground">{text.seriesMeta.name}</label>
+              <Input
+                autoFocus
+                value={seriesMetaReq.title}
+                onChange={(e) =>
+                  setSeriesMetaReq((s) => (s ? { ...s, title: e.target.value } : s))
+                }
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground">{text.seriesMeta.author}</label>
+              <Input
+                value={seriesMetaReq.author}
+                placeholder={text.seriesMeta.authorPlaceholder}
+                onChange={(e) =>
+                  setSeriesMetaReq((s) => (s ? { ...s, author: e.target.value } : s))
+                }
+              />
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setSeriesMetaReq(null)}
+                disabled={seriesMetaReq.busy}
+              >
+                {text.seriesMeta.cancel}
+              </Button>
+              <Button type="submit" disabled={!seriesMetaReq.title.trim() || seriesMetaReq.busy}>
+                {text.seriesMeta.save}
+              </Button>
+            </DialogFooter>
+          </form>
+        ) : null}
+      </DialogContent>
+    </Dialog>
     <div className="flex min-h-0 flex-1 flex-col bg-background">
       {/* 合并后的顶栏：侧栏开关 + 标题/面包屑 + 操作 */}
       <header
@@ -2612,15 +2853,26 @@ function LibraryView({
             ) : (
               <>
                 {showVolumes ? (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" onClick={() => setSelectMode(true)}>
-                        <CheckSquare className="size-4" />
-                        <span className="sr-only">{text.activity.select}</span>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>{text.activity.select}</TooltipContent>
-                  </Tooltip>
+                  <>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" onClick={() => openSeriesMeta(selected)}>
+                          <Pencil className="size-4" />
+                          <span className="sr-only">{text.seriesMeta.edit}</span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>{text.seriesMeta.edit}</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" onClick={() => setSelectMode(true)}>
+                          <CheckSquare className="size-4" />
+                          <span className="sr-only">{text.activity.select}</span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>{text.activity.select}</TooltipContent>
+                    </Tooltip>
+                  </>
                 ) : null}
                 <ConvertActivityPopover
                   activity={activity}
@@ -2857,33 +3109,45 @@ function LibraryView({
             ) : (
               <div className={LIBRARY_GRID}>
                 {series.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => openSeries(item)}
-                    className="group flex flex-col gap-2 text-left"
-                  >
-                    <div className="group relative">
-                      <AspectRatio ratio={3 / 4} className="overflow-hidden rounded-lg bg-muted">
-                        <CoverImage src={item.coverUrl} alt={item.title} />
-                        <div className="pointer-events-none absolute inset-0 rounded-lg border border-foreground/10" />
-                      </AspectRatio>
-                      <Badge
-                        variant="secondary"
-                        className="absolute top-1.5 right-1.5 max-w-[calc(100%-0.75rem)] truncate bg-background/85 backdrop-blur"
+                  <ContextMenu key={item.id}>
+                    <ContextMenuTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={() => openSeries(item)}
+                        className="group flex flex-col gap-2 text-left"
                       >
-                        {text.library.volumeUnit(item.volumeCount)}
-                      </Badge>
-                    </div>
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-medium" title={item.title}>
-                        {item.title}
-                      </div>
-                      <div className="truncate text-xs text-muted-foreground">
-                        {item.author ?? text.library.unknownAuthor}
-                      </div>
-                    </div>
-                  </button>
+                        <div className="group relative">
+                          <AspectRatio
+                            ratio={3 / 4}
+                            className="overflow-hidden rounded-lg bg-muted"
+                          >
+                            <CoverImage src={item.coverUrl} alt={item.title} />
+                            <div className="pointer-events-none absolute inset-0 rounded-lg border border-foreground/10" />
+                          </AspectRatio>
+                          <Badge
+                            variant="secondary"
+                            className="absolute top-1.5 right-1.5 max-w-[calc(100%-0.75rem)] truncate bg-background/85 backdrop-blur"
+                          >
+                            {text.library.volumeUnit(item.volumeCount)}
+                          </Badge>
+                        </div>
+                        <div className="min-w-0">
+                          <div className="truncate text-sm font-medium" title={item.title}>
+                            {item.title}
+                          </div>
+                          <div className="truncate text-xs text-muted-foreground">
+                            {item.author ?? text.library.unknownAuthor}
+                          </div>
+                        </div>
+                      </button>
+                    </ContextMenuTrigger>
+                    <ContextMenuContent>
+                      <ContextMenuItem onSelect={() => openSeriesMeta(item)}>
+                        <Pencil className="size-4" />
+                        {text.seriesMeta.edit}
+                      </ContextMenuItem>
+                    </ContextMenuContent>
+                  </ContextMenu>
                 ))}
               </div>
             )}

@@ -165,6 +165,31 @@ function parseSeriesName(name: string): { title: string; author: string | null }
   return { title: name, author: null }
 }
 
+// 用户对某部漫画名称/作者的自定义覆盖（存 settings.json 的 seriesMeta，按部文件夹名为键），
+// 免去为改书名/作者而重命名本地文件夹。
+interface SeriesMetaOverride {
+  title?: string
+  author?: string | null
+}
+
+async function readSeriesMeta(): Promise<Record<string, SeriesMetaOverride>> {
+  const settings = await readSettings()
+  const raw = settings.seriesMeta
+  return raw && typeof raw === 'object' ? (raw as Record<string, SeriesMetaOverride>) : {}
+}
+
+/** 解析文件夹名得默认名称/作者，再叠加用户覆盖 */
+function resolveSeriesMeta(
+  name: string,
+  override?: SeriesMetaOverride
+): { title: string; author: string | null } {
+  const parsed = parseSeriesName(name)
+  return {
+    title: override?.title?.trim() || parsed.title,
+    author: override ? override.author?.trim() || null : parsed.author
+  }
+}
+
 const isVolumeEntry = (e: import('fs').Dirent): boolean =>
   !isHidden(e.name) &&
   !isSplitContinuation(e.name) && // 隐藏分卷续卷（.002…/.rNN），只保留入口卷
@@ -179,13 +204,14 @@ async function scanLibrary(root: string): Promise<LibrarySeries[]> {
     .map((e) => e.name)
     .sort(naturalSort)
 
+  const overrides = await readSeriesMeta()
   const result: LibrarySeries[] = []
   for (const name of seriesDirs) {
     const dir = join(root, name)
     const sub = await readDirSafe(dir)
     const volumeCount = sub.filter(isVolumeEntry).length
     const cover = await findFirstImage(dir)
-    const { title, author } = parseSeriesName(name)
+    const { title, author } = resolveSeriesMeta(name, overrides[name])
     result.push({
       id: dir,
       path: dir,
@@ -391,4 +417,15 @@ export function setupLibrary(): void {
   )
 
   ipcMain.handle('library:listPages', async (_event, volumePath: string) => listPages(volumePath))
+
+  // 保存某部漫画的名称/作者覆盖（按部文件夹名为键），不改动本地文件夹
+  ipcMain.handle(
+    'library:setSeriesMeta',
+    async (_event, name: string, meta: { title: string; author: string | null }) => {
+      const all = await readSeriesMeta()
+      all[name] = { title: meta.title.trim(), author: meta.author?.trim() || null }
+      await patchSettings({ seriesMeta: all })
+      return resolveSeriesMeta(name, all[name])
+    }
+  )
 }
