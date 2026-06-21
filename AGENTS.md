@@ -78,7 +78,7 @@ src/renderer/src/components/ui/
 归档
 ```
 
-`漫画库` 是真实功能：扫描本地目录、按「部 / 卷册」两级浏览，点卷册进入阅读器（单页/双页、左右方向、续读）；卷册可单本或多选/框选批量转 Kindle EPUB（单卷转换前弹「确认书籍信息」框）。卷册除图片文件夹外，也支持 CBZ/ZIP/CBR/RAR/7z 压缩包（含加密 zip 与分卷，共享密码池，解压进度），阅读/转换前经 `window.api.archive.prepare/unlock` 解出到缓存。每部名称/作者可在应用内编辑（右键网格 / 顶栏铅笔，存 `settings.json` 的 `seriesMeta`，不改本地文件夹名）。文件访问全部走 main 进程 + preload（`window.api.library/archive/convert/artifacts/deliver/webpush.*`），数据层细节见 `docs/architecture.md`。`归档`（产物管理 + 投递）、`设备与邮箱`（SMTP 配置）、`转换设置`、`网页推送`（Send to Kindle 网页通道着陆/设置页，对应 `src/main/webpush.ts`）均已是真实 UI，挂在侧边栏「Kindle 推送」组（注意：侧边栏渲染用 `sidebarGroups` 而非 `primaryNav`）。`导入收件箱` 仍是导航占位。`设计组件 / 基础规范` 是开发期工具页。
+`漫画库` 是真实功能，采用桌面「文件管理器」式交互（对标 Eagle）：扫描本地目录、按「部 / 卷册」两级浏览，**双击**进入（部→卷、卷→阅读器：单页/双页、左右方向、续读），**单击**选中（整卡为单位，封面 ring + 标题反白底）；卷册多选支持 Cmd/Ctrl 累加、框选、Cmd·Ctrl+A，空白单击取消、ESC 退出；选中后顶栏「转换所选」批量转 Kindle EPUB——单本弹「确认书籍信息」框、多本弹批量确认框（封面已无单独转换按钮，顶栏也无「选择」入口）。卷册除图片文件夹外，也支持 CBZ/ZIP/CBR/RAR/7z 压缩包（含加密 zip 与分卷，共享密码池，解压进度），阅读/转换前经 `window.api.archive.prepare/unlock` 解出到缓存。每部名称/作者可在应用内编辑（右键网格 / 顶栏铅笔，存 `settings.json` 的 `seriesMeta`，不改本地文件夹名）。文件访问全部走 main 进程 + preload（`window.api.library/archive/convert/artifacts/deliver/webpush.*`），数据层细节见 `docs/architecture.md`。`归档`（产物管理 + 投递）、`设备与邮箱`（SMTP 配置）、`转换设置`、`网页推送`（Send to Kindle 网页通道着陆/设置页，对应 `src/main/webpush.ts`）均已是真实 UI，挂在侧边栏「Kindle 推送」组（注意：侧边栏渲染用 `sidebarGroups` 而非 `primaryNav`）。`导入收件箱` 仍是导航占位。`设计组件 / 基础规范` 是开发期工具页。
 
 顶栏有应用级深浅模式切换按钮，会在 `document.documentElement` 上切换 `.dark` class，并把选择保存到 `localStorage` 的 `comic-to-kindle-theme`。
 
