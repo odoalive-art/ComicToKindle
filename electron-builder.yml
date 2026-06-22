@@ -1,5 +1,5 @@
-appId: com.electron.app
-productName: comictokindle-scaffold
+appId: com.comictokindle.app
+productName: ComicToKindle
 directories:
   buildResources: build
 files:
@@ -12,14 +12,19 @@ files:
 asarUnpack:
   - resources/**
   - node_modules/7zip-bin/**
+  - node_modules/sharp/**
+  - node_modules/@img/**
 win:
-  executableName: comictokindle-scaffold
+  executableName: ComicToKindle
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
 mac:
+  # 内测不走 Developer ID：identity:null 跳过证书查找，改用 ad-hoc 签名
+  # （Apple Silicon 需 ad-hoc 才能启动）。测试者首次打开需右键→打开或去隔离属性。
+  identity: null
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
     - NSCameraUsageDescription: Application requests access to the device's camera.
