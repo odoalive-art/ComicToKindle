@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, nativeTheme } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -12,6 +12,13 @@ import { setupWebPush } from './webpush'
 // 自定义 comic:// 协议必须在 app ready 之前注册
 registerComicScheme()
 
+const BG_DARK = '#09090b'
+const BG_LIGHT = '#ffffff'
+
+function themeBg(): string {
+  return nativeTheme.shouldUseDarkColors ? BG_DARK : BG_LIGHT
+}
+
 function createWindow(): void {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
@@ -19,6 +26,7 @@ function createWindow(): void {
     height: 670,
     show: false,
     autoHideMenuBar: true,
+    backgroundColor: themeBg(),
     ...(process.platform === 'darwin' ? { titleBarStyle: 'hidden' } : {}),
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
@@ -82,6 +90,11 @@ app.whenReady().then(() => {
 
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
+
+  ipcMain.on('set-background-color', (event, color: string) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (win) win.setBackgroundColor(color)
+  })
 
   ipcMain.on('window-close', (event) => {
     const win = BrowserWindow.fromWebContents(event.sender)

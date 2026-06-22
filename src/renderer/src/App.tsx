@@ -1229,6 +1229,7 @@ function App(): React.JSX.Element {
     root.classList.toggle('dark', themeMode === 'dark')
     root.style.colorScheme = themeMode
     window.localStorage.setItem('comic-to-kindle-theme', themeMode)
+    window.api.setBackgroundColor(themeMode === 'dark' ? '#09090b' : '#ffffff')
   }, [themeMode])
 
   useEffect(() => {

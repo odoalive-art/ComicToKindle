@@ -219,6 +219,7 @@ export interface CustomAPI {
   queue: QueueAPI
   deliver: DeliverAPI
   webpush: WebPushAPI
+  setBackgroundColor: (color: string) => void
 }
 
 declare global {

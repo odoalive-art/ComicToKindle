@@ -136,9 +136,14 @@
     @apply border-border outline-ring/50;
   }
 
+  html {
+    @apply bg-background;
+    height: 100%;
+  }
+
   body {
     @apply bg-background text-foreground;
-    min-height: 100vh;
+    height: 100%;
     overflow: hidden;
     font-family:
       Inter,
@@ -159,6 +164,6 @@
   }
 
   #root {
-    min-height: 100vh;
+    height: 100%;
   }
 }

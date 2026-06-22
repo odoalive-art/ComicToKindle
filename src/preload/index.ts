@@ -60,7 +60,8 @@ const api = {
     openBlank: () => ipcRenderer.invoke('webpush:openBlank'),
     open: (artifactId: string) => ipcRenderer.invoke('webpush:open', artifactId),
     reveal: (artifactId: string) => ipcRenderer.invoke('webpush:reveal', artifactId)
-  }
+  },
+  setBackgroundColor: (color: string): void => ipcRenderer.send('set-background-color', color)
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to
