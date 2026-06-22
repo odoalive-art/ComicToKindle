@@ -475,6 +475,8 @@ const uiText = {
       moveTitle: '移动到',
       moveDesc: (n: number) => `将所选 ${n} 项移动到另一部。`,
       noMoveTarget: '没有其他可移动到的部。',
+      moveNewFolder: '新建文件夹并移入',
+      moveNewFolderPlaceholder: '新文件夹名称',
       delete: '删除',
       deleteTitle: '移到废纸篓',
       deleteDesc: (n: number) => `确定把所选 ${n} 项移到系统废纸篓吗？可在废纸篓中还原。`,
@@ -803,6 +805,8 @@ const uiText = {
       moveTitle: 'Move to',
       moveDesc: (n: number) => `Move ${n} selected item${n === 1 ? '' : 's'} into another series.`,
       noMoveTarget: 'No other series to move into.',
+      moveNewFolder: 'New folder & move in',
+      moveNewFolderPlaceholder: 'New folder name',
       delete: 'Delete',
       deleteTitle: 'Move to Trash',
       deleteDesc: (n: number) =>
@@ -2364,6 +2368,7 @@ function LibraryView({
     null
   )
   const [moveReq, setMoveReq] = useState<{ sources: string[]; busy: boolean } | null>(null)
+  const [moveNewFolderName, setMoveNewFolderName] = useState<string | null>(null)
   const [deleteReq, setDeleteReq] = useState<{ paths: string[]; busy: boolean } | null>(null)
   const [newFolderReq, setNewFolderReq] = useState<{
     parent: string
@@ -2538,8 +2543,8 @@ function LibraryView({
 
   // 操作后刷新：卷册视图刷卷，部视图重扫
   const refreshAfterFileop = async (): Promise<void> => {
+    if (root) await loadSeries(root)
     if (selected) await refreshVolumes()
-    else if (root) await loadSeries(root)
   }
 
   // 右键命中的卷：若它在多选集合内则对整组操作，否则只对它
@@ -2567,6 +2572,25 @@ function LibraryView({
       await window.api.library.move(moveReq.sources, destDir)
       const n = moveReq.sources.length
       setMoveReq(null)
+      setMoveNewFolderName(null)
+      exitSelect()
+      toast.success(text.fileops.moved(n))
+      await refreshAfterFileop()
+    } catch (e) {
+      toast.error(fileopErr(e))
+      setMoveReq((s) => (s ? { ...s, busy: false } : s))
+    }
+  }
+
+  const submitMoveToNewFolder = async (): Promise<void> => {
+    if (!moveReq || moveReq.busy || moveNewFolderName === null || !moveNewFolderName.trim() || !root) return
+    setMoveReq((s) => (s ? { ...s, busy: true } : s))
+    try {
+      const newPath = await window.api.library.createFolder(root, moveNewFolderName)
+      await window.api.library.move(moveReq.sources, newPath)
+      const n = moveReq.sources.length
+      setMoveReq(null)
+      setMoveNewFolderName(null)
       exitSelect()
       toast.success(text.fileops.moved(n))
       await refreshAfterFileop()
@@ -3274,7 +3298,12 @@ function LibraryView({
     {/* 文件整理：移动到另一部 */}
     <Dialog
       open={moveReq !== null}
-      onOpenChange={(o) => (!o && !moveReq?.busy ? setMoveReq(null) : undefined)}
+      onOpenChange={(o) => {
+        if (!o && !moveReq?.busy) {
+          setMoveReq(null)
+          setMoveNewFolderName(null)
+        }
+      }}
     >
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
@@ -3284,26 +3313,71 @@ function LibraryView({
           </DialogDescription>
         </DialogHeader>
         {moveReq ? (
-          moveTargets().length === 0 ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">
-              {text.fileops.noMoveTarget}
-            </p>
-          ) : (
-            <div className="max-h-72 space-y-1 overflow-y-auto">
-              {moveTargets().map((t) => (
+          <div className="space-y-1">
+            {moveTargets().length === 0 ? (
+              <p className="py-3 text-center text-sm text-muted-foreground">
+                {text.fileops.noMoveTarget}
+              </p>
+            ) : (
+              <div className="max-h-60 space-y-1 overflow-y-auto">
+                {moveTargets().map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    disabled={moveReq.busy}
+                    onClick={() => void submitMove(t.path)}
+                    className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-accent disabled:opacity-50"
+                  >
+                    <FolderInput className="size-4 shrink-0 text-muted-foreground" />
+                    <span className="min-w-0 flex-1 truncate">{t.title}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="border-t pt-1">
+              {moveNewFolderName === null ? (
                 <button
-                  key={t.id}
                   type="button"
-                  disabled={moveReq.busy}
-                  onClick={() => void submitMove(t.path)}
-                  className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-accent disabled:opacity-50"
+                  disabled={moveReq.busy || !root}
+                  onClick={() => setMoveNewFolderName('')}
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
                 >
-                  <FolderInput className="size-4 shrink-0 text-muted-foreground" />
-                  <span className="min-w-0 flex-1 truncate">{t.title}</span>
+                  <FolderPlus className="size-4 shrink-0" />
+                  <span>{text.fileops.moveNewFolder}</span>
                 </button>
-              ))}
+              ) : (
+                <form
+                  className="flex items-center gap-2 px-1 py-1"
+                  onSubmit={(e) => { e.preventDefault(); void submitMoveToNewFolder() }}
+                >
+                  <Input
+                    autoFocus
+                    value={moveNewFolderName}
+                    onChange={(e) => setMoveNewFolderName(e.target.value)}
+                    placeholder={text.fileops.moveNewFolderPlaceholder}
+                    disabled={moveReq.busy}
+                    className="h-8 flex-1 text-sm"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={moveReq.busy}
+                    onClick={() => setMoveNewFolderName(null)}
+                  >
+                    <X className="size-4" />
+                  </Button>
+                  <Button
+                    type="submit"
+                    size="sm"
+                    disabled={moveReq.busy || !moveNewFolderName.trim()}
+                  >
+                    {text.fileops.confirm}
+                  </Button>
+                </form>
+              )}
             </div>
-          )
+          </div>
         ) : null}
         <DialogFooter>
           <Button
