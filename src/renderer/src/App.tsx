@@ -3562,7 +3562,7 @@ function LibraryView({
                 }}
               />
             ) : null}
-            {loading ? (
+            {loading && !showVolumes ? (
               <div className={LIBRARY_GRID}>
                 {Array.from({ length: 12 }).map((_, i) => (
                   <div key={i} className="flex flex-col gap-2">
