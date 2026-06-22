@@ -340,13 +340,6 @@ import {
   type ShadcnDocBlock
 } from '@/data/shadcn-docs'
 
-type NavItem = {
-  id: ViewId
-  title: string
-  icon: LucideIcon
-  badge?: string
-}
-
 type ViewId =
   | 'library'
   | 'convert-settings'
@@ -1023,16 +1016,6 @@ const uiText = {
   }
 } as const
 
-const primaryNav: NavItem[] = [
-  { id: 'library', title: '所有漫画', icon: Library, badge: '128' },
-  { id: 'web-push', title: '网页推送', icon: Globe },
-  { id: 'devices-emails', title: '设备与邮箱', icon: Mail },
-  { id: 'extensions', title: '扩展功能', icon: Puzzle },
-  { id: 'design-components', title: 'Shadcn 组件', icon: Component, badge: '59' },
-  { id: 'foundation-standards', title: '基础规范', icon: SwatchBook },
-  { id: 'app-components', title: '应用组件', icon: Package, badge: '15' },
-  { id: 'archive', title: '归档', icon: Archive }
-]
 
 type SidebarGroupItem = {
   id: ViewId
@@ -1183,7 +1166,7 @@ function App(): React.JSX.Element {
   const [languageMode, setLanguageMode] = useState<LanguageMode>(getInitialLanguageMode)
   // 转换活动队列上提到 App 层，切换视图时不中断
   const convertActivity = useConvertActivity(languageMode)
-  const activeNavItem = primaryNav.find((item) => item.id === activeView) ?? primaryNav[0]
+
   const isComponentView = activeView === 'design-components'
   const isFoundationView = activeView === 'foundation-standards'
   const filteredDesignComponents = useMemo(() => {
@@ -1277,7 +1260,7 @@ function App(): React.JSX.Element {
             <>
               <AppHeader
                 languageMode={languageMode}
-                activeNavItemId={activeNavItem.id}
+                activeNavItemId={activeView}
                 isComponentView={isComponentView}
                 selectedComponentSlug={selectedComponentSlug}
               />
@@ -4241,17 +4224,7 @@ function ArchiveView({ locale }: { locale: LanguageMode }): React.JSX.Element {
       <Clock3 className="size-3 text-muted-foreground" />
     )
 
-  if (loading) {
-    return (
-      <div className="mx-auto w-full max-w-4xl p-4 lg:p-6">
-        <div className="space-y-3">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-20 w-full rounded-lg" />
-          ))}
-        </div>
-      </div>
-    )
-  }
+  if (loading) return <div className="flex-1" />
 
   if (artifacts.length === 0) {
     return <PageEmpty icon={Archive} label={t.empty} />
