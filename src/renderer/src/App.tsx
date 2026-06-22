@@ -1316,12 +1316,10 @@ function App(): React.JSX.Element {
               ) : activeView === 'convert-settings' ? (
                 <ConvertSettingsView locale={languageMode} />
               ) : activeView === 'extensions' ? (
-                <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center text-muted-foreground">
-                  <Puzzle className="size-10 opacity-30" />
-                  <p className="text-sm">
-                    {languageMode === 'zh' ? '暂无可用扩展' : 'No extensions available yet'}
-                  </p>
-                </div>
+                <PageEmpty
+                  icon={Puzzle}
+                  label={languageMode === 'zh' ? '暂无可用扩展' : 'No extensions available yet'}
+                />
               ) : (
                 <div className="flex-1 bg-background" />
               )}
@@ -4137,6 +4135,15 @@ function DeliverySettingsView({ locale }: { locale: LanguageMode }): React.JSX.E
   )
 }
 
+function PageEmpty({ icon: Icon, label }: { icon: React.ElementType; label: string }): React.JSX.Element {
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center text-muted-foreground">
+      <Icon className="size-10 opacity-30" />
+      <p className="text-sm">{label}</p>
+    </div>
+  )
+}
+
 function ArchiveView({ locale }: { locale: LanguageMode }): React.JSX.Element {
   const text = uiText[locale]
   const t = text.archiveView
@@ -4234,30 +4241,26 @@ function ArchiveView({ locale }: { locale: LanguageMode }): React.JSX.Element {
       <Clock3 className="size-3 text-muted-foreground" />
     )
 
+  if (loading) {
+    return (
+      <div className="mx-auto w-full max-w-4xl p-4 lg:p-6">
+        <div className="space-y-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-20 w-full rounded-lg" />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (artifacts.length === 0) {
+    return <PageEmpty icon={Archive} label={t.empty} />
+  }
+
   return (
     <ScrollArea className="min-h-0 flex-1">
       <div className="mx-auto w-full max-w-4xl p-4 lg:p-6">
-        <p className="mb-4 text-sm text-muted-foreground">{t.description}</p>
-        {loading ? (
-          <div className="space-y-3">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="h-20 w-full rounded-lg" />
-            ))}
-          </div>
-        ) : artifacts.length === 0 ? (
-          <div className="flex flex-1 items-center justify-center py-16">
-            <Empty>
-              <EmptyHeader>
-                <EmptyMedia variant="icon">
-                  <Archive />
-                </EmptyMedia>
-                <EmptyTitle>{t.title}</EmptyTitle>
-                <EmptyDescription>{t.empty}</EmptyDescription>
-              </EmptyHeader>
-            </Empty>
-          </div>
-        ) : (
-          <div className="space-y-3">
+        <div className="space-y-3">
             {artifacts.map((a) => {
               const totalBytes = a.outputs.reduce((sum, o) => sum + o.sizeBytes, 0)
               return (
@@ -4341,7 +4344,6 @@ function ArchiveView({ locale }: { locale: LanguageMode }): React.JSX.Element {
               )
             })}
           </div>
-        )}
       </div>
     </ScrollArea>
   )
