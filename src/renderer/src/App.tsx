@@ -57,7 +57,6 @@ import {
   BookUp,
   FileDown,
   Trash2,
-  ArrowDownUp,
   RotateCcw,
   X,
   Lock,
@@ -355,7 +354,6 @@ type ViewId =
   | 'web-push'
   | 'devices-emails'
   | 'system-doctor'
-  | 'queue'
   | 'design-components'
   | 'foundation-standards'
   | 'app-components'
@@ -375,7 +373,6 @@ const uiText = {
       'web-push': '网页推送',
       'devices-emails': '设备与邮箱',
       'system-doctor': '系统环境医生',
-      queue: '任务队列',
       'design-components': 'Shadcn 组件',
       'foundation-standards': '基础规范',
       'app-components': '设计组件',
@@ -703,7 +700,6 @@ const uiText = {
       'web-push': 'Web Push',
       'devices-emails': 'Devices & Emails',
       'system-doctor': 'System Doctor',
-      queue: 'Task Queue',
       'design-components': 'Shadcn Components',
       'foundation-standards': 'Foundations',
       'app-components': 'App Components',
@@ -1042,7 +1038,6 @@ const primaryNav: NavItem[] = [
   { id: 'web-push', title: '网页推送', icon: Globe },
   { id: 'devices-emails', title: '设备与邮箱', icon: Mail },
   { id: 'system-doctor', title: '系统环境医生', icon: Stethoscope },
-  { id: 'queue', title: '任务队列', icon: BookOpenCheck, badge: '2' },
   { id: 'design-components', title: 'Shadcn 组件', icon: Component, badge: '59' },
   { id: 'foundation-standards', title: '基础规范', icon: SwatchBook },
   { id: 'app-components', title: '应用组件', icon: Package, badge: '15' },
@@ -1077,8 +1072,7 @@ const sidebarGroups: SidebarGroupConfig[] = [
       { id: 'convert-settings', icon: Settings },
       { id: 'web-push', icon: Globe },
       { id: 'devices-emails', icon: Mail },
-      { id: 'system-doctor', icon: Stethoscope },
-      { id: 'queue', icon: BookOpenCheck, badge: '2' }
+      { id: 'system-doctor', icon: Stethoscope }
     ]
   },
   {
@@ -2080,7 +2074,7 @@ function ConvertActivityPopover({
               ) : onlyInterrupted ? (
                 <AlertCircle className="size-4 text-amber-500" />
               ) : (
-                <ArrowDownUp className="size-4" />
+                <BookOpenCheck className="size-4" />
               )}
               {badgeCount > 0 ? (
                 <span
