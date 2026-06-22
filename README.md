@@ -54,12 +54,13 @@ npm run build
 ## 打包
 
 ```bash
-npm run build:mac
+npm run build:mac      # macOS dmg（当前内测主用）
+npm run release:mac    # 版本号 prerelease +1 后再打 macOS 包（每轮内测用）
 npm run build:win
 npm run build:linux
 ```
 
-平台安装包由 electron-builder 生成。跨平台打包可能需要在目标系统运行，或提前配置对应平台工具链。
+平台安装包由 electron-builder 生成（macOS 走 ad-hoc 签名，未公证）。跨平台打包可能需要在目标系统运行，或提前配置对应平台工具链。完整的内测分发、签名、Gatekeeper 绕过与版本递增说明见 `docs/operator-runbook.md`「打包与内测分发」。
 
 ## 项目结构
 

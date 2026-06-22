@@ -79,7 +79,7 @@ src/renderer/src/components/ui/
 基础规范
 ```
 
-`漫画库` 是真实功能，采用桌面「文件管理器」式交互（对标 Eagle）：扫描本地目录、按「部 / 卷册」两级浏览，**双击**进入（部→卷、卷→阅读器：单页/双页、左右方向、续读），**单击**选中（整卡为单位，封面 ring + 标题反白底）；卷册多选支持 Cmd/Ctrl 累加、框选、Cmd·Ctrl+A，空白单击取消、ESC 退出；选中后顶栏「转换所选」批量转 Kindle EPUB——单本弹「确认书籍信息」框、多本弹批量确认框（封面已无单独转换按钮，顶栏也无「选择」入口）。卷册除图片文件夹外，也支持 CBZ/ZIP/CBR/RAR/7z 压缩包（含加密 zip 与分卷，共享密码池，解压进度），阅读/转换前经 `window.api.archive.prepare/unlock` 解出到缓存。每部名称/作者可在应用内编辑（右键网格 / 顶栏铅笔，存 `settings.json` 的 `seriesMeta`，不改本地文件夹名）。**应用内文件整理**（`library:rename/move/createFolder/trash`）：卷右键「重命名/移动到…/删除」，部右键「重命名/删除」，顶栏「新建文件夹」；移动弹框支持「＋新建文件夹并移入」（库根新建部 + 卷移入一步完成）。文件访问全部走 main 进程 + preload（`window.api.library/archive/convert/artifacts/deliver/webpush.*`），数据层细节见 `docs/architecture.md`。`归档`（产物管理 + 投递）、`设备与邮箱`（SMTP 配置）、`转换设置`、`网页推送`（Send to Kindle 网页通道着陆/设置页，对应 `src/main/webpush.ts`）均已是真实 UI，挂在侧边栏「Kindle 推送」组（注意：侧边栏渲染用 `sidebarGroups` 而非 `primaryNav`）。`扩展功能`（extensions，icon Puzzle）是 waifu2x 等扩展能力的入口壳，暂无内容，以 `PageEmpty` 空状态组件呈现。`设计组件 / 基础规范` 是开发期工具页。已移除的导航占位：`导入收件箱`、`投递记录`、`添加资源库`；`转换队列` 功能已并入转换活动浮窗，不再有独立导航项。
+`漫画库` 是真实功能，采用桌面「文件管理器」式交互（对标 Eagle）：扫描本地目录、按「部 / 卷册」两级浏览，**双击**进入（部→卷、卷→阅读器：单页/双页、左右方向、续读），**单击**选中（整卡为单位，封面 ring + 标题反白底）；卷册多选支持 Cmd/Ctrl 累加、框选、Cmd·Ctrl+A，空白单击取消、ESC 退出；选中后顶栏「转换所选」批量转 Kindle EPUB——单本弹「确认书籍信息」框、多本弹批量确认框（封面已无单独转换按钮，顶栏也无「选择」入口）。卷册除图片文件夹外，也支持 CBZ/ZIP/CBR/RAR/7z 压缩包（含加密 zip 与分卷，共享密码池，解压进度），阅读/转换前经 `window.api.archive.prepare/unlock` 解出到缓存。每部名称/作者可在应用内编辑（右键网格 / 顶栏铅笔，存 `settings.json` 的 `seriesMeta`，不改本地文件夹名）。**应用内文件整理**（`library:rename/move/createFolder/trash`）：卷右键「重命名/移动到…/删除」，部右键「重命名/删除」，顶栏「新建文件夹」；移动弹框支持「＋新建文件夹并移入」（库根新建部 + 卷移入一步完成）。文件访问全部走 main 进程 + preload（`window.api.library/archive/convert/artifacts/deliver/webpush.*`），数据层细节见 `docs/architecture.md`。`归档`（产物管理 + 投递）、`设备与邮箱`（SMTP 配置）、`转换设置`、`网页推送`（Send to Kindle 网页通道着陆/设置页，对应 `src/main/webpush.ts`）均已是真实 UI，挂在侧边栏「Kindle 推送」组（注意：侧边栏渲染用 `sidebarGroups` 而非 `primaryNav`）。`扩展功能`（extensions，icon Puzzle）是 waifu2x 等扩展能力的入口壳，暂无内容，以 `PageEmpty` 空状态组件呈现。`设计组件 / 基础规范` 是开发期工具页，**仅 dev 构建可见**（侧栏 `groupDevMode` 与视图都按 `import.meta.env.DEV` 门控），视图代码在 `src/renderer/src/dev/Showcase.tsx`（经 `React.lazy` 加载，生产包不打包，连同 recharts 等重依赖一并剔除）。已移除的导航占位：`导入收件箱`、`投递记录`、`添加资源库`；`转换队列` 功能已并入转换活动浮窗，不再有独立导航项。
 
 顶栏有应用级深浅模式切换按钮，会在 `document.documentElement` 上切换 `.dark` class，并把选择保存到 `localStorage` 的 `comic-to-kindle-theme`。
 
@@ -122,6 +122,7 @@ src/renderer/src/data/design-tokens.ts
 
 - 添加产品工作流时，保持 `docs/` 同步更新。
 - 保持 README 中的安装和验证命令与 `package.json` 同步。
+- **`package.json` 的 `dependencies` 只放 main 进程运行时真正 require 的包**（当前：`sharp` / `7zip-bin` / `archiver` / `nodemailer` / `@electron-toolkit{,/preload}`）；新增 UI/渲染层库一律装到 `devDependencies`，否则会被外部化进 `app.asar` 使打包体积暴涨（详见 `docs/architecture.md` 「打包」）。
 - 除非仓库重新移回同步目录，否则不要新增 iCloud 特定工具链 workaround。
 - 优先使用 shadcn/ui 组件和本地既有模式，不要随意新增自定义 primitive。
 - 未经用户明确授权，绝不擅自执行 `git commit` 或 `git push` 提交及推送操作，必须先询问用户并获得确认。

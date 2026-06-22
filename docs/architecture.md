@@ -88,6 +88,9 @@ Preload process
 Renderer process
   src/renderer/src/
   负责 React UI、Tailwind 样式和 shadcn/ui 组件。
+  App.tsx 是应用壳与全部真实功能视图；i18n.ts 存共享的 uiText + LanguageMode；
+  dev/Showcase.tsx 存「设计组件 / 基础规范」开发期演示页（经 import.meta.env.DEV
+  门控的 React.lazy 加载，生产构建不打包，详见「构建流水线」）。
 ```
 
 ## 漫画库数据层
@@ -319,13 +322,13 @@ webpush:reveal      兜底：在 Finder 定位产物，方便手动拖入
   SMTP host/port/user/password + Kindle 邮箱表单，保存 + 测试连接。
   密码不回传渲染端；已存密码时密码框显示占位、留空不修改。
 
-设计组件
+设计组件（仅 dev 构建可见）
   开发期 shadcn/ui 组件索引和本地文档镜像。
-  数据源：src/renderer/src/data/shadcn-docs.ts
+  数据源：src/renderer/src/data/shadcn-docs.ts；视图代码在 src/renderer/src/dev/Showcase.tsx。
   已镜像 A 到 I 范围内组件文档，支持中文阅读和英文原文切换。
 
-基础规范
-  开发期设计基础参考页。
+基础规范（仅 dev 构建可见）
+  开发期设计基础参考页，视图代码同在 dev/Showcase.tsx。
   覆盖颜色 token、字体栈、字号层级和间距层级。
 
 扩展功能（extensions）
@@ -351,6 +354,14 @@ typecheck:node
 typecheck:web
 electron-vite build
 ```
+
+### 打包（electron-builder）
+
+`npm run build:mac` / `:win` / `:linux` 先 `build` 再调 electron-builder；`release:mac` 额外先把版本号 prerelease +1。打包细节（ad-hoc 签名、Gatekeeper、版本递增、内测分发）见 `docs/operator-runbook.md`。两条架构级约束：
+
+- **依赖分层决定包体**：`package.json` 的 `dependencies` 只放 main 进程运行时真正 `require` 的包（`sharp` / `7zip-bin` / `archiver` / `nodemailer` / `@electron-toolkit{,/preload}`）。electron-vite 会把 `dependencies` 外部化并由 electron-builder 拷进 `app.asar`；所有 UI 库（react / radix / recharts 等）已被 vite 打进 `out/renderer`，必须留在 `devDependencies`，否则 asar 里重复一份、体积暴涨（曾因 `shadcn` CLI 误置 dependencies 使 asar 达 200MB）。
+- **原生库须 asarUnpack**：`7zip-bin`、`sharp`、`@img`（libvips dylib 无 `.node`，smartUnpack 会漏）放进 `asarUnpack`，运行时把 `path7za` 的 `app.asar` 改写为 `app.asar.unpacked`。
+- **开发期演示页代码分割**：`dev/Showcase.tsx`（含 recharts/embla/cmdk 等重依赖）经 `import.meta.env.DEV` 门控的 `React.lazy` 加载；生产构建该分支为死代码，Rollup 不产出对应 chunk，演示代码与重依赖完全不进生产包。侧栏 `groupDevMode` 同样按 DEV 隐藏。
 
 ## UI 系统
 

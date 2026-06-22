@@ -4,9 +4,21 @@
 
 日期：2026-06-22
 
-ComicToKindle **核心闭环已打通**：漫画库浏览 → 阅读器 → 卷册转 Kindle 固定版式 EPUB → 归档 → 投递到 Kindle（SMTP 邮件 / Send to Kindle 网页通道二选一）。最近一轮（2026-06-22）补齐**移动框「＋新建文件夹并移入」**、**UI 清理**（移除废弃导航、统一空状态组件、修归档 skeleton 闪烁、修顶栏标题错乱）、**窗口缩放白边修复**（BrowserWindow backgroundColor + CSS 全高背景）。更早一轮（2026-06-21）补齐**应用内文件整理**（重命名/移动/删除到废纸篓/新建文件夹）、**转换队列持久化 + 中断恢复**、**漫画库文件管理器式交互**（双击进入/单击选中/框选多选）、**压缩包来源**、**封面缩略图缓存**、**书籍元数据**与**每部信息编辑**。
+ComicToKindle **核心闭环已打通**，且**已可打包内测**（macOS dmg，ad-hoc 签名，`npm run release:mac` 一键出包，当前 `0.1.0-beta.2`）：漫画库浏览 → 阅读器 → 卷册转 Kindle 固定版式 EPUB → 归档 → 投递到 Kindle（SMTP 邮件 / Send to Kindle 网页通道二选一）。最近一轮（2026-06-22 下半）做了**打包内测准备 + 包体瘦身（dmg 170→116MB）+ 开发期演示页移出生产包**；上半做了**移动框「＋新建文件夹并移入」**、**UI 清理**、**窗口缩放白边修复**。更早一轮（2026-06-21）补齐**应用内文件整理**、**转换队列持久化 + 中断恢复**、**漫画库文件管理器式交互**、**压缩包来源**、**封面缩略图缓存**、**书籍元数据**与**每部信息编辑**。
 
 ## 已完成
+
+### 2026-06-22 阶段（打包内测准备 + 包体瘦身 + 演示页剥离）
+
+分支 `feat/archive-source-layer`，已提交并 push（commit `1df423d`→`c0d452b`）。
+
+- **打包内测就绪**：`electron-builder.yml` 改正脚手架占位符（appId `com.comictokindle.app` / productName `ComicToKindle`）；`mac.identity: null` 走 ad-hoc 签名（Apple Silicon 必须签名才能启动），`build:mac` 内置 `CSC_IDENTITY_AUTO_DISCOVERY=false`（本机有两张同名 Apple Development 证书会报 ambiguous）；新增 `release:mac`（prerelease 版本号 +1 再 build:mac）；版本切 `0.1.0-beta.x`。打包/分发流程见 `docs/operator-runbook.md`「打包与内测分发」。
+- **sharp 打包陷阱修复**：`asarUnpack` 增加 `node_modules/sharp/**` 与 `@img/**`——`@img/sharp-libvips-*` 只含 `.dylib` 无 `.node`，electron-builder smartUnpack 会漏，导致打包后 sharp 一调用即崩。
+- **包体瘦身 dmg 170→116MB**：`shadcn` CLI 被误置 `dependencies`（拖入 @ts-morph/@modelcontextprotocol/hono 等），加上 recharts/radix 等 UI 库在 asar 与 vite 产物重复。把 `dependencies` 收敛为 main 运行时真正需要的 6 个包，其余全移 `devDependencies`（app.asar 200→8.3MB）；再剔除 7zip-bin 的 linux/win 二进制 + docs/AGENTS.md/*.tsbuildinfo 等开发文件。
+- **开发期演示页移出生产包**：`App.tsx`（曾 12263 行）拆分——演示页（设计组件/基础规范 + 全部 *Preview，约 7800 行）抽到 `src/renderer/src/dev/Showcase.tsx`，经 `import.meta.env.DEV` 门控的 `React.lazy` 加载；`uiText`+`LanguageMode` 抽到 `src/renderer/src/i18n.ts`。生产构建该懒加载分支为死代码 → Rollup 不产出 chunk，recharts/embla/cmdk 等重依赖完全不进包。主渲染包 3.3→1.3MB，冷启动白屏明显缓解。侧栏 `groupDevMode` 同样按 DEV 隐藏。
+- **卷册视图骨架屏闪烁修复（QA 发现）**：列表渲染 `loading` 优先级高于 `showVolumes`，导致在某部内做移动/删除/重命名后 `refreshAfterFileop` 的整库重扫把卷册网格闪成骨架屏。改渲染条件为 `loading && !showVolumes`（卷册视图改由静默 `refreshVolumes` 刷新）。注：这是上半轮 `refreshAfterFileop` 改为「始终 loadSeries」引入的回归。
+- 验证：`npm run typecheck` / `npm run build` 通过，打包后 app 启动正常（sharp/@img 到位、生产包确认无 recharts）。
+- 用户口述的后续功能方向（移除解压/多格式预览/模拟 Kindle 预览/外部拖拽导入）记在 agent 记忆 `feature-backlog`，未排期。
 
 ### 2026-06-22 阶段（UI 清理 + 窗口修复）
 

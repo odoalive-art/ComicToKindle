@@ -79,9 +79,9 @@ npm run release:mac
 
 注意：
 
-- **首次出包不用 `release:mac`**，当前已是 `beta.1`，直接 `npm run build:mac` 即可；之后每轮才用 `release:mac` 递增。
+- 每发一轮内测用 `release:mac`（版本号自动 `beta.N → beta.N+1`）；只想重打当前版本、不动版本号时用 `npm run build:mac`。
 - `release:mac` 会改 `package.json` 版本号但**不自动 git 提交**，记得事后 `git commit`，让仓库版本与发出去的包对得上。
-- 只单纯打包、不动版本号时用 `npm run build:mac`。
+- 当前包体约 116MB（dmg）；其中 Electron 框架本体 ~100MB 是固定底座。**别把 UI 库（react / radix / recharts 等）加进 `package.json` 的 `dependencies`**——它们已被 vite 打进 `out/renderer`，放 dependencies 会让 electron-vite 外部化、在 `app.asar` 里重复一份使体积暴涨（dependencies 只应有 main 进程运行时真正 require 的 6 个包）。`electron-builder.yml` 还剔除了 7zip-bin 的 linux/win 二进制与 docs/AGENTS.md 等开发文件。
 
 ### 关于签名（内测不公证）
 
