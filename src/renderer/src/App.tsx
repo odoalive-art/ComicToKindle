@@ -50,7 +50,6 @@ import {
   Type,
   Globe,
   Mail,
-  Stethoscope,
   FolderPlus,
   ImageOff,
   RefreshCw,
@@ -64,7 +63,8 @@ import {
   Eye,
   EyeOff,
   Pencil,
-  FolderInput
+  FolderInput,
+  Puzzle
 } from 'lucide-react'
 
 import {
@@ -353,7 +353,7 @@ type ViewId =
   | 'convert-settings'
   | 'web-push'
   | 'devices-emails'
-  | 'system-doctor'
+  | 'extensions'
   | 'design-components'
   | 'foundation-standards'
   | 'app-components'
@@ -372,7 +372,7 @@ const uiText = {
       'convert-settings': '转换设置',
       'web-push': '网页推送',
       'devices-emails': '设备与邮箱',
-      'system-doctor': '系统环境医生',
+      extensions: '扩展功能',
       'design-components': 'Shadcn 组件',
       'foundation-standards': '基础规范',
       'app-components': '设计组件',
@@ -699,7 +699,7 @@ const uiText = {
       'convert-settings': 'Conversion',
       'web-push': 'Web Push',
       'devices-emails': 'Devices & Emails',
-      'system-doctor': 'System Doctor',
+      extensions: 'Extensions',
       'design-components': 'Shadcn Components',
       'foundation-standards': 'Foundations',
       'app-components': 'App Components',
@@ -1037,7 +1037,7 @@ const primaryNav: NavItem[] = [
   { id: 'add-library', title: '添加资源库', icon: FolderPlus },
   { id: 'web-push', title: '网页推送', icon: Globe },
   { id: 'devices-emails', title: '设备与邮箱', icon: Mail },
-  { id: 'system-doctor', title: '系统环境医生', icon: Stethoscope },
+  { id: 'extensions', title: '扩展功能', icon: Puzzle },
   { id: 'design-components', title: 'Shadcn 组件', icon: Component, badge: '59' },
   { id: 'foundation-standards', title: '基础规范', icon: SwatchBook },
   { id: 'app-components', title: '应用组件', icon: Package, badge: '15' },
@@ -1072,7 +1072,7 @@ const sidebarGroups: SidebarGroupConfig[] = [
       { id: 'convert-settings', icon: Settings },
       { id: 'web-push', icon: Globe },
       { id: 'devices-emails', icon: Mail },
-      { id: 'system-doctor', icon: Stethoscope }
+      { id: 'extensions', icon: Puzzle }
     ]
   },
   {
@@ -1328,6 +1328,25 @@ function App(): React.JSX.Element {
                 <DeliverySettingsView locale={languageMode} />
               ) : activeView === 'convert-settings' ? (
                 <ConvertSettingsView locale={languageMode} />
+              ) : activeView === 'extensions' ? (
+                <div className="flex flex-1 flex-col gap-6 p-6">
+                  <div>
+                    <h2 className="text-xl font-semibold">
+                      {languageMode === 'zh' ? '扩展功能' : 'Extensions'}
+                    </h2>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {languageMode === 'zh'
+                        ? '可选功能模块，按需启用。'
+                        : 'Optional feature modules, enable as needed.'}
+                    </p>
+                  </div>
+                  <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center text-muted-foreground">
+                    <Puzzle className="size-10 opacity-30" />
+                    <p className="text-sm">
+                      {languageMode === 'zh' ? '暂无可用扩展' : 'No extensions available yet'}
+                    </p>
+                  </div>
+                </div>
               ) : (
                 <div className="flex-1 bg-background" />
               )}
