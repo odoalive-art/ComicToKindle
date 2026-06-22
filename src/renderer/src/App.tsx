@@ -349,7 +349,6 @@ type NavItem = {
 
 type ViewId =
   | 'library'
-  | 'add-library'
   | 'convert-settings'
   | 'web-push'
   | 'devices-emails'
@@ -357,8 +356,6 @@ type ViewId =
   | 'design-components'
   | 'foundation-standards'
   | 'app-components'
-  | 'inbox'
-  | 'deliveries'
   | 'archive'
 
 type ThemeMode = 'light' | 'dark'
@@ -368,7 +365,6 @@ const uiText = {
   zh: {
     nav: {
       library: '所有漫画',
-      'add-library': '添加资源库',
       'convert-settings': '转换设置',
       'web-push': '网页推送',
       'devices-emails': '设备与邮箱',
@@ -376,8 +372,6 @@ const uiText = {
       'design-components': 'Shadcn 组件',
       'foundation-standards': '基础规范',
       'app-components': '设计组件',
-      inbox: '导入收件箱',
-      deliveries: '投递记录',
       archive: '归档'
     },
     header: {
@@ -695,7 +689,6 @@ const uiText = {
   en: {
     nav: {
       library: 'All Manga',
-      'add-library': 'Add Library',
       'convert-settings': 'Conversion',
       'web-push': 'Web Push',
       'devices-emails': 'Devices & Emails',
@@ -703,8 +696,6 @@ const uiText = {
       'design-components': 'Shadcn Components',
       'foundation-standards': 'Foundations',
       'app-components': 'App Components',
-      inbox: 'Inbox',
-      deliveries: 'Deliveries',
       archive: 'Archive'
     },
     header: {
@@ -1034,15 +1025,12 @@ const uiText = {
 
 const primaryNav: NavItem[] = [
   { id: 'library', title: '所有漫画', icon: Library, badge: '128' },
-  { id: 'add-library', title: '添加资源库', icon: FolderPlus },
   { id: 'web-push', title: '网页推送', icon: Globe },
   { id: 'devices-emails', title: '设备与邮箱', icon: Mail },
   { id: 'extensions', title: '扩展功能', icon: Puzzle },
   { id: 'design-components', title: 'Shadcn 组件', icon: Component, badge: '59' },
   { id: 'foundation-standards', title: '基础规范', icon: SwatchBook },
   { id: 'app-components', title: '应用组件', icon: Package, badge: '15' },
-  { id: 'inbox', title: '导入收件箱', icon: Inbox, badge: '6' },
-  { id: 'deliveries', title: '投递记录', icon: Send },
   { id: 'archive', title: '归档', icon: Archive }
 ]
 
@@ -1061,8 +1049,7 @@ const sidebarGroups: SidebarGroupConfig[] = [
   {
     titleKey: 'groupMyLibrary',
     items: [
-      { id: 'library', icon: Library, badge: '128' },
-      { id: 'add-library', icon: FolderPlus }
+      { id: 'library', icon: Library, badge: '128' }
     ]
   },
   {
@@ -1329,23 +1316,11 @@ function App(): React.JSX.Element {
               ) : activeView === 'convert-settings' ? (
                 <ConvertSettingsView locale={languageMode} />
               ) : activeView === 'extensions' ? (
-                <div className="flex flex-1 flex-col gap-6 p-6">
-                  <div>
-                    <h2 className="text-xl font-semibold">
-                      {languageMode === 'zh' ? '扩展功能' : 'Extensions'}
-                    </h2>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {languageMode === 'zh'
-                        ? '可选功能模块，按需启用。'
-                        : 'Optional feature modules, enable as needed.'}
-                    </p>
-                  </div>
-                  <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center text-muted-foreground">
-                    <Puzzle className="size-10 opacity-30" />
-                    <p className="text-sm">
-                      {languageMode === 'zh' ? '暂无可用扩展' : 'No extensions available yet'}
-                    </p>
-                  </div>
+                <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center text-muted-foreground">
+                  <Puzzle className="size-10 opacity-30" />
+                  <p className="text-sm">
+                    {languageMode === 'zh' ? '暂无可用扩展' : 'No extensions available yet'}
+                  </p>
                 </div>
               ) : (
                 <div className="flex-1 bg-background" />
