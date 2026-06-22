@@ -1,6 +1,6 @@
 # 架构说明
 
-本文描述 2026-06-20 时点的应用架构。
+本文描述 2026-06-22 时点的应用架构。
 
 ## 当前范围
 
@@ -48,6 +48,8 @@ Electron main process
   处理自定义交通灯的 window-close / window-minimize / window-maximize IPC 事件。
   window-all-closed 统一 app.quit()（含 macOS）：关窗即退，让转换队列持久化的「关窗==重启」前提成立。
   app ready 前调用 registerComicScheme()，ready 后调用 setupLibrary() / setupArchive() / setupArtifacts() / setupQueue() / setupDelivery() / setupWebPush()。
+  **窗口缩放背景色**：用 nativeTheme.shouldUseDarkColors 在创建窗口时设置 backgroundColor（深色 #09090b / 浅色 #ffffff），
+  同时注册 set-background-color IPC 供 renderer 在用户切换主题时同步。
 
   src/main/library.ts
   漫画库数据层：comic:// 协议（含封面缩略图通道）、目录扫描、库根目录持久化、每部名称/作者覆盖、
@@ -293,7 +295,7 @@ webpush:reveal      兜底：在 Finder 定位产物，方便手动拖入
   转换状态由 App 层 hook `useConvertActivity` 管理（队列顺序处理、进度订阅、产物刷新），
   上提到 App 层因此切换视图时队列不中断；队列经 `window.api.queue.load/save` 持久化到
   `userData/queue.json`，重启后未完成任务标为 interrupted 等用户确认（详见「转换队列持久化层」）。
-  库顶栏右上角「转换活动」浮窗（ConvertActivityPopover，idle 图标 ArrowDownUp，进行中 spinner、
+  库顶栏右上角「转换活动」浮窗（ConvertActivityPopover，idle 图标 BookOpenCheck，进行中 spinner、
   仅中断时 AlertCircle 警示角标）合并展示进行中（排队/进度/中断可继续/失败可重试，每条可取消、
   顶部可「清空」）+ 最近完成（投递/在 Finder 显示/删除），底部「查看全部归档」跳归档页。
   产物显示用「部标题 · 卷」（artifactLabel）。取消的任务静默移除（不弹失败 toast）。
@@ -326,8 +328,8 @@ webpush:reveal      兜底：在 Finder 定位产物，方便手动拖入
   开发期设计基础参考页。
   覆盖颜色 token、字体栈、字号层级和间距层级。
 
-导入收件箱 / 转换队列 / 投递记录
-  导航占位。对应产品工作流尚未实现（归档已实装，见上）。
+扩展功能（extensions）
+  waifu2x 等扩展能力的入口壳，暂无内容，以 PageEmpty 空状态组件呈现。
 ```
 
 `设计组件` 和 `基础规范` 只用于开发阶段提效。除非后续明确做产品化设计，否则不要把它们当作用户功能描述。
