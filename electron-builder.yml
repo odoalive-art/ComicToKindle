@@ -9,6 +9,12 @@ files:
   - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+  # 开发文件不进包
+  - '!{AGENTS.md,components.json}'
+  - '!{docs,design-system,.npm-cache}/**'
+  - '!**/*.tsbuildinfo'
+  # mac 包只需 mac 平台的 7za，剔除 linux/win 二进制（约 5MB）
+  - '!node_modules/7zip-bin/{linux,win}/**'
 asarUnpack:
   - resources/**
   - node_modules/7zip-bin/**
