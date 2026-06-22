@@ -62,15 +62,44 @@ npm run build
 - node 和 web TypeScript 检查通过。
 - electron-vite 构建 `out/main`、`out/preload` 和 `out/renderer`。
 
-## 打包
+## 打包与内测分发
+
+### 一键出内测包（macOS）
+
+每发一轮内测：
 
 ```bash
-npm run build:mac
-npm run build:win
-npm run build:linux
+npm run release:mac
 ```
 
-这些脚本会先运行 `npm run build`，再调用 electron-builder 生成目标平台产物。
+`release:mac` = 先 `npm version prerelease --no-git-tag-version`（版本号 `beta.N → beta.N+1`，不打 git tag）→ 再 `npm run build:mac`。免去手动改 `package.json` 版本号。产物落在 `dist/`：
+
+- `dist/comic-to-kindle-<version>.dmg` ← 发给测试者的就是这个
+- `dist/ComicToKindle-<version>-arm64-mac.zip`（含 blockmap，自动更新用，当前未启用）
+
+注意：
+
+- **首次出包不用 `release:mac`**，当前已是 `beta.1`，直接 `npm run build:mac` 即可；之后每轮才用 `release:mac` 递增。
+- `release:mac` 会改 `package.json` 版本号但**不自动 git 提交**，记得事后 `git commit`，让仓库版本与发出去的包对得上。
+- 只单纯打包、不动版本号时用 `npm run build:mac`。
+
+### 关于签名（内测不公证）
+
+- `electron-builder.yml` 设 `mac.identity: null`，跳过 Developer ID、改 **ad-hoc 签名**（Apple Silicon 必须有签名才能启动；ad-hoc 即可）。
+- `build:mac` 脚本内置 `CSC_IDENTITY_AUTO_DISCOVERY=false`，避免 electron-builder 去钥匙串找证书（本机有两张同名 `Apple Development` 证书会报 `ambiguous` 而打包失败）。
+- 因未做 Apple 公证，测试者下载 `.dmg` 拖入「应用程序」后首次打开会被 Gatekeeper 拦（"无法验证开发者"）。**给测试者的说明**，二选一：
+  - 右键应用图标 → 打开 → 弹窗里再点「打开」（只需一次）；或
+  - 终端执行 `xattr -dr com.apple.quarantine /Applications/ComicToKindle.app`
+- 后续要做正式分发 / 自动更新，再申请 Apple Developer ID（$99/年）配置签名 + 公证，并填好 `electron-builder.yml` 的 `publish.url`（当前是占位 `https://example.com`）。
+
+### 其他平台
+
+```bash
+npm run build:win     # 需在 Windows 机器或 CI 上跑（sharp 二进制按平台安装）
+npm run build:linux   # AppImage / deb / snap
+```
+
+这些脚本同样先 `npm run build` 再调 electron-builder。Windows/Linux 暂未配套签名与版本脚本，需要时再补。
 
 ## 常用检查
 
@@ -105,6 +134,7 @@ Send to Kindle 网页通道有一项可配置项：STK 站点 URL，存 `userDat
 
 - 当前仓库位于 iCloud Drive 同步目录；若再次出现 Node toolchain 卡住，优先迁回本地非同步目录。
 - 压缩包解压用内置 7-Zip（`7zip-bin`）。打包时 `electron-builder.yml` 的 `asarUnpack` 必须放行 `node_modules/7zip-bin/**`，运行时把 `path7za` 里的 `app.asar` 替换为 `app.asar.unpacked`，否则打包后 `7za` 不可执行、压缩包卷册无法解压。
+- 图像处理用 `sharp`（封面缩略图 + 转换）。`asarUnpack` 必须放行 `node_modules/sharp/**` 和 `node_modules/@img/**`：`@img/sharp-libvips-*` 只含 `.dylib`、不含 `.node`，electron-builder 的 smartUnpack 靠 `.node` 识别会漏掉它，导致打包后 sharp 一调用就崩。三个原生库（sharp `.node`、libvips `.dylib`、`7za`）npm 包自带 ad-hoc 签名，无需额外重签。
 - shadcn CLI 无法自动把该 Electron Vite 项目识别为标准 Vite app，因此项目通过 `components.json` 手动配置 shadcn。
 - `设计组件` 和 `基础规范` 是开发期提效页面，不代表已实现终端用户功能。
 - `npm run build` 是当前验证设置是否正确的事实来源。
