@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import type { LucideIcon } from 'lucide-react'
-import { Archive, ArrowLeft, ArrowLeftRight, BookOpen, BookOpenCheck, CheckCircle2, Clock3, Component, FileText, FolderOpen, Library, Loader2, Moon, BookText, Send, Settings, Sun, SwatchBook, AlertCircle, ChevronLeft, ChevronRight, Globe, Mail, FolderPlus, ImageOff, RefreshCw, BookUp, FileDown, Trash2, RotateCcw, X, Lock, FileArchive, Eye, EyeOff, Pencil, FolderInput, Puzzle } from 'lucide-react'
+import { Archive, ArrowLeft, ArrowLeftRight, BookOpen, BookOpenCheck, CheckCircle2, Clock3, Component, FileText, FolderOpen, Library, Loader2, Moon, BookText, Send, Settings, Sun, SwatchBook, AlertCircle, ChevronDown, ChevronLeft, ChevronRight, Globe, Mail, FolderPlus, ImageOff, RefreshCw, BookUp, FileDown, Trash2, RotateCcw, X, Lock, FileArchive, Eye, EyeOff, Pencil, FolderInput, Puzzle, List, LayoutGrid } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { TrafficLights } from '@/components/ui/traffic-lights'
@@ -258,6 +258,9 @@ function CoverImage({
 
 const LIBRARY_GRID =
   'grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'
+// 列表视图里展开某部后的卷册封面网格：比顶层书架更密一档（嵌在部下，封面更小）
+const LIST_VOLUME_GRID =
+  'grid grid-cols-3 gap-3 px-2 py-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8'
 
 /** EPUB 书名 = 「漫画名 + 卷册」（与 main/artifacts.ts composeBookTitle 保持一致，用于预览） */
 function composeBookTitle(seriesTitle: string, volumeTitle: string): string {
@@ -275,6 +278,13 @@ type ReadingMode = 'single' | 'double'
 const READING_DIR_KEY = 'comic-to-kindle-reading-direction'
 const READING_MODE_KEY = 'comic-to-kindle-reading-mode'
 const READING_PROGRESS_KEY = 'comic-to-kindle-reading-progress'
+
+// 漫画库书架视图：icon=图标平铺 / list=Finder 列表（部可就地展开看卷）
+type LibraryViewMode = 'icon' | 'list'
+const LIBRARY_VIEW_KEY = 'comic-to-kindle-library-view'
+function getInitialLibraryView(): LibraryViewMode {
+  return window.localStorage.getItem(LIBRARY_VIEW_KEY) === 'list' ? 'list' : 'icon'
+}
 
 // 转换选项（非敏感，存 localStorage）。字段与 main 的 convert.ts DEFAULTS 保持一致。
 const CONVERT_OPTIONS_KEY = 'comic-to-kindle-convert-options'
@@ -1172,6 +1182,10 @@ function LibraryView({
   const [selectedVols, setSelectedVols] = useState<Set<string>>(new Set())
   // 部（series）层单击选中：纯视觉高亮，给「可双击进入」的预期反馈（暂无批量动作，故单选）
   const [selectedSeriesPath, setSelectedSeriesPath] = useState<string | null>(null)
+  // 书架视图模式（图标/列表）+ 列表视图里就地展开的部 + 各部卷册缓存
+  const [viewMode, setViewMode] = useState<LibraryViewMode>(getInitialLibraryView)
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
+  const [volCache, setVolCache] = useState<Map<string, LibraryVolume[]>>(new Map())
   // 框选（橡皮筋）：在空白处按下拖动进入多选
   const gridWrapRef = React.useRef<HTMLDivElement>(null)
   const [marquee, setMarquee] = useState<{
@@ -1431,6 +1445,16 @@ function LibraryView({
   const refreshAfterFileop = async (): Promise<void> => {
     if (root) await loadSeries(root)
     if (selected) await refreshVolumes()
+    // 列表视图：重拉已展开各部的卷册缓存（文件操作可能改了卷的增删/命名）
+    if (expanded.size > 0) {
+      const fresh = new Map<string, LibraryVolume[]>()
+      await Promise.all(
+        [...expanded].map(async (p) => {
+          fresh.set(p, await window.api.library.listVolumes(p))
+        })
+      )
+      setVolCache(fresh)
+    }
   }
 
   // 右键命中的卷：若它在多选集合内则对整组操作，否则只对它
@@ -1743,6 +1767,41 @@ function LibraryView({
       seriesTitle: book.title,
       author: book.author ?? '',
       volumeTitle: book.title
+    })
+  }
+
+  // 列表视图：某一卷的转换（不在「部」内时也能转，系列名/标题取其所属部）
+  const enqueueVolumeIn = (vol: LibraryVolume, folder: LibrarySeries): void => {
+    setConvertReq({
+      vol,
+      seriesPathName: folder.name,
+      seriesTitle: folder.title,
+      author: folder.author ?? '',
+      volumeTitle: vol.title
+    })
+  }
+
+  const switchView = (mode: LibraryViewMode): void => {
+    setViewMode(mode)
+    window.localStorage.setItem(LIBRARY_VIEW_KEY, mode)
+  }
+
+  const loadFolderVolumes = React.useCallback(async (folderPath: string): Promise<void> => {
+    const vols = await window.api.library.listVolumes(folderPath)
+    setVolCache((prev) => new Map(prev).set(folderPath, vols))
+  }, [])
+
+  // 列表视图里就地展开/收起一个部；首次展开按需拉取其卷册
+  const toggleExpand = (folderPath: string): void => {
+    setExpanded((prev) => {
+      const next = new Set(prev)
+      if (next.has(folderPath)) {
+        next.delete(folderPath)
+      } else {
+        next.add(folderPath)
+        if (!volCache.has(folderPath)) void loadFolderVolumes(folderPath)
+      }
+      return next
     })
   }
 
@@ -2422,6 +2481,29 @@ function LibraryView({
                     <TooltipContent>{text.seriesMeta.edit}</TooltipContent>
                   </Tooltip>
                 ) : null}
+                {!showVolumes ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => switchView(viewMode === 'icon' ? 'list' : 'icon')}
+                      >
+                        {viewMode === 'icon' ? (
+                          <List className="size-4" />
+                        ) : (
+                          <LayoutGrid className="size-4" />
+                        )}
+                        <span className="sr-only">
+                          {viewMode === 'icon' ? text.library.viewList : text.library.viewIcon}
+                        </span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {viewMode === 'icon' ? text.library.viewList : text.library.viewIcon}
+                    </TooltipContent>
+                  </Tooltip>
+                ) : null}
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button variant="ghost" size="icon" onClick={openNewFolder}>
@@ -2685,6 +2767,305 @@ function LibraryView({
               <p className="py-16 text-center text-sm text-muted-foreground">
                 {text.library.noSeries}
               </p>
+            ) : viewMode === 'list' ? (
+              // 列表视图：部=纯文字行（三角在右），展开后部名吸顶、其下卷册以封面网格呈现；
+              // 书=不可展开的叶子文字行。
+              <div className="flex flex-col">
+                {series.map((item) => {
+                  const picked = selectedSeriesPath === item.path
+                  if (item.type === 'book') {
+                    return (
+                      <ContextMenu key={item.id}>
+                        <ContextMenuTrigger asChild>
+                          <div
+                            data-series-card
+                            onClick={() => onSeriesClick(item)}
+                            onDoubleClick={() => void onVolumeOpen(item)}
+                            className={`group flex cursor-default items-center gap-2.5 rounded-md px-3 py-2 ${
+                              picked ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/50'
+                            }`}
+                          >
+                            <span className="shrink-0 text-muted-foreground">
+                              {item.kind === 'file' ? (
+                                item.sourceType === 'archive' ? (
+                                  <FileArchive className="size-4" />
+                                ) : (
+                                  <FileText className="size-4" />
+                                )
+                              ) : (
+                                <BookText className="size-4" />
+                              )}
+                            </span>
+                            <span className="min-w-0 flex-1 truncate text-sm" title={item.title}>
+                              {item.title}
+                            </span>
+                            <span className="shrink-0 truncate text-xs text-muted-foreground">
+                              {item.author ?? text.library.unknownAuthor}
+                            </span>
+                            {convertedPaths.has(item.path) ? (
+                              <CheckCircle2 className="size-4 shrink-0 text-emerald-500" />
+                            ) : null}
+                          </div>
+                        </ContextMenuTrigger>
+                        <ContextMenuContent>
+                          <ContextMenuItem onSelect={() => deferOpen(() => enqueueTopBook(item))}>
+                            <BookUp className="size-4" />
+                            {text.convert.action}
+                          </ContextMenuItem>
+                          <ContextMenuSeparator />
+                          <ContextMenuItem
+                            onSelect={() =>
+                              deferOpen(() =>
+                                setRenameReq({ path: item.path, name: item.name, busy: false })
+                              )
+                            }
+                          >
+                            <Pencil className="size-4" />
+                            {text.fileops.rename}
+                          </ContextMenuItem>
+                          <ContextMenuItem
+                            disabled={moveTargets().length === 0}
+                            onSelect={() =>
+                              deferOpen(() => setMoveReq({ sources: [item.path], busy: false }))
+                            }
+                          >
+                            <FolderInput className="size-4" />
+                            {text.fileops.move}
+                          </ContextMenuItem>
+                          <ContextMenuSeparator />
+                          <ContextMenuItem
+                            variant="destructive"
+                            onSelect={() =>
+                              deferOpen(() => setDeleteReq({ paths: [item.path], busy: false }))
+                            }
+                          >
+                            <Trash2 className="size-4" />
+                            {text.fileops.delete}
+                          </ContextMenuItem>
+                        </ContextMenuContent>
+                      </ContextMenu>
+                    )
+                  }
+                  const isOpen = expanded.has(item.path)
+                  const vols = volCache.get(item.path)
+                  return (
+                    <div key={item.id} className="flex flex-col">
+                      <ContextMenu>
+                        <ContextMenuTrigger asChild>
+                          <div
+                            data-series-card
+                            onClick={() => onSeriesClick(item)}
+                            onDoubleClick={() => void openSeries(item)}
+                            className={`group sticky top-0 z-10 flex cursor-default items-center gap-2.5 border-b bg-background/95 px-3 py-2 backdrop-blur ${
+                              picked ? 'text-accent-foreground' : ''
+                            }`}
+                          >
+                            <Library className="size-4 shrink-0 text-muted-foreground" />
+                            <span className="min-w-0 flex-1 truncate text-sm font-medium" title={item.title}>
+                              {item.title}
+                            </span>
+                            <span className="shrink-0 truncate text-xs text-muted-foreground">
+                              {item.author ?? text.library.unknownAuthor}
+                            </span>
+                            <Badge variant="secondary" className="shrink-0">
+                              {text.library.volumeUnit(item.volumeCount)}
+                            </Badge>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                toggleExpand(item.path)
+                              }}
+                              className="flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-foreground/10"
+                            >
+                              {isOpen ? (
+                                <ChevronDown className="size-4" />
+                              ) : (
+                                <ChevronRight className="size-4" />
+                              )}
+                            </button>
+                          </div>
+                        </ContextMenuTrigger>
+                        <ContextMenuContent>
+                          <ContextMenuItem onSelect={() => deferOpen(() => openSeriesMeta(item))}>
+                            <Pencil className="size-4" />
+                            {text.seriesMeta.edit}
+                          </ContextMenuItem>
+                          <ContextMenuItem
+                            onSelect={() =>
+                              deferOpen(() =>
+                                setRenameReq({ path: item.path, name: item.name, busy: false })
+                              )
+                            }
+                          >
+                            <FolderInput className="size-4" />
+                            {text.fileops.rename}
+                          </ContextMenuItem>
+                          <ContextMenuSeparator />
+                          <ContextMenuItem
+                            variant="destructive"
+                            onSelect={() =>
+                              deferOpen(() => setDeleteReq({ paths: [item.path], busy: false }))
+                            }
+                          >
+                            <Trash2 className="size-4" />
+                            {text.fileops.delete}
+                          </ContextMenuItem>
+                        </ContextMenuContent>
+                      </ContextMenu>
+                      {isOpen ? (
+                        !vols ? (
+                          <div className="flex items-center gap-2 px-3 py-4 text-xs text-muted-foreground">
+                            <Loader2 className="size-3 animate-spin" />
+                          </div>
+                        ) : vols.length === 0 ? (
+                          <p className="px-3 py-4 text-xs text-muted-foreground">
+                            {text.library.noVolumes}
+                          </p>
+                        ) : (
+                          <div className={LIST_VOLUME_GRID}>
+                            {vols.map((v) => {
+                              const vConverted = convertedPaths.has(v.path)
+                              const vjob = jobByPath.get(v.path)
+                              const vprog = getProgress(v.path)
+                              return (
+                                <ContextMenu key={v.id}>
+                                  <ContextMenuTrigger asChild>
+                                    <div
+                                      onDoubleClick={() => void onVolumeOpen(v)}
+                                      className="group flex cursor-default flex-col gap-1.5 text-left"
+                                    >
+                                      <div className="relative">
+                                        <AspectRatio
+                                          ratio={3 / 4}
+                                          className="overflow-hidden rounded-md bg-muted"
+                                        >
+                                          <CoverImage
+                                            src={v.coverUrl}
+                                            alt={v.title}
+                                            quiet={v.kind === 'file'}
+                                          />
+                                          {!v.coverUrl && v.kind === 'file' ? (
+                                            <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-muted-foreground">
+                                              {v.locked ? (
+                                                <Lock className="size-7" />
+                                              ) : v.sourceType === 'archive' ? (
+                                                <FileArchive className="size-7" />
+                                              ) : (
+                                                <FileText className="size-7" />
+                                              )}
+                                            </div>
+                                          ) : null}
+                                          <div className="pointer-events-none absolute inset-0 rounded-md border border-foreground/10" />
+                                          {vprog > 0 && v.pageCount > 0 ? (
+                                            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1 bg-black/30">
+                                              <div
+                                                className="h-full bg-primary"
+                                                style={{
+                                                  width: `${Math.min(100, ((vprog + 1) / v.pageCount) * 100)}%`
+                                                }}
+                                              />
+                                            </div>
+                                          ) : null}
+                                        </AspectRatio>
+                                        {vConverted && !vjob ? (
+                                          <Badge
+                                            variant="secondary"
+                                            className="absolute top-1 left-1 size-5 justify-center rounded-full bg-background/85 p-0 backdrop-blur"
+                                          >
+                                            <CheckCircle2 className="size-3 text-emerald-500" />
+                                          </Badge>
+                                        ) : null}
+                                        {vjob ? (
+                                          <div className="absolute top-1 right-1 flex max-w-[calc(100%-0.5rem)] justify-end">
+                                            <Badge
+                                              variant="secondary"
+                                              className="pointer-events-none max-w-full gap-1 truncate bg-background/85 px-1.5 text-[10px] backdrop-blur"
+                                            >
+                                              {vjob.status === 'converting' ? (
+                                                <>
+                                                  <Loader2 className="size-3 animate-spin" />
+                                                  {text.convert.progress(Math.max(0, vjob.percent))}
+                                                </>
+                                              ) : vjob.status === 'queued' ? (
+                                                text.activity.queued
+                                              ) : vjob.status === 'interrupted' ? (
+                                                <span className="text-amber-500">
+                                                  {text.activity.interrupted}
+                                                </span>
+                                              ) : (
+                                                <span className="text-destructive">
+                                                  {text.activity.failed}
+                                                </span>
+                                              )}
+                                            </Badge>
+                                          </div>
+                                        ) : null}
+                                      </div>
+                                      <div className="min-w-0">
+                                        <div className="truncate text-xs font-medium" title={v.title}>
+                                          {v.title}
+                                        </div>
+                                        <div className="truncate text-[11px] text-muted-foreground">
+                                          {vprog > 0 && v.pageCount > 0
+                                            ? `${text.reader.resume} · ${text.reader.pageOf(vprog + 1, v.pageCount)}`
+                                            : volumeTypeLabel(v)}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </ContextMenuTrigger>
+                                  <ContextMenuContent>
+                                    <ContextMenuItem
+                                      onSelect={() => deferOpen(() => enqueueVolumeIn(v, item))}
+                                    >
+                                      <BookUp className="size-4" />
+                                      {text.convert.action}
+                                    </ContextMenuItem>
+                                    <ContextMenuSeparator />
+                                    <ContextMenuItem
+                                      onSelect={() =>
+                                        deferOpen(() =>
+                                          setRenameReq({ path: v.path, name: v.name, busy: false })
+                                        )
+                                      }
+                                    >
+                                      <Pencil className="size-4" />
+                                      {text.fileops.rename}
+                                    </ContextMenuItem>
+                                    <ContextMenuItem
+                                      disabled={moveTargets().length === 0}
+                                      onSelect={() =>
+                                        deferOpen(() =>
+                                          setMoveReq({ sources: [v.path], busy: false })
+                                        )
+                                      }
+                                    >
+                                      <FolderInput className="size-4" />
+                                      {text.fileops.move}
+                                    </ContextMenuItem>
+                                    <ContextMenuSeparator />
+                                    <ContextMenuItem
+                                      variant="destructive"
+                                      onSelect={() =>
+                                        deferOpen(() =>
+                                          setDeleteReq({ paths: [v.path], busy: false })
+                                        )
+                                      }
+                                    >
+                                      <Trash2 className="size-4" />
+                                      {text.fileops.delete}
+                                    </ContextMenuItem>
+                                  </ContextMenuContent>
+                                </ContextMenu>
+                              )
+                            })}
+                          </div>
+                        )
+                      ) : null}
+                    </div>
+                  )
+                })}
+              </div>
             ) : (
               <div className={LIBRARY_GRID}>
                 {series.map((item) => {
