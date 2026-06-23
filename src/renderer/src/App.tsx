@@ -219,7 +219,10 @@ function AppHeader({ languageMode, activeNavItemId }: AppHeaderProps): React.JSX
 }
 
 // 来自 preload 的 window.api.library 返回类型（单一事实来源：src/preload/index.d.ts）
-type LibrarySeries = Awaited<ReturnType<Window['api']['library']['scan']>>[number]
+// 库根顶层项 = 「书(卷册)」或「部文件夹」；书本质上是一卷 LibraryVolume + 作者
+type LibraryEntry = Awaited<ReturnType<Window['api']['library']['scan']>>[number]
+type LibrarySeries = Extract<LibraryEntry, { type: 'folder' }>
+type LibraryBook = Extract<LibraryEntry, { type: 'book' }>
 type LibraryVolume = Awaited<ReturnType<Window['api']['library']['listVolumes']>>[number]
 type Artifact = Awaited<ReturnType<Window['api']['artifacts']['list']>>[number]
 
@@ -1159,7 +1162,7 @@ function LibraryView({
   const text = uiText[locale]
   const { isMobile } = useSidebar()
   const [root, setRoot] = useState<string | null>(null)
-  const [series, setSeries] = useState<LibrarySeries[]>([])
+  const [series, setSeries] = useState<LibraryEntry[]>([])
   const [selected, setSelected] = useState<LibrarySeries | null>(null)
   const [volumes, setVolumes] = useState<LibraryVolume[]>([])
   const [readingVolume, setReadingVolume] = useState<LibraryVolume | null>(null)
@@ -1400,7 +1403,9 @@ function LibraryView({
       title,
       author: author.trim() || null
     })
-    setSeries((prev) => prev.map((s) => (s.name === name ? { ...s, ...updated } : s)))
+    setSeries((prev) =>
+      prev.map((s) => (s.type === 'folder' && s.name === name ? { ...s, ...updated } : s))
+    )
     setSelected((prev) => (prev && prev.name === name ? { ...prev, ...updated } : prev))
     setSeriesMetaReq(null)
     toast.success(text.seriesMeta.saved)
@@ -1517,8 +1522,9 @@ function LibraryView({
     }
   }
 
-  // 移动目标 = 其他「部」文件夹（移动卷册到另一部）
-  const moveTargets = (): LibrarySeries[] => series.filter((s) => s.path !== selected?.path)
+  // 移动目标 = 其他「部」文件夹（散卷/卷册可移入任一部；书本身不能当目标）
+  const moveTargets = (): LibrarySeries[] =>
+    series.filter((s): s is LibrarySeries => s.type === 'folder' && s.path !== selected?.path)
 
   const exitSelect = (): void => {
     setSelectMode(false)
@@ -1724,9 +1730,20 @@ function LibraryView({
     if (root) await loadSeries(root)
   }
 
-  // 部卡单击 = 选中高亮（单选，纯视觉反馈）；双击才 openSeries 进入
-  const onSeriesClick = (item: LibrarySeries): void => {
+  // 顶层书架卡单击 = 选中高亮（单选，纯视觉反馈）；双击才进入（书→阅读器 / 部→卷册）
+  const onSeriesClick = (item: { path: string }): void => {
     setSelectedSeriesPath((prev) => (prev === item.path ? prev : item.path))
+  }
+
+  // 散卷/单行本书（顶层 book）转换：复用单卷册确认弹窗，系列名/标题就用书本身
+  const enqueueTopBook = (book: LibraryBook): void => {
+    setConvertReq({
+      vol: book,
+      seriesPathName: book.name,
+      seriesTitle: book.title,
+      author: book.author ?? '',
+      volumeTitle: book.title
+    })
   }
 
   const openSeries = async (item: LibrarySeries): Promise<void> => {
@@ -2672,6 +2689,152 @@ function LibraryView({
               <div className={LIBRARY_GRID}>
                 {series.map((item) => {
                   const picked = selectedSeriesPath === item.path
+                  // ① 书(卷册)：平铺一张封面，双击直接进阅读器、可转换/整理
+                  if (item.type === 'book') {
+                    const isConverted = convertedPaths.has(item.path)
+                    const job = jobByPath.get(item.path)
+                    const prog = getProgress(item.path)
+                    return (
+                      <ContextMenu key={item.id}>
+                        <ContextMenuTrigger asChild>
+                          <div
+                            data-series-card
+                            onClick={() => onSeriesClick(item)}
+                            onDoubleClick={() => void onVolumeOpen(item)}
+                            className="group flex cursor-default flex-col gap-2 text-left"
+                          >
+                            <div className="relative">
+                              <AspectRatio
+                                ratio={3 / 4}
+                                className={`overflow-hidden rounded-lg bg-muted transition-all ${
+                                  picked
+                                    ? 'ring-2 ring-primary ring-offset-2 ring-offset-background'
+                                    : ''
+                                }`}
+                              >
+                                <CoverImage
+                                  src={item.coverUrl}
+                                  alt={item.title}
+                                  quiet={item.kind === 'file'}
+                                />
+                                {!item.coverUrl && item.kind === 'file' ? (
+                                  <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-muted-foreground">
+                                    {item.locked ? (
+                                      <Lock className="size-8" />
+                                    ) : item.sourceType === 'archive' ? (
+                                      <FileArchive className="size-8" />
+                                    ) : (
+                                      <FileText className="size-8" />
+                                    )}
+                                  </div>
+                                ) : null}
+                                <div className="pointer-events-none absolute inset-0 rounded-lg border border-foreground/10" />
+                                {prog > 0 && item.pageCount > 0 ? (
+                                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1 bg-black/30">
+                                    <div
+                                      className="h-full bg-primary"
+                                      style={{
+                                        width: `${Math.min(100, ((prog + 1) / item.pageCount) * 100)}%`
+                                      }}
+                                    />
+                                  </div>
+                                ) : null}
+                              </AspectRatio>
+                              {isConverted && !job ? (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Badge
+                                      variant="secondary"
+                                      className="absolute top-1.5 left-1.5 size-6 justify-center rounded-full bg-background/85 p-0 backdrop-blur"
+                                    >
+                                      <CheckCircle2 className="size-3.5 text-emerald-500" />
+                                    </Badge>
+                                  </TooltipTrigger>
+                                  <TooltipContent>{text.convert.converted}</TooltipContent>
+                                </Tooltip>
+                              ) : null}
+                              {job ? (
+                                <div className="absolute top-1.5 right-1.5 flex max-w-[calc(100%-0.75rem)] justify-end">
+                                  <Badge
+                                    variant="secondary"
+                                    className="pointer-events-none max-w-full gap-1 truncate bg-background/85 backdrop-blur"
+                                  >
+                                    {job.status === 'converting' ? (
+                                      <>
+                                        <Loader2 className="size-3 animate-spin" />
+                                        {text.convert.progress(Math.max(0, job.percent))}
+                                      </>
+                                    ) : job.status === 'queued' ? (
+                                      text.activity.queued
+                                    ) : job.status === 'interrupted' ? (
+                                      <span className="text-amber-500">
+                                        {text.activity.interrupted}
+                                      </span>
+                                    ) : (
+                                      <span className="text-destructive">
+                                        {text.activity.failed}
+                                      </span>
+                                    )}
+                                  </Badge>
+                                </div>
+                              ) : null}
+                            </div>
+                            <div
+                              className={`min-w-0 rounded-md px-1.5 py-0.5 ${
+                                picked ? 'bg-accent text-accent-foreground' : ''
+                              }`}
+                            >
+                              <div className="truncate text-sm font-medium" title={item.title}>
+                                {item.title}
+                              </div>
+                              <div className="truncate text-xs text-muted-foreground">
+                                {prog > 0 && item.pageCount > 0
+                                  ? `${text.reader.resume} · ${text.reader.pageOf(prog + 1, item.pageCount)}`
+                                  : (item.author ?? text.library.unknownAuthor)}
+                              </div>
+                            </div>
+                          </div>
+                        </ContextMenuTrigger>
+                        <ContextMenuContent>
+                          <ContextMenuItem onSelect={() => deferOpen(() => enqueueTopBook(item))}>
+                            <BookUp className="size-4" />
+                            {text.convert.action}
+                          </ContextMenuItem>
+                          <ContextMenuSeparator />
+                          <ContextMenuItem
+                            onSelect={() =>
+                              deferOpen(() =>
+                                setRenameReq({ path: item.path, name: item.name, busy: false })
+                              )
+                            }
+                          >
+                            <Pencil className="size-4" />
+                            {text.fileops.rename}
+                          </ContextMenuItem>
+                          <ContextMenuItem
+                            disabled={moveTargets().length === 0}
+                            onSelect={() =>
+                              deferOpen(() => setMoveReq({ sources: [item.path], busy: false }))
+                            }
+                          >
+                            <FolderInput className="size-4" />
+                            {text.fileops.move}
+                          </ContextMenuItem>
+                          <ContextMenuSeparator />
+                          <ContextMenuItem
+                            variant="destructive"
+                            onSelect={() =>
+                              deferOpen(() => setDeleteReq({ paths: [item.path], busy: false }))
+                            }
+                          >
+                            <Trash2 className="size-4" />
+                            {text.fileops.delete}
+                          </ContextMenuItem>
+                        </ContextMenuContent>
+                      </ContextMenu>
+                    )
+                  }
+                  // ② 部文件夹：错位「书摞」+ 卷数角标，双击进入看卷册
                   return (
                   <ContextMenu key={item.id}>
                     <ContextMenuTrigger asChild>
@@ -2686,9 +2849,12 @@ function LibraryView({
                         className="group flex cursor-default flex-col gap-2 text-left"
                       >
                         <div className="group relative">
+                          {/* 背后两层错位卡片，暗示「文件夹里有多卷」 */}
+                          <div className="pointer-events-none absolute inset-0 translate-x-1.5 translate-y-1.5 rounded-lg bg-muted-foreground/20" />
+                          <div className="pointer-events-none absolute inset-0 translate-x-[3px] translate-y-[3px] rounded-lg bg-muted-foreground/30" />
                           <AspectRatio
                             ratio={3 / 4}
-                            className={`overflow-hidden rounded-lg bg-muted transition-all ${
+                            className={`relative overflow-hidden rounded-lg bg-muted transition-all ${
                               picked ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''
                             }`}
                           >
@@ -2697,8 +2863,9 @@ function LibraryView({
                           </AspectRatio>
                           <Badge
                             variant="secondary"
-                            className="absolute top-1.5 right-1.5 max-w-[calc(100%-0.75rem)] truncate bg-background/85 backdrop-blur"
+                            className="absolute top-1.5 right-1.5 max-w-[calc(100%-0.75rem)] gap-1 truncate bg-background/85 backdrop-blur"
                           >
+                            <Library className="size-3" />
                             {text.library.volumeUnit(item.volumeCount)}
                           </Badge>
                         </div>

@@ -63,6 +63,15 @@ export interface LibraryVolume {
   locked?: boolean
 }
 
+/**
+ * 库根目录的一个顶层项：要么是一本「书(卷册)」，要么是一个「部文件夹」(装了多卷)。
+ * 判定规则见 scanLibrary：图片直接铺在文件夹里 / 散落的 cbz·pdf·epub = 书；
+ * 文件夹里装着多个卷(子文件夹/压缩包/文档) = 部文件夹。
+ */
+export type LibraryEntry =
+  | (LibrarySeries & { type: 'folder' })
+  | (LibraryVolume & { type: 'book'; author: string | null })
+
 // 自然排序：2.jpg 排在 10.jpg 前面
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' })
 const naturalSort = (a: string, b: string): number => collator.compare(a, b)
@@ -209,31 +218,116 @@ const isVolumeEntry = (e: import('fs').Dirent): boolean =>
   (e.isDirectory() || (e.isFile() && isVolumeFile(e.name)))
 
 // ---------- 扫描实现 ----------
-async function scanLibrary(root: string): Promise<LibrarySeries[]> {
+
+/** 构造一个「单文件卷册」(压缩包 / pdf / epub) 的展示信息（封面/页数/加密态，缓存优先）。 */
+async function buildFileVolume(path: string, name: string): Promise<LibraryVolume> {
+  const docType = documentType(path)
+  const base = {
+    id: path,
+    path,
+    name,
+    title: name.replace(/\.[^.]+$/, ''),
+    kind: 'file' as const,
+    sourceType: (isArchiveFile(name) ? 'archive' : docType) as 'archive' | 'pdf' | 'epub'
+  }
+  // 已解出缓存 → 用缓存首图作封面、缓存页数
+  const cached = isArchiveFile(name)
+    ? await getCachedImages(path)
+    : isDocumentFile(name)
+      ? await getCachedDocumentImages(path)
+      : null
+  if (cached && cached.length > 0) {
+    return { ...base, pageCount: cached.length, coverUrl: toThumbUrl(cached[0]) }
+  }
+  if (isArchiveFile(name)) {
+    // 未解出 → 轻量列表拿页数 + 加密状态（封面待首次打开后出现）
+    const info = await inspectArchive(path).catch(() => null)
+    return {
+      ...base,
+      pageCount: info?.imageCount ?? 0,
+      coverUrl: null,
+      locked: info?.encrypted ?? false
+    }
+  }
+  // PDF 未准备 → 只渲染首页作封面（带缓存）；EPUB 封面解包较重，仍待首次打开后出现
+  const info = await inspectDocument(path).catch(() => null)
+  let coverUrl: string | null = null
+  if (docType === 'pdf') {
+    const cover = await getPdfCoverImage(path).catch(() => null)
+    coverUrl = cover ? toThumbUrl(cover) : null
+  }
+  return { ...base, pageCount: info?.pageCount ?? 0, coverUrl }
+}
+
+/**
+ * 扫描库根，返回「书 / 部文件夹」统一清单（自然排序）。
+ * 主单位是「书(卷册)」：散落在库根的图片文件夹 / cbz / pdf / epub 各算一本书；
+ * 只有「装了多个卷」的文件夹才算「部」(需双击进入看卷)。
+ */
+async function scanLibrary(root: string): Promise<LibraryEntry[]> {
   currentRoot = root
-  const entries = await readDirSafe(root)
-  const seriesDirs = entries
-    .filter((e) => e.isDirectory() && !isHidden(e.name))
-    .map((e) => e.name)
-    .sort(naturalSort)
+  const dirents = (await readDirSafe(root))
+    .filter((e) => !isHidden(e.name) && !isSplitContinuation(e.name))
+    .sort((a, b) => naturalSort(a.name, b.name))
 
   const overrides = await readSeriesMeta()
-  const result: LibrarySeries[] = []
-  for (const name of seriesDirs) {
-    const dir = join(root, name)
-    const sub = await readDirSafe(dir)
+  const result: LibraryEntry[] = []
+  for (const e of dirents) {
+    const path = join(root, e.name)
+    if (e.isFile()) {
+      // 库根下散落的单文件卷册（cbz/pdf/epub…）→ 各算一本独立的书
+      if (!isVolumeFile(e.name)) continue
+      const vol = await buildFileVolume(path, e.name)
+      const parsed = parseSeriesName(vol.title)
+      result.push({ ...vol, type: 'book', title: parsed.title, author: parsed.author })
+      continue
+    }
+    if (!e.isDirectory()) continue
+
+    const sub = await readDirSafe(path)
     const volumeCount = sub.filter(isVolumeEntry).length
-    const cover = await findFirstImage(dir)
-    const { title, author } = resolveSeriesMeta(name, overrides[name])
-    result.push({
-      id: dir,
-      path: dir,
-      name,
-      title,
-      author,
-      volumeCount,
-      coverUrl: cover ? toThumbUrl(cover) : null
-    })
+    const cover = await findFirstImage(path)
+    const { title, author } = resolveSeriesMeta(e.name, overrides[e.name])
+    if (volumeCount > 0) {
+      // 装了多卷 → 部文件夹
+      result.push({
+        type: 'folder',
+        id: path,
+        path,
+        name: e.name,
+        title,
+        author,
+        volumeCount,
+        coverUrl: cover ? toThumbUrl(cover) : null
+      })
+    } else if (cover) {
+      // 图片直接铺在文件夹里（无更细的卷）→ 这文件夹本身就是一本书
+      const pageCount = await countImages(path)
+      result.push({
+        type: 'book',
+        id: path,
+        path,
+        name: e.name,
+        title,
+        author,
+        kind: 'folder',
+        sourceType: 'folder',
+        pageCount,
+        coverUrl: toThumbUrl(cover)
+      })
+    } else {
+      // 空文件夹 → 仍作为部文件夹呈现（卷数 0）
+      result.push({
+        type: 'folder',
+        id: path,
+        path,
+        name: e.name,
+        title,
+        author,
+        volumeCount: 0,
+        coverUrl: null
+      })
+    }
   }
   return result
 }
@@ -258,42 +352,7 @@ async function listVolumes(seriesPath: string): Promise<LibraryVolume[]> {
         coverUrl: cover ? toThumbUrl(cover) : null
       })
     } else {
-      const docType = documentType(path)
-      const base = {
-        id: path,
-        path,
-        name: entry.name,
-        title: entry.name.replace(/\.[^.]+$/, ''),
-        kind: 'file' as const,
-        sourceType: (isArchiveFile(entry.name) ? 'archive' : docType) as 'archive' | 'pdf' | 'epub'
-      }
-      // 已解出缓存 → 用缓存首图作封面、缓存页数
-      const cached = isArchiveFile(entry.name)
-        ? await getCachedImages(path)
-        : isDocumentFile(entry.name)
-          ? await getCachedDocumentImages(path)
-          : null
-      if (cached && cached.length > 0) {
-        result.push({ ...base, pageCount: cached.length, coverUrl: toThumbUrl(cached[0]) })
-      } else if (isArchiveFile(entry.name)) {
-        // 未解出 → 轻量列表拿页数 + 加密状态（封面待首次打开后出现）
-        const info = await inspectArchive(path).catch(() => null)
-        result.push({
-          ...base,
-          pageCount: info?.imageCount ?? 0,
-          coverUrl: null,
-          locked: info?.encrypted ?? false
-        })
-      } else {
-        // PDF 未准备 → 只渲染首页作封面（带缓存）；EPUB 封面解包较重，仍待首次打开后出现
-        const info = await inspectDocument(path).catch(() => null)
-        let coverUrl: string | null = null
-        if (docType === 'pdf') {
-          const cover = await getPdfCoverImage(path).catch(() => null)
-          coverUrl = cover ? toThumbUrl(cover) : null
-        }
-        result.push({ ...base, pageCount: info?.pageCount ?? 0, coverUrl })
-      }
+      result.push(await buildFileVolume(path, entry.name))
     }
   }
   return result

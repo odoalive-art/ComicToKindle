@@ -23,10 +23,18 @@ export interface LibraryVolume {
   locked?: boolean
 }
 
+/**
+ * 库根目录的一个顶层项：一本「书(卷册)」或一个「部文件夹」(装了多卷)。
+ * 与 main/library.ts 的 LibraryEntry 同形。
+ */
+export type LibraryEntry =
+  | (LibrarySeries & { type: 'folder' })
+  | (LibraryVolume & { type: 'book'; author: string | null })
+
 export interface LibraryAPI {
   pickFolder: () => Promise<string | null>
   getSavedRoot: () => Promise<string | null>
-  scan: (root: string) => Promise<LibrarySeries[]>
+  scan: (root: string) => Promise<LibraryEntry[]>
   listVolumes: (seriesPath: string) => Promise<LibraryVolume[]>
   listPages: (volumePath: string) => Promise<string[]>
   /** 保存某部漫画的名称/作者覆盖（按部文件夹名为键），返回叠加后的结果 */
