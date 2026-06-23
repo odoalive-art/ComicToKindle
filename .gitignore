@@ -8,3 +8,4 @@ out
 *.log*
 .claude/
 .gemini/
+build/release-notes-current.txt

@@ -579,6 +579,57 @@ function saveProgress(volumePath: string, index: number): void {
   }
 }
 
+/**
+ * PDF 来源阅读器：用 comic:// 把原 PDF 喂给 Chromium 内置查看器（PDFium）直接渲染，
+ * 秒开、无需预渲染整本。代价是失去统一阅读器的双页/RTL/续读（PDF 转 Kindle 时才整本渲染）。
+ */
+function PdfReader({
+  volume,
+  locale,
+  onClose
+}: {
+  volume: LibraryVolume
+  locale: LanguageMode
+  onClose: () => void
+}): React.JSX.Element {
+  const text = uiText[locale]
+  const src = `comic://img/?p=${encodeURIComponent(volume.path)}`
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col bg-background">
+      <header
+        className="flex h-12 shrink-0 items-center gap-2 border-b bg-background px-4"
+        style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
+      >
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onClose}
+          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+        >
+          <ArrowLeft className="size-4" />
+          {text.reader.back}
+        </Button>
+        <span
+          className="min-w-0 truncate text-sm font-semibold text-foreground"
+          title={volume.title}
+        >
+          {volume.title}
+        </span>
+      </header>
+      <iframe title={volume.title} src={src} className="min-h-0 w-full flex-1 border-0 bg-neutral-900" />
+    </div>
+  )
+}
+
 function VolumeReader({
   volume,
   locale,
@@ -1129,11 +1180,16 @@ function LibraryView({
   // 转换活动（队列 + 产物 + 进度）由 App 层 hook 提供，跨视图保活
   const { convertedPaths, jobByPath, enqueue } = activity
 
-  // ---- 压缩包来源：解压/解锁前置 ----
-  // 末尾允许 .NNN 数字分卷（如 .7z.001）；.partN.rar / 旧式 .rar 由 .rar$ 覆盖
-  const ARCHIVE_RE = /\.(cbz|zip|cbr|rar|7z)(\.\d{2,})?$/i
+  // ---- 单文件来源：压缩包解出 / PDF 渲染 / 图片型 EPUB 抽图 ----
   const isUnsupportedVol = (v: LibraryVolume): boolean =>
-    v.kind === 'file' && !ARCHIVE_RE.test(v.path)
+    v.kind === 'file' && !['archive', 'pdf', 'epub'].includes(v.sourceType)
+
+  const volumeTypeLabel = (v: LibraryVolume): string => {
+    if (v.sourceType === 'pdf') return text.library.pdfVolume
+    if (v.sourceType === 'epub') return text.library.epubVolume
+    if (v.sourceType === 'archive') return text.library.fileVolume
+    return text.library.pageUnit(v.pageCount)
+  }
 
   // 解锁对话框：用 Promise + ref 让阅读/转换流程能 await 用户输入密码
   const [unlockReq, setUnlockReq] = useState<{
@@ -1145,11 +1201,11 @@ function LibraryView({
     show: boolean
   } | null>(null)
   const unlockResolve = React.useRef<((ok: boolean) => void) | null>(null)
-  // 解压进度（0–100，null = 未在解压）
+  // 单文件准备进度（压缩包解压 / PDF 渲染 / 图片型 EPUB 抽图）
   const [extractPct, setExtractPct] = useState<number | null>(null)
-  const prepareToastRef = React.useRef<string | number | null>(null) // 解压中的 toast id（实时更新文案）
-  const extractNameRef = React.useRef<string>('') // 当前解压卷册名，供 toast/进度文案使用
-  const extractStartedRef = React.useRef(false) // 是否真的开始了解压（缓存命中则不触发，用于决定是否提示“完成”）
+  const prepareToastRef = React.useRef<string | number | null>(null) // 准备中的 toast id（实时更新文案）
+  const extractNameRef = React.useRef<string>('') // 当前准备卷册名，供 toast/进度文案使用
+  const extractStartedRef = React.useRef(false) // 是否真的开始处理（缓存命中则不触发，用于决定是否提示“完成”）
 
   // 转换前确认书籍信息（单卷册）：预填漫画名/作者/卷册名，可改后再转
   const [convertReq, setConvertReq] = useState<{
@@ -1217,7 +1273,7 @@ function LibraryView({
       setUnlockReq({ vol, password: '', error: null, remember: true, busy: false, show: false })
     })
 
-  /** 确保压缩包卷册已解出缓存；需要密码时弹框。返回是否可继续 */
+  /** 确保单文件卷册已准备成页面缓存；加密压缩包需要密码时弹框。返回是否可继续 */
   const ensureArchiveReady = async (vol: LibraryVolume): Promise<boolean> => {
     if (vol.kind !== 'file') return true
     if (isUnsupportedVol(vol)) {
@@ -1233,7 +1289,7 @@ function LibraryView({
     prepareToastRef.current = null
     setExtractPct(null)
     if (r.status === 'ready') {
-      // 真正解压过才提示“完成”；缓存命中（瞬间 ready）则静默收起 toast
+      // 真正处理过才提示“完成”；缓存命中（瞬间 ready）则静默收起 toast
       if (extractStartedRef.current) toast.success(text.archive.done(vol.title), { id: tid })
       else toast.dismiss(tid)
       if (!vol.coverUrl) void refreshVolumes()
@@ -1241,7 +1297,13 @@ function LibraryView({
     }
     toast.dismiss(tid)
     if (r.status === 'error') {
-      toast.error(r.message === 'NO_IMAGES' ? text.archive.noImages : text.archive.extractFailed)
+      toast.error(
+        r.message === 'NO_IMAGES'
+          ? vol.sourceType === 'archive'
+            ? text.archive.noImages
+            : text.archive.noPages
+          : text.archive.extractFailed
+      )
       return false
     }
     return requestUnlock(vol)
@@ -1285,6 +1347,11 @@ function LibraryView({
   }
 
   const openVolume = async (vol: LibraryVolume): Promise<void> => {
+    // PDF 阅读走内置查看器，无需预渲染整本；直接进阅读器
+    if (vol.sourceType === 'pdf') {
+      setReadingVolume(vol)
+      return
+    }
     if (await ensureArchiveReady(vol)) setReadingVolume(vol)
   }
 
@@ -1710,6 +1777,16 @@ function LibraryView({
 
   // 阅读某一卷：接管整个内容区
   if (readingVolume) {
+    // PDF 来源走 Chromium 内置查看器（秒开，不预渲染整本）；其余走统一图片阅读器
+    if (readingVolume.sourceType === 'pdf') {
+      return (
+        <PdfReader
+          volume={readingVolume}
+          locale={locale}
+          onClose={() => setReadingVolume(null)}
+        />
+      )
+    }
     return (
       <VolumeReader volume={readingVolume} locale={locale} onClose={() => setReadingVolume(null)} />
     )
@@ -2459,8 +2536,10 @@ function LibraryView({
                                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-muted-foreground">
                                   {vol.locked ? (
                                     <Lock className="size-8" />
-                                  ) : (
+                                  ) : vol.sourceType === 'archive' ? (
                                     <FileArchive className="size-8" />
+                                  ) : (
+                                    <FileText className="size-8" />
                                   )}
                                 </div>
                               ) : null}
@@ -2539,9 +2618,7 @@ function LibraryView({
                               if (prog > 0 && vol.pageCount > 0) {
                                 return `${text.reader.resume} · ${text.reader.pageOf(prog + 1, vol.pageCount)}`
                               }
-                              return vol.kind === 'file'
-                                ? text.library.fileVolume
-                                : text.library.pageUnit(vol.pageCount)
+                              return volumeTypeLabel(vol)
                             })()}
                           </div>
                         </div>

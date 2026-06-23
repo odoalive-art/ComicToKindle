@@ -4,6 +4,7 @@ import { promises as fs } from 'fs'
 import { createHash } from 'crypto'
 import { execFile } from 'child_process'
 import sevenBin from '7zip-bin'
+import { isDocumentFile, prepareDocument } from './document'
 
 /**
  * 压缩包来源层：用内置 7-Zip 把 CBZ/ZIP/CBR/RAR/7z 解出图片到缓存目录，供阅读器、
@@ -330,6 +331,16 @@ export async function prepareArchive(
   filePath: string,
   onProgress?: ProgressCb
 ): Promise<PrepareResult> {
+  if (isDocumentFile(filePath)) {
+    try {
+      const images = await prepareDocument(filePath, onProgress)
+      return { status: 'ready', pageCount: images.length }
+    } catch (err) {
+      console.error('[prepareDocument] failed:', filePath, err)
+      return { status: 'error', message: (err as Error).message }
+    }
+  }
+
   const cached = await getCachedImages(filePath)
   if (cached) return { status: 'ready', pageCount: cached.length }
 
@@ -376,6 +387,10 @@ export async function unlockArchive(
   remember: boolean,
   onProgress?: ProgressCb
 ): Promise<PrepareResult> {
+  if (isDocumentFile(filePath)) {
+    return prepareArchive(filePath, onProgress)
+  }
+
   // 直接解压（省去单独 7za t 整包校验那一遍，进度立即开始）。
   try {
     const images = await extractAll(filePath, password, onProgress)
@@ -392,6 +407,9 @@ export async function unlockArchive(
 
 // ---------- IPC ----------
 export function setupArchive(): void {
+  // iCloud 同步等场景会丢失 7za 二进制的执行位（spawn EACCES），启动时幂等补回。
+  fs.chmod(bin7za(), 0o755).catch((err) => console.error('[archive] chmod 7za failed:', err))
+
   ipcMain.handle('archive:prepare', async (event, filePath: string): Promise<PrepareResult> => {
     const emit = (percent: number): void =>
       event.sender.send('archive:progress', { filePath, percent })

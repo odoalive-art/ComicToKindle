@@ -16,6 +16,7 @@ export interface LibraryVolume {
   name: string
   title: string
   kind: 'folder' | 'file'
+  sourceType: 'folder' | 'archive' | 'pdf' | 'epub'
   pageCount: number
   coverUrl: string | null
   /** 压缩包卷册：加密且尚未解锁缓存（需密码） */

@@ -11,6 +11,15 @@ import {
   isArchiveFile,
   isSplitContinuation
 } from './archive'
+import {
+  documentType,
+  documentsRoot,
+  getCachedDocumentImages,
+  getPdfCoverImage,
+  inspectDocument,
+  isDocumentFile,
+  prepareDocument
+} from './document'
 
 /**
  * 漫画库数据层：目录扫描 + 封面/图片服务 + 库根目录持久化。
@@ -21,9 +30,6 @@ import {
  */
 
 const IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif', '.avif', '.bmp'])
-// 显示但暂不解析的单文件卷册；可解压归档（cbz/zip/cbr/rar/7z 及分卷）交由 archive.isArchiveFile 判定
-const VIEW_ONLY_EXTS = new Set(['.pdf', '.epub'])
-
 const MIME: Record<string, string> = {
   '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
@@ -50,6 +56,7 @@ export interface LibraryVolume {
   name: string
   title: string
   kind: 'folder' | 'file'
+  sourceType: 'folder' | 'archive' | 'pdf' | 'epub'
   pageCount: number
   coverUrl: string | null
   /** 压缩包卷册：加密且尚未解锁缓存（需密码） */
@@ -63,7 +70,7 @@ const naturalSort = (a: string, b: string): number => collator.compare(a, b)
 const isImage = (name: string): boolean => IMAGE_EXTS.has(extname(name).toLowerCase())
 /** 可作为一卷展示的单文件：可解压归档（含分卷入口）或显示型 pdf/epub */
 const isVolumeFile = (name: string): boolean =>
-  isArchiveFile(name) || VIEW_ONLY_EXTS.has(extname(name).toLowerCase())
+  isArchiveFile(name) || isDocumentFile(name)
 const isHidden = (name: string): boolean => name.startsWith('.')
 
 // 当前库根目录，用于 comic:// 协议的越权访问校验
@@ -132,6 +139,12 @@ const toComicUrl = (absPath: string): string => `comic://img/?p=${encodeURICompo
 /** 封面用缩略图通道：comic:// 协议据 thumb=1 返回降采样 webp（见 handleComicProtocol） */
 const toThumbUrl = (absPath: string): string =>
   `comic://img/?p=${encodeURIComponent(absPath)}&thumb=1`
+
+function isWithinPath(absPath: string, rootPath: string): boolean {
+  const abs = resolve(absPath)
+  const root = resolve(rootPath)
+  return abs === root || abs.startsWith(root + sep)
+}
 
 // ---------- 封面缩略图缓存 ----------
 // 漫画原图常达数 MB（本库单页约 4MB），网格里 10+ 张封面若直接解全图会拖慢加载并造成交互卡顿。
@@ -240,19 +253,26 @@ async function listVolumes(seriesPath: string): Promise<LibraryVolume[]> {
         name: entry.name,
         title: entry.name,
         kind: 'folder',
+        sourceType: 'folder',
         pageCount,
         coverUrl: cover ? toThumbUrl(cover) : null
       })
     } else {
+      const docType = documentType(path)
       const base = {
         id: path,
         path,
         name: entry.name,
         title: entry.name.replace(/\.[^.]+$/, ''),
-        kind: 'file' as const
+        kind: 'file' as const,
+        sourceType: (isArchiveFile(entry.name) ? 'archive' : docType) as 'archive' | 'pdf' | 'epub'
       }
       // 已解出缓存 → 用缓存首图作封面、缓存页数
-      const cached = isArchiveFile(entry.name) ? await getCachedImages(path) : null
+      const cached = isArchiveFile(entry.name)
+        ? await getCachedImages(path)
+        : isDocumentFile(entry.name)
+          ? await getCachedDocumentImages(path)
+          : null
       if (cached && cached.length > 0) {
         result.push({ ...base, pageCount: cached.length, coverUrl: toThumbUrl(cached[0]) })
       } else if (isArchiveFile(entry.name)) {
@@ -265,8 +285,14 @@ async function listVolumes(seriesPath: string): Promise<LibraryVolume[]> {
           locked: info?.encrypted ?? false
         })
       } else {
-        // pdf/epub 等暂不支持解析
-        result.push({ ...base, pageCount: 0, coverUrl: null })
+        // PDF 未准备 → 只渲染首页作封面（带缓存）；EPUB 封面解包较重，仍待首次打开后出现
+        const info = await inspectDocument(path).catch(() => null)
+        let coverUrl: string | null = null
+        if (docType === 'pdf') {
+          const cover = await getPdfCoverImage(path).catch(() => null)
+          coverUrl = cover ? toThumbUrl(cover) : null
+        }
+        result.push({ ...base, pageCount: info?.pageCount ?? 0, coverUrl })
       }
     }
   }
@@ -303,12 +329,26 @@ async function isArchiveVolume(volumePath: string): Promise<boolean> {
   }
 }
 
+async function isDocumentVolume(volumePath: string): Promise<boolean> {
+  if (!isDocumentFile(volumePath)) return false
+  try {
+    return (await fs.stat(volumePath)).isFile()
+  } catch {
+    return false
+  }
+}
+
 /**
  * 解出一卷的图片绝对路径（按阅读顺序）。
  * 文件夹卷 → 递归收图；压缩包卷 → 读缓存，缺则尝试用密码池解；
  * 仍需密码时抛 'NEEDS_PASSWORD'，由 renderer 走解锁流程后重试。
  */
 async function resolveVolumeImagePaths(volumePath: string): Promise<string[]> {
+  if (await isDocumentVolume(volumePath)) {
+    const cached = await getCachedDocumentImages(volumePath)
+    if (cached) return cached
+    return prepareDocument(volumePath)
+  }
   if (!(await isArchiveVolume(volumePath))) return collectPages(volumePath)
   const cached = await getCachedImages(volumePath)
   if (cached) return cached
@@ -451,14 +491,27 @@ function handleComicProtocol(): void {
     const params = new URL(request.url).searchParams
     const filePath = params.get('p')
     const wantThumb = params.get('thumb') === '1'
-    // 安全校验：必须是图片、且位于当前库根目录或压缩包解压缓存目录内
-    const norm = filePath ? join(filePath) : null
-    const inRoot = !!(norm && currentRoot && norm.startsWith(join(currentRoot)))
-    const inCache = !!(norm && norm.startsWith(join(extractedRoot())))
-    if (!filePath || !isImage(filePath) || (!inRoot && !inCache)) {
+    // 安全校验：必须是图片或 PDF、且位于当前库根目录或来源缓存目录内
+    const norm = filePath ? resolve(filePath) : null
+    const isPdfFile = !!(norm && extname(norm).toLowerCase() === '.pdf')
+    const inRoot = !!(norm && currentRoot && isWithinPath(norm, currentRoot))
+    const inCache = !!(norm && isWithinPath(norm, extractedRoot()))
+    const inDocumentCache = !!(norm && isWithinPath(norm, documentsRoot()))
+    if (
+      !filePath ||
+      (!isImage(filePath) && !isPdfFile) ||
+      (!inRoot && !inCache && !inDocumentCache)
+    ) {
       return new Response('Forbidden', { status: 403 })
     }
     try {
+      // PDF 原文件：直接回传，由 Chromium 内置查看器渲染（来源预览，不预渲染整本）
+      if (isPdfFile) {
+        const pdfData = await fs.readFile(filePath)
+        return new Response(new Uint8Array(pdfData), {
+          headers: { 'content-type': 'application/pdf' }
+        })
+      }
       // 封面走缩略图通道：返回降采样 webp，避免解全图拖慢网格；失败则回退原图
       if (wantThumb) {
         try {

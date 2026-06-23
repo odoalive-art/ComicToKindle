@@ -1,10 +1,10 @@
 # 架构说明
 
-本文描述 2026-06-22 时点的应用架构。
+本文描述 2026-06-23 时点的应用架构。
 
 ## 当前范围
 
-ComicToKindle 目前是一个桌面应用工作台，已打通核心闭环:**本地漫画库浏览 → 卷册阅读 → 图片卷册转 Kindle 固定版式 EPUB → 归档管理 → 投递到 Kindle（SMTP 邮件 / Send to Kindle 网页通道二选一）**。
+ComicToKindle 目前是一个桌面应用工作台，已打通核心闭环:**本地漫画库浏览 → 卷册阅读 → 多来源卷册转 Kindle 固定版式 EPUB → 归档管理 → 投递到 Kindle（SMTP 邮件 / Send to Kindle 网页通道二选一）**。
 
 已实现：
 
@@ -17,8 +17,9 @@ ComicToKindle 目前是一个桌面应用工作台，已打通核心闭环:**本
 - `src/renderer/src/App.tsx` 中的侧边栏工作台壳
 - **真实漫画库浏览**：扫描本地目录，按「部 / 卷册」两级展示（详见「漫画库数据层」）
 - **压缩包来源**：CBZ/ZIP/CBR/RAR/7z 卷册（含加密 zip、多卷分卷，共享密码池，解压进度）解出图片供阅读 + 转换（详见「压缩包来源层」）
+- **文档来源**：PDF 单文件卷册渲染为页面图片；图片型 EPUB 按 OPF spine / XHTML 图片引用抽成页面（详见「文档来源层」）
 - **卷册阅读器**：单页 / 双页、左右阅读方向、记住每卷续读进度；网格封面走缩略图缓存
-- **转换流水线**：图片卷册 → Kindle 固定版式 EPUB3，书名「漫画名 + 卷册」+ 作者元数据、转换前确认弹窗（详见「转换与产物层」）
+- **转换流水线**：图片目录、压缩包、PDF、图片型 EPUB → Kindle 固定版式 EPUB3，书名「漫画名 + 卷册」+ 作者元数据、转换前确认弹窗（详见「转换与产物层」）
 - **漫画信息编辑**：在应用内改每部的名称/作者（持久化覆盖，不改本地文件夹名）
 - **归档视图**：列出转换产物，支持在 Finder 显示 / 导出副本 / 删除 / 投递到 Kindle
 - **Kindle 投递**：SMTP 配置页（设备与邮箱）+ 归档手动投递（详见「投递层」）
@@ -29,12 +30,10 @@ ComicToKindle 目前是一个桌面应用工作台，已打通核心闭环:**本
 - 开发期使用的 shadcn 组件索引和本地文档镜像
 - 开发期使用的基础规范页，覆盖颜色、字体、字号和间距
 
-- **压缩包来源**：CBZ/ZIP/CBR/7z 卷册（含加密 zip）解出图片供阅读 + 转换（详见「压缩包来源层」）
-
 未实现：
 
 - 元数据持久化（数据库 / 索引；漫画库当前每次进入实时扫描）
-- PDF / EPUB 卷册读取（压缩包来源目前覆盖 CBZ/ZIP/CBR/7z；PDF 需光栅化，留后续）
+- 纯文本/重排 EPUB 解析（当前 EPUB 首版仅支持图片型）
 - 图像处理或 AI 放大
 - 本地 AZW3 导出（原型曾用 Calibre，已移除；无线投递发 EPUB）
 - 自动投递（转换完成即发；当前只支持归档手动投递）
@@ -61,6 +60,11 @@ Electron main process
   userData/extracted/<hash>/，共享密码池（safeStorage 加密存 settings.json），解压进度流式回传。
   导出 prepareArchive/unlockArchive/getCachedImages/inspectArchive/extractedRoot/isArchiveFile/
   isSplitContinuation 供 library 与 IPC 使用。
+
+  src/main/document.ts
+  文档来源层：PDF 用 PDF.js + @napi-rs/canvas 离线渲染为 PNG 页面缓存；图片型 EPUB
+  用 7-Zip 解包并按 OPF spine / XHTML 图片引用抽取页面，缓存到 userData/documents/<hash>/。
+  导出 prepareDocument/getCachedDocumentImages/inspectDocument/documentType 供 library 与 archive IPC 复用。
 
   src/main/convert.ts
   转换引擎：图片 → Kindle 固定版式 EPUB3。无 IPC、无 electron 依赖，纯函数 convertMangaToEPUB。
@@ -104,7 +108,7 @@ Renderer process
 ```
 
 - **部（series）**= 顶层文件夹，命名通常为 `[作者] 标题`，解析出作者与标题。
-- **卷册（volume）**= 第二层；文件夹封面取首图、递归统计页数，遇到「单话」子文件夹会下钻取图。`kind: 'folder' | 'file'`，file 卷为压缩包（见「压缩包来源层」），分卷只展示入口卷。
+- **卷册（volume）**= 第二层；文件夹封面取首图、递归统计页数，遇到「单话」子文件夹会下钻取图。`kind: 'folder' | 'file'`，`sourceType: 'folder' | 'archive' | 'pdf' | 'epub'`；file 卷可为压缩包、PDF 或图片型 EPUB，分卷只展示入口卷。
 - **每部名称/作者覆盖**：默认从 `[作者] 标题` 解析；用户可在应用内改写，覆盖存 `settings.json` 的 `seriesMeta`（按部文件夹名为键），扫描时叠加，**不改本地文件夹名**。
 - 文件名一律按**自然排序**（`2.jpg` 在 `10.jpg` 前）。
 
@@ -125,13 +129,13 @@ library:trash         把若干部/卷移入系统废纸篓（shell.trashItem，
 
 **应用内文件整理**：`library:rename/move/createFolder/trash` 都先经 `assertWithinRoot`（规范化后必须落在当前库根内，防路径穿越）+ `sanitizeName`（禁分隔符/`.`/`..`/超长，空格放行）。删除走 `shell.trashItem` 进系统废纸篓。renderer 端入口在库网格右键菜单（卷：重命名/移动到/删除；部：重命名/删除）+ 顶栏「新建文件夹」；错误经稳定码→`uiText.fileops` 翻译。注意「编辑信息」(seriesMeta 覆盖、不动文件) 与「重命名」(真改文件夹) 并存。
 
-**comic:// 协议**：`registerComicScheme()` 在 app ready 前注册为 privileged scheme，`setupLibrary()` 内 `protocol.handle('comic', …)` 服务图片。URL 形如 `comic://img/?p=<encodeURIComponent(绝对路径)>`；返回前做**越权校验**——必须是图片扩展名且位于当前库根目录或解压缓存目录内，否则 403。带 `&thumb=1` 走**封面缩略图通道**：sharp 把原图降到 480px webp、按 路径+mtime+size 缓存到 `userData/thumbs/`（网格封面用，避免解全图卡顿；阅读器仍走原图）。`src/renderer/index.html` 的 CSP `img-src` 已放行 `comic:`。
+**comic:// 协议**：`registerComicScheme()` 在 app ready 前注册为 privileged scheme，`setupLibrary()` 内 `protocol.handle('comic', …)` 服务图片。URL 形如 `comic://img/?p=<encodeURIComponent(绝对路径)>`；返回前做**越权校验**——必须是图片扩展名且位于当前库根目录、压缩包解压缓存目录或文档页面缓存目录内，否则 403。带 `&thumb=1` 走**封面缩略图通道**：sharp 把原图降到 480px webp、按 路径+mtime+size 缓存到 `userData/thumbs/`（网格封面用，避免解全图卡顿；阅读器仍走原图）。`src/renderer/index.html` 的 CSP `img-src` 已放行 `comic:`。
 
 **数据模型**（`src/preload/index.d.ts` 为单一事实来源）：
 
 ```txt
 LibrarySeries  id, path, name, title, author, volumeCount, coverUrl
-LibraryVolume  id, path, name, title, kind('folder'|'file'), pageCount, coverUrl
+LibraryVolume  id, path, name, title, kind('folder'|'file'), sourceType('folder'|'archive'|'pdf'|'epub'), pageCount, coverUrl
 ```
 
 ## 压缩包来源层
@@ -145,14 +149,14 @@ LibraryVolume  id, path, name, title, kind('folder'|'file'), pageCount, coverUrl
 - **进度**：解压用 `7za x -bsp1` 把百分比流式写到 stdout，逐块解析末位 `NN%` 经 `archive:progress` IPC 回传，renderer 在解锁框进度条 / toast 实时显示（带卷册名 + 完成/失败提示）。
 - **图片顺序**：解出后递归收集图片，按相对路径自然排序（与文件夹卷一致）。
 - **数据流接入**：`library.collectVolumeImagePaths` / `listPages` 对 file 卷改走缓存（缺则用密码池尝试解，仍需密码则抛 `NEEDS_PASSWORD`）；`listVolumes` 的 file 卷补 `pageCount`/`locked`，已解出则用缓存首图作封面。renderer 在阅读/转换前先调 `archive:prepare`，遇 `needs-password` 弹框走 `archive:unlock`。
-- **范围**：当前覆盖 CBZ/ZIP/CBR/RAR/7z（含分卷）；PDF/EPUB 仍按 file 卷显示但不解析（renderer 提示暂不支持）。
+- **范围**：当前覆盖 CBZ/ZIP/CBR/RAR/7z（含分卷）。PDF/EPUB 由 `src/main/document.ts` 负责准备页面缓存，renderer 仍复用 `archive:prepare` / `archive:progress` 这组 IPC 入口。
 
 **IPC 频道**：
 
 ```txt
-archive:prepare   确保压缩包已解出缓存（幂等，自动试密码池）→ ArchivePrepareResult
-archive:unlock    用用户输入的密码解锁（可记住）→ ArchivePrepareResult
-archive:progress  解压进度推送（main → renderer）：{ filePath, percent }
+archive:prepare   确保单文件来源已准备成页面缓存；压缩包会自动试密码池，PDF/EPUB 委托 document.ts → ArchivePrepareResult
+archive:unlock    用用户输入的密码解锁压缩包（可记住）；PDF/EPUB 直接复用 prepare → ArchivePrepareResult
+archive:progress  准备进度推送（main → renderer）：{ filePath, percent }
 ```
 
 **数据模型**（`src/preload/index.d.ts` 为单一事实来源）：
@@ -161,6 +165,16 @@ archive:progress  解压进度推送（main → renderer）：{ filePath, percen
 ArchivePrepareResult  status('ready'|'needs-password'|'error'), message?, pageCount?
 LibraryVolume         ... + locked?(加密且未解锁缓存)
 ```
+
+## 文档来源层
+
+`src/main/document.ts`，把 PDF 与图片型 EPUB 规范化为“按阅读顺序排列的图片页”，供阅读器、封面缩略图和 Kindle 转换流水线复用。
+
+- **PDF**：使用 `pdfjs-dist/legacy/build/pdf.mjs` 读取页面，`@napi-rs/canvas` 在 main 进程离线渲染为 PNG，当前渲染 scale=2；缓存落 `userData/documents/<hash>/pages/`，`hash = sha1(路径 + mtime + size + document-v1)`，源文件变化后自动失效。PDF.js 的 standard fonts / cmaps / wasm 资源随 `pdfjs-dist` 运行时依赖进入包内。
+- **图片型 EPUB**：EPUB 本质是 zip，仍用内置 7-Zip 解包到临时 raw 目录；解析 `META-INF/container.xml` 找 OPF，再按 OPF spine 顺序读取 XHTML 中的 `<img>` / SVG `<image>` 本地图片引用，复制成 `pages/0001.ext`。若 spine 中找不到图片，则回退按 manifest 中的 image item 顺序抽取。纯文本/重排 EPUB 不在首版支持范围内，最终没有可用图片时返回 `NO_IMAGES`。
+- **缓存与协议**：完成后写 `.manifest.json`，`getCachedDocumentImages()` 命中即复用；`comic://` 协议放行 `userData/documents/`，因此文档页可以和普通图片/压缩包图片一样进入封面、阅读器和转换。
+- **IPC 复用**：没有新增 `document:*` IPC。`archive:prepare` 在检测到 PDF/EPUB 时委托 `prepareDocument()`；renderer 的阅读/转换前置准备流程保持一致，只把文案改为通用的“准备页面/处理中”。
+- **打包关键**：`pdfjs-dist`、`@napi-rs/canvas`、`fast-xml-parser` 属于 main 运行时依赖，应保留在 `dependencies`；`@napi-rs/canvas` 与平台包需要 `asarUnpack`，否则打包后 native canvas 可能加载失败。
 
 ## 转换与产物层
 
@@ -357,11 +371,16 @@ electron-vite build
 
 ### 打包（electron-builder）
 
-`npm run build:mac` / `:win` / `:linux` 先 `build` 再调 electron-builder；`release:mac` 额外先把版本号 prerelease +1。打包细节（ad-hoc 签名、Gatekeeper、版本递增、内测分发）见 `docs/operator-runbook.md`。两条架构级约束：
+`npm run build:mac` / `:win` / `:linux` 先 `build` 再调 electron-builder；`npm run pack:doctor` 做打包前体检（依赖分层、dmg-only 配置、版本说明、`BUILD_STAMP`、esbuild native binary）。`release:mac` 由 `scripts/release-mac.mjs` 包装，先跑 `pack:doctor` 和 `build`，通过后才把版本号 prerelease +1，再调用 `build:mac` 正式出包。macOS 内测流程由 `scripts/build-mac-dmg.mjs` 包装：生成 `BUILD_STAMP`、从 `docs/release-notes.md` 写出 `build/release-notes-current.txt`、只构建 dmg、关闭 blockmap/update info，并清理 `dist/` 里的非 dmg 临时产物；dmg 文件名包含版本号和构建时间戳，挂载根目录包含 `版本说明.txt`。打包细节（ad-hoc 签名、Gatekeeper、版本递增、内测分发）见 `docs/operator-runbook.md`。两条架构级约束：
 
-- **依赖分层决定包体**：`package.json` 的 `dependencies` 只放 main 进程运行时真正 `require` 的包（`sharp` / `7zip-bin` / `archiver` / `nodemailer` / `@electron-toolkit{,/preload}`）。electron-vite 会把 `dependencies` 外部化并由 electron-builder 拷进 `app.asar`；所有 UI 库（react / radix / recharts 等）已被 vite 打进 `out/renderer`，必须留在 `devDependencies`，否则 asar 里重复一份、体积暴涨（曾因 `shadcn` CLI 误置 dependencies 使 asar 达 200MB）。
-- **原生库须 asarUnpack**：`7zip-bin`、`sharp`、`@img`（libvips dylib 无 `.node`，smartUnpack 会漏）放进 `asarUnpack`，运行时把 `path7za` 的 `app.asar` 改写为 `app.asar.unpacked`。
+- **依赖分层决定包体**：`package.json` 的 `dependencies` 只放 main/preload 运行时真正 `require` / dynamic import 的包（`@electron-toolkit/preload`、`@electron-toolkit/utils`、`sharp`、`7zip-bin`、`archiver`、`nodemailer`、`pdfjs-dist`、`@napi-rs/canvas`、`fast-xml-parser`）。electron-vite 会把 `dependencies` 外部化并由 electron-builder 拷进 `app.asar`；所有 UI 库（react / radix / recharts 等）已被 vite 打进 `out/renderer`，必须留在 `devDependencies`，否则 asar 里重复一份、体积暴涨（曾因 `shadcn` CLI 误置 dependencies 使 asar 达 200MB）。
+- **原生库须 asarUnpack**：`7zip-bin`、`sharp`、`@img`（libvips dylib 无 `.node`，smartUnpack 会漏）、`@napi-rs/canvas`/`@napi-rs/canvas-*` 放进 `asarUnpack`，运行时把 `path7za` 的 `app.asar` 改写为 `app.asar.unpacked`。当前 mac arm64 内测包会剔除 `7zip-bin` 的 linux/win/mac x64 二进制。
 - **开发期演示页代码分割**：`dev/Showcase.tsx`（含 recharts/embla/cmdk 等重依赖）经 `import.meta.env.DEV` 门控的 `React.lazy` 加载；生产构建该分支为死代码，Rollup 不产出对应 chunk，演示代码与重依赖完全不进生产包。侧栏 `groupDevMode` 同样按 DEV 隐藏。
+
+### 产品沟通源
+
+- `docs/release-notes.md` 是更新日志源：打包时生成 dmg 根目录的 `版本说明.txt`，未来可渲染为官网 `/changelog`。
+- `docs/roadmap.md` 是路线图源：按「已上线 / 正在打磨 / 计划中 / 探索中」维护能力状态，未来可渲染为官网 `/roadmap`。
 
 ## UI 系统
 
@@ -417,11 +436,11 @@ renderer alias：
 
 ```txt
 漫画库领域（浏览/阅读已实现，元数据存储待做）
-  扫描本地目录、图片文件夹、压缩包卷册（archive.ts）已实现；元数据存储待做。
+  扫描本地目录、图片文件夹、压缩包卷册（archive.ts）、PDF/图片型 EPUB（document.ts）已实现；元数据存储待做。
 
 转换领域（已实现首切）
   规范化页面、处理图像、生成固定版式 EPUB（convert.ts）；产物由 artifacts.ts 托管编排。
-  压缩包来源（CBZ/ZIP/CBR/7z）已接入；队列持久化（queue.ts）已实现；待做：PDF 来源、自动投递。
+  压缩包来源（CBZ/ZIP/CBR/RAR/7z）、PDF 来源、图片型 EPUB 来源已接入；队列持久化（queue.ts）已实现；待做：自动投递、纯文本/重排 EPUB 策略。
 
 投递领域（已实现首切）
   SMTP 投递（deliver.ts）+ Send to Kindle 网页推送（webpush.ts）+ 归档手动投递 + 本地导出副本均已实现。
@@ -443,6 +462,7 @@ Electron main 或专门的服务模块应负责本地文件系统和进程执行
 - **转换队列**：`app.getPath('userData')/queue.json`（`{ version, jobs: PersistedConvertJob[] }`）。每次队列结构变化由 renderer 经 `queue:save` 推送；启动时 `queue.ts` 把未完成任务（queued/converting）标为 `'interrupted'`（不自动跑，等用户在 UI 确认继续/不继续），并扫 `userData/converted/<部>/tmp_<id>/` 清孤儿临时目录。详见「转换队列持久化层」。
 - **投递配置**：`settings.json` 的 `delivery` 字段（host/port/user/kindleEmail + `passEncrypted` 或 `passPlain`）。密码经 `safeStorage` 系统钥匙串加密，不明文落盘。
 - **压缩包解压缓存**：`app.getPath('userData')/extracted/<hash>/`（图片 + `.manifest.json`），按所有分卷的 路径+mtime+size 哈希。
+- **文档页面缓存**：`app.getPath('userData')/documents/<hash>/`（PDF 渲染页或图片型 EPUB 抽出的页面 + `.manifest.json`），按源文件 路径+mtime+size + `document-v1` 哈希。
 - **封面缩略图缓存**：`app.getPath('userData')/thumbs/<hash>.webp`（480px），按封面源图 路径+mtime+size 哈希；可安全清空（再开自动重建）。
 - **压缩包密码池**：`settings.json` 的 `archivePasswords`（`safeStorage` 加密的 base64 数组），不明文落盘、不回传 renderer。
 - **renderer localStorage 键**：

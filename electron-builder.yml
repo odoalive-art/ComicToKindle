@@ -11,15 +11,19 @@ files:
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
   # 开发文件不进包
   - '!{AGENTS.md,components.json}'
+  - '!{.claude,.gemini}/**'
   - '!{docs,design-system,.npm-cache}/**'
   - '!**/*.tsbuildinfo'
-  # mac 包只需 mac 平台的 7za，剔除 linux/win 二进制（约 5MB）
+  # mac arm64 内测包只需 arm64 7za，剔除其他平台/架构二进制
   - '!node_modules/7zip-bin/{linux,win}/**'
+  - '!node_modules/7zip-bin/mac/x64/**'
 asarUnpack:
   - resources/**
   - node_modules/7zip-bin/**
   - node_modules/sharp/**
   - node_modules/@img/**
+  - node_modules/@napi-rs/canvas/**
+  - node_modules/@napi-rs/canvas-*/**
 win:
   executableName: ComicToKindle
 nsis:
@@ -28,6 +32,8 @@ nsis:
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
 mac:
+  target:
+    - dmg
   # 内测不走 Developer ID：identity:null 跳过证书查找，改用 ad-hoc 签名
   # （Apple Silicon 需 ad-hoc 才能启动）。测试者首次打开需右键→打开或去隔离属性。
   identity: null
@@ -39,7 +45,24 @@ mac:
     - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
   notarize: false
 dmg:
-  artifactName: ${name}-${version}.${ext}
+  artifactName: ${name}-${version}-${env.BUILD_STAMP}.${ext}
+  title: ${productName} ${version}
+  writeUpdateInfo: false
+  contents:
+    - x: 130
+      y: 220
+      type: file
+      path: dist/mac-arm64/ComicToKindle.app
+      name: ComicToKindle.app
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
+    - x: 270
+      y: 360
+      type: file
+      path: build/release-notes-current.txt
+      name: 版本说明.txt
 linux:
   target:
     - AppImage
@@ -50,6 +73,4 @@ linux:
 appImage:
   artifactName: ${name}-${version}.${ext}
 npmRebuild: false
-publish:
-  provider: generic
-  url: https://example.com/auto-updates
+publish: null

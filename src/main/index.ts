@@ -31,7 +31,9 @@ function createWindow(): void {
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false
+      sandbox: false,
+      // 启用 Chromium 内置 PDF 查看器（PDFium），供 PDF 来源用 iframe 直接预览
+      plugins: true
     }
   })
 

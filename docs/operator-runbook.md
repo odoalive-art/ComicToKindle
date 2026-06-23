@@ -1,6 +1,6 @@
 # 运行手册
 
-本文覆盖当前基础阶段的安装、开发和验证流程。
+本文覆盖当前应用阶段的安装、开发、验证和内测分发流程。
 
 ## 仓库位置
 
@@ -43,6 +43,8 @@ npm run dev
 - 顶栏中英切换按钮可以切换应用壳、开发期页面和 shadcn 镜像文档阅读语言。
 - `所有漫画` 视图首次进入显示空状态，点「选择漫画库文件夹」选目录后显示部封面网格；**双击**某部看卷册、**双击**卷册进入阅读器（单页/双页、左右方向、续读）；单击为选中（文件管理器式交互）。库根目录会被记住。
 - 压缩包卷册（CBZ/ZIP/CBR/RAR/7z，含分卷 `name.7z.001` 等——只显示入口卷）显示压缩包/锁占位图标；点开阅读或转换时先解压到缓存并显示进度条/进度 toast；加密包弹密码框（可输中文，勾「记住」加入共享密码池，后续同密码包自动解）。
+- PDF 单文件卷册显示 `PDF` 类型标签；首次打开或转换时会渲染为页面缓存并显示“准备页面/处理中”进度，之后复用缓存。
+- 图片型 EPUB 显示 `EPUB` 类型标签；首次准备时会按 OPF spine / XHTML 图片引用抽取页面。纯文本/重排 EPUB 没有本地图片页时，应提示没有可用页面图片。
 - 转换某一卷会先弹「确认书籍信息」框（预填漫画名/卷册名/作者，可改）；产物书名 = 「漫画名 + 卷册」、作者写入元数据。库网格右键某部 / 进入后顶栏铅笔可编辑该部名称/作者（持久化，不改本地文件夹）。
 - `设计组件` 中的示例复制按钮仍复制英文示例名，例如 `button-with-icon`。
 - `网页推送`（或归档条目的「网页推送」入口）打开内嵌 Amazon 网页窗口；首次需在该窗口登录 Amazon（登录态存在独立 `persist:amazon-stk` partition、重启保留）。带产物推送时会盖黑色蒙层并自动填入文件，最后由用户在网页里点 Send。
@@ -72,16 +74,36 @@ npm run build
 npm run release:mac
 ```
 
-`release:mac` = 先 `npm version prerelease --no-git-tag-version`（版本号 `beta.N → beta.N+1`，不打 git tag）→ 再 `npm run build:mac`。免去手动改 `package.json` 版本号。产物落在 `dist/`：
+`release:mac` 由 `scripts/release-mac.mjs` 包装，流程是：
 
-- `dist/comic-to-kindle-<version>.dmg` ← 发给测试者的就是这个
-- `dist/ComicToKindle-<version>-arm64-mac.zip`（含 blockmap，自动更新用，当前未启用）
+1. 运行 `npm run pack:doctor` 做打包体检（依赖分层、electron-builder dmg-only 配置、版本说明、`BUILD_STAMP`、esbuild native binary）。
+2. 运行 `npm run build` 做预构建验证，此时版本号暂不递增。
+3. 运行 `npm version prerelease --no-git-tag-version`（版本号 `beta.N → beta.N+1`，不打 git tag）。
+4. 运行 `npm run build:mac` 正式出 dmg。
+
+这样可以先排除最常见的构建/环境问题，再修改 `package.json` 版本号。`build:mac` 会生成构建时间戳、写入 dmg 版本说明、调用 electron-builder，并清理非 dmg 的临时/自动更新产物。产物落在 `dist/`：
+
+- `dist/comic-to-kindle-<version>-<YYYYMMDD-HHMMSS>.dmg` ← 发给测试者的就是这个
+
+dmg 挂载后包含：
+
+- `ComicToKindle.app`
+- `Applications` 链接
+- `版本说明.txt`（构建前由 `docs/release-notes.md` 生成，标题会写入当前 `package.json` 版本、构建时间、构建标识和 Git 修订）
+
+发布前维护：
+
+- 更新 `docs/release-notes.md` 中对应版本的「亮点 / 新增 / 改进 / 修复 / 已知限制 / 下载」。
+- 如果能力状态变化，同步更新 `docs/roadmap.md`，不要把探索中或计划中的能力写成已上线。
 
 注意：
 
 - 每发一轮内测用 `release:mac`（版本号自动 `beta.N → beta.N+1`）；只想重打当前版本、不动版本号时用 `npm run build:mac`。
+- 只想做打包前体检时用 `npm run pack:doctor`，不会改版本号，也不会生成 dmg。
+- 同一版本可以多次重打；dmg 文件名带构建时间戳，不会覆盖旧包，方便留存和对比。
 - `release:mac` 会改 `package.json` 版本号但**不自动 git 提交**，记得事后 `git commit`，让仓库版本与发出去的包对得上。
-- 当前包体约 116MB（dmg）；其中 Electron 框架本体 ~100MB 是固定底座。**别把 UI 库（react / radix / recharts 等）加进 `package.json` 的 `dependencies`**——它们已被 vite 打进 `out/renderer`，放 dependencies 会让 electron-vite 外部化、在 `app.asar` 里重复一份使体积暴涨（dependencies 只应有 main 进程运行时真正 require 的 6 个包）。`electron-builder.yml` 还剔除了 7zip-bin 的 linux/win 二进制与 docs/AGENTS.md 等开发文件。
+- PDF/EPUB 来源接入后包体会比此前约 116MB 的 dmg 增加（PDF.js 资源 + native canvas）。其中 Electron 框架本体 ~100MB 是固定底座。**别把 UI 库（react / radix / recharts 等）加进 `package.json` 的 `dependencies`**——它们已被 vite 打进 `out/renderer`，放 dependencies 会让 electron-vite 外部化、在 `app.asar` 里重复一份使体积暴涨。`dependencies` 只放 main/preload 运行时真正需要的包；当前白名单由 `npm run pack:doctor` 校验。`electron-builder.yml` 还剔除了 7zip-bin 的 linux/win/mac x64 二进制与 docs/AGENTS.md/.claude 等开发文件。
+- 若 `build:mac` 在 electron-builder 下载阶段报 `Client network socket disconnected before secure TLS connection was established`，通常是外部下载/TLS 网络问题，不代表 TypeScript 或打包配置失败。先确认 `npm run build` 与 `npm run pack:doctor` 通过；网络恢复后重跑 `npm run build:mac`，成功后再挂载 dmg 检查 `版本说明.txt` 和 native canvas unpack。
 
 ### 关于签名（内测不公证）
 
@@ -90,7 +112,7 @@ npm run release:mac
 - 因未做 Apple 公证，测试者下载 `.dmg` 拖入「应用程序」后首次打开会被 Gatekeeper 拦（"无法验证开发者"）。**给测试者的说明**，二选一：
   - 右键应用图标 → 打开 → 弹窗里再点「打开」（只需一次）；或
   - 终端执行 `xattr -dr com.apple.quarantine /Applications/ComicToKindle.app`
-- 后续要做正式分发 / 自动更新，再申请 Apple Developer ID（$99/年）配置签名 + 公证，并填好 `electron-builder.yml` 的 `publish.url`（当前是占位 `https://example.com`）。
+- 后续要做正式分发 / 自动更新，再申请 Apple Developer ID（$99/年）配置签名 + 公证，并重新启用 mac zip、blockmap/update info 与 `publish` 配置。
 
 ### 其他平台
 
@@ -125,6 +147,7 @@ Send to Kindle 网页通道有一项可配置项：STK 站点 URL，存 `userDat
 - **库根目录**：`app.getPath('userData')/settings.json` 的 `libraryRoot`（macOS 通常在 `~/Library/Application Support/comic-to-kindle/`）。删除该文件或在应用内「切换文件夹」可重选库。
 - **renderer 偏好（localStorage）**：`comic-to-kindle-theme`、`comic-to-kindle-language`、`comic-to-kindle-reading-direction`、`comic-to-kindle-reading-mode`、`comic-to-kindle-reading-progress`（每卷续读进度）。清掉对应键即可重置。
 - **压缩包解压缓存**：`app.getPath('userData')/extracted/<hash>/`（图片 + `.manifest.json`，按所有分卷的 路径+mtime+size 哈希）。删除整个 `extracted/` 目录即可清空，下次打开会重新解压。
+- **文档页面缓存**：`app.getPath('userData')/documents/<hash>/`（PDF 渲染页或图片型 EPUB 抽出的页面 + `.manifest.json`，按源文件 路径+mtime+size 哈希）。删除整个 `documents/` 目录即可清空，下次打开 PDF/EPUB 会重新准备页面。
 - **封面缩略图缓存**：`app.getPath('userData')/thumbs/<hash>.webp`。可随时整目录删除，下次进库自动重建。
 - **压缩包密码池**：`settings.json` 的 `archivePasswords`（safeStorage 加密的 base64 数组）。删除该字段可清空已记住的解压密码。
 - **每部名称/作者覆盖**：`settings.json` 的 `seriesMeta`（`{ <部文件夹名>: { title, author } }`）。删除该字段或对应键可恢复按 `[作者]标题` 解析。
@@ -134,7 +157,9 @@ Send to Kindle 网页通道有一项可配置项：STK 站点 URL，存 `userDat
 
 - 当前仓库位于 iCloud Drive 同步目录；若再次出现 Node toolchain 卡住，优先迁回本地非同步目录。
 - 压缩包解压用内置 7-Zip（`7zip-bin`）。打包时 `electron-builder.yml` 的 `asarUnpack` 必须放行 `node_modules/7zip-bin/**`，运行时把 `path7za` 里的 `app.asar` 替换为 `app.asar.unpacked`，否则打包后 `7za` 不可执行、压缩包卷册无法解压。
-- 图像处理用 `sharp`（封面缩略图 + 转换）。`asarUnpack` 必须放行 `node_modules/sharp/**` 和 `node_modules/@img/**`：`@img/sharp-libvips-*` 只含 `.dylib`、不含 `.node`，electron-builder 的 smartUnpack 靠 `.node` 识别会漏掉它，导致打包后 sharp 一调用就崩。三个原生库（sharp `.node`、libvips `.dylib`、`7za`）npm 包自带 ad-hoc 签名，无需额外重签。
+- 图像处理用 `sharp`（封面缩略图 + 转换）。`asarUnpack` 必须放行 `node_modules/sharp/**` 和 `node_modules/@img/**`：`@img/sharp-libvips-*` 只含 `.dylib`、不含 `.node`，electron-builder 的 smartUnpack 靠 `.node` 识别会漏掉它，导致打包后 sharp 一调用就崩。
+- PDF 渲染用 `pdfjs-dist` + `@napi-rs/canvas`。`asarUnpack` 必须放行 `node_modules/@napi-rs/canvas/**` 与 `node_modules/@napi-rs/canvas-*/**`，否则打包后 native canvas 可能加载失败。`npm run pack:doctor` 会检查 canvas unpack 配置。
+- 这些原生库（sharp `.node`、libvips `.dylib`、`7za`、canvas 平台 `.node`）npm 包自带 ad-hoc 签名，无需额外重签。
 - shadcn CLI 无法自动把该 Electron Vite 项目识别为标准 Vite app，因此项目通过 `components.json` 手动配置 shadcn。
 - `设计组件` 和 `基础规范` 是开发期提效页面，不代表已实现终端用户功能。
 - `npm run build` 是当前验证设置是否正确的事实来源。

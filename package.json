@@ -15,18 +15,23 @@
     "dev": "electron-vite dev",
     "build": "npm run typecheck && electron-vite build",
     "postinstall": "electron-builder install-app-deps",
+    "pack:doctor": "node scripts/pack-doctor.mjs",
+    "prepare:dmg-notes": "node scripts/prepare-dmg-notes.mjs",
     "build:unpack": "npm run build && electron-builder --dir",
     "build:win": "npm run build && electron-builder --win",
-    "build:mac": "npm run build && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac",
+    "build:mac": "node scripts/build-mac-dmg.mjs",
     "build:linux": "npm run build && electron-builder --linux",
-    "release:mac": "npm version prerelease --no-git-tag-version && npm run build:mac"
+    "release:mac": "node scripts/release-mac.mjs"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
+    "@napi-rs/canvas": "^1.0.0",
     "7zip-bin": "^5.2.0",
     "archiver": "^8.0.0",
+    "fast-xml-parser": "^5.9.3",
     "nodemailer": "^9.0.1",
+    "pdfjs-dist": "^6.0.227",
     "sharp": "^0.35.1"
   },
   "devDependencies": {
