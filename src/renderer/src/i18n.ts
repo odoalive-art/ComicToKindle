@@ -53,7 +53,6 @@ export const uiText = {
     },
     fileView: {
       root: '漫画库',
-      readFolder: '阅读本文件夹',
       emptyFolder: '这个文件夹是空的',
       itemUnit: (n: number) => `${n} 项`,
       dragHint: '拖到左侧文件夹 = 移动到那里',
@@ -394,7 +393,6 @@ export const uiText = {
     },
     fileView: {
       root: 'Library',
-      readFolder: 'Read this folder',
       emptyFolder: 'This folder is empty',
       itemUnit: (n: number) => `${n} item${n === 1 ? '' : 's'}`,
       dragHint: 'Drag onto a folder on the left to move it there',

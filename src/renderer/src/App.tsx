@@ -228,9 +228,9 @@ function App(): React.JSX.Element {
     setNavKids((prev) => new Map(prev).set(dir, list))
   }, [])
 
-  // 切库 → 重置树导航选中目录，预载根目录子文件夹
+  // 切库 → 默认选中库根目录，预载根目录子文件夹
   useEffect(() => {
-    setFileDir(null)
+    setFileDir(libRoot)
     setNavKids(new Map())
     setNavExpanded(libRoot ? new Set([libRoot]) : new Set())
     if (libRoot) void ensureKids(libRoot)
@@ -413,7 +413,7 @@ type RawVolume = RawListing['files'][number]
 interface FileNavValue {
   root: string | null
   setRoot: (r: string | null) => void
-  /** null = 书架根；非空 = 左树导航选中的目录，内容区仍展示统一网格 */
+  /** null = 旧智能书架兜底；非空 = 左树导航选中的目录，内容区展示统一目录网格 */
   fileDir: string | null
   /** 进入某目录（并切到库视图） */
   openFolder: (dir: string) => void
@@ -534,8 +534,6 @@ function FolderStackCard({
 // ============ 左侧文件夹树导航（内容区仍使用统一网格）============
 // 树只负责定位目录；右侧网格负责选中、右键、拖拽、打开等交互。
 
-const basenameOf = (p: string): string => p.split('/').filter(Boolean).pop() ?? p
-
 /** 文件整理错误码 → 本地化文案 */
 function fileopErrText(e: unknown, text: (typeof uiText)[LanguageMode]): string {
   const m = `${e}`
@@ -564,7 +562,7 @@ async function fileNavMove(
 
 /**
  * 边栏「所有漫画」项 = 文件夹树根（不再单列 Library 标签）：
- * 单击 = 选中书架根；双击 = 展开/收起其下真实文件夹（FileTreeNode）；可作拖放目标=移到库根。
+ * 单击 = 选中库根目录；双击 = 展开/收起其下真实文件夹（FileTreeNode）；可作拖放目标=移到库根。
  */
 function LibraryNav({
   locale,
@@ -2129,15 +2127,17 @@ function LibraryView({
     setSelectedVols(new Set())
   }
 
-  // 文件管理器式单击选中：普通点 = 只选这一卷；Cmd/Ctrl 点或已在多选模式 = 累加/切换。
-  // （已在多选模式里点击累加，保留「选择」按钮 + 连点多选的既有流程）
+  const shouldUseSelectMode = (count: number): boolean => count >= 2
+
+  // 文件管理器式单击选中：普通点 = 只选这一项；Cmd/Ctrl 点或已在多选模式 = 累加/切换。
+  // 只有选中 2 个及以上才进入多选模式；单个选中只保留高亮反馈。
   const onVolumeClick = (vol: LibraryVolume, e: React.MouseEvent): void => {
     const additive = e.metaKey || e.ctrlKey || selectMode
     const next = new Set(additive ? selectedVols : [])
     if (additive && next.has(vol.path)) next.delete(vol.path)
     else next.add(vol.path)
     setSelectedVols(next)
-    setSelectMode(next.size > 0)
+    setSelectMode(shouldUseSelectMode(next.size))
   }
 
   const onFileGridClick = (path: string, e: React.MouseEvent): void => {
@@ -2146,13 +2146,13 @@ function LibraryView({
     if (additive && next.has(path)) next.delete(path)
     else next.add(path)
     setSelectedVols(next)
-    setSelectMode(next.size > 0)
+    setSelectMode(shouldUseSelectMode(next.size))
   }
 
   const onFileGridContext = (path: string): void => {
     if (selectedVols.has(path)) return
     setSelectedVols(new Set([path]))
-    setSelectMode(true)
+    setSelectMode(false)
   }
 
   const fileGridTargets = (path: string): string[] =>
@@ -2189,7 +2189,7 @@ function LibraryView({
   const toggleAll = (): void => {
     const paths = fileMode ? rawSelectablePaths : bookVolumes.map((v) => v.path)
     setSelectedVols(allSelected ? new Set() : new Set(paths))
-    setSelectMode(!allSelected && paths.length > 0)
+    setSelectMode(!allSelected && shouldUseSelectMode(paths.length))
   }
 
   // 转换所选：单本走单本确认弹窗（含封面预览），多本走批量确认弹窗
@@ -2305,7 +2305,7 @@ function LibraryView({
       const path = card.dataset.volPath
       if (path && intersect) hit.add(path)
     })
-    if (hit.size > 0) setSelectMode(true)
+    setSelectMode(shouldUseSelectMode(hit.size))
     setSelectedVols(hit)
   }
 
@@ -2471,14 +2471,15 @@ function LibraryView({
       if (fileMode) {
         if (rawSelectablePaths.length === 0) return
         e.preventDefault()
-        setSelectMode(true)
         setSelectedVols(new Set(rawSelectablePaths))
+        setSelectMode(shouldUseSelectMode(rawSelectablePaths.length))
         return
       }
       if (selected === null || volumes.length === 0) return
+      const paths = volumes.filter((v) => v.type === 'book').map((v) => v.path)
       e.preventDefault()
-      setSelectMode(true)
-      setSelectedVols(new Set(volumes.filter((v) => v.type === 'book').map((v) => v.path)))
+      setSelectedVols(new Set(paths))
+      setSelectMode(shouldUseSelectMode(paths.length))
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -2516,8 +2517,7 @@ function LibraryView({
     rawListing !== null &&
     rawListing.folders.length === 0 &&
     rawListing.files.length === 0 &&
-    rawListing.plainFiles.length === 0 &&
-    !rawListing.self.readable
+    rawListing.plainFiles.length === 0
 
   const showVolumes = !fileMode && selected !== null
 
@@ -3082,9 +3082,9 @@ function LibraryView({
                             <BreadcrumbLink asChild>
                               <button
                                 type="button"
-                                onClick={() =>
-                                  node.path ? fileNav.openFolder(node.path) : fileNav.exitToShelf()
-                                }
+                                onClick={() => {
+                                  if (node.path) fileNav.openFolder(node.path)
+                                }}
                                 className="truncate"
                                 title={node.name}
                                 style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
@@ -3310,52 +3310,6 @@ function LibraryView({
                 </p>
               ) : (
                 <div className={LIBRARY_GRID}>
-                  {rawListing?.self.readable ? (
-                    <button
-                      type="button"
-                      onDoubleClick={() =>
-                        void onVolumeOpen({
-                          id: currentFileDir ?? '',
-                          path: currentFileDir ?? '',
-                          name: basenameOf(currentFileDir ?? ''),
-                          title: basenameOf(currentFileDir ?? ''),
-                          kind: 'folder',
-                          sourceType: 'folder',
-                          pageCount: rawListing.self.pageCount,
-                          coverUrl: rawListing.self.coverUrl,
-                          type: 'book',
-                          author: null
-                        })
-                      }
-                      className="group flex cursor-default flex-col gap-2 text-left"
-                    >
-                      <div className="relative">
-                        <AspectRatio
-                          ratio={3 / 4}
-                          className="relative overflow-hidden rounded-lg bg-muted ring-1 ring-primary/40 transition-all"
-                        >
-                          <CoverImage src={rawListing.self.coverUrl} alt="" />
-                          <div className="pointer-events-none absolute inset-0 rounded-lg border border-foreground/10" />
-                          <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 bg-primary/85 py-1 text-xs font-medium text-primary-foreground">
-                            <BookOpen className="size-3.5" />
-                            {text.fileView.readFolder}
-                          </div>
-                        </AspectRatio>
-                      </div>
-                      <div className="min-w-0 rounded-md px-1.5 py-0.5">
-                        <div
-                          className="truncate text-sm font-medium"
-                          title={basenameOf(currentFileDir ?? '')}
-                        >
-                          {basenameOf(currentFileDir ?? '')}
-                        </div>
-                        <div className="truncate text-xs text-muted-foreground">
-                          {text.library.pageUnit(rawListing.self.pageCount)}
-                        </div>
-                      </div>
-                    </button>
-                  ) : null}
-
                   {rawListing?.folders.map((folder) => {
                     const picked = selectedVols.has(folder.path)
                     const isDrop = rawDropTarget === folder.path
@@ -3416,14 +3370,6 @@ function LibraryView({
                                 <Folder className="size-3" />
                                 {text.fileView.itemUnit(folder.childCount)}
                               </Badge>
-                              {selectMode ? (
-                                <div className="pointer-events-none absolute top-1.5 left-1.5">
-                                  <Checkbox
-                                    checked={picked}
-                                    className="size-6 border-2 bg-background/85 backdrop-blur data-[state=checked]:bg-primary"
-                                  />
-                                </div>
-                              ) : null}
                             </div>
                             <div
                               className={`min-w-0 rounded-md px-1.5 py-0.5 ${
@@ -3514,14 +3460,6 @@ function LibraryView({
                                 ) : null}
                                 <div className="pointer-events-none absolute inset-0 rounded-lg border border-foreground/10" />
                               </AspectRatio>
-                              {selectMode ? (
-                                <div className="pointer-events-none absolute top-1.5 right-1.5">
-                                  <Checkbox
-                                    checked={picked}
-                                    className="size-6 border-2 bg-background/85 backdrop-blur data-[state=checked]:bg-primary"
-                                  />
-                                </div>
-                              ) : null}
                             </div>
                             <div
                               className={`min-w-0 rounded-md px-1.5 py-0.5 ${
@@ -3610,14 +3548,6 @@ function LibraryView({
                                 >
                                   {file.ext}
                                 </Badge>
-                              ) : null}
-                              {selectMode ? (
-                                <div className="pointer-events-none absolute top-1.5 left-1.5">
-                                  <Checkbox
-                                    checked={picked}
-                                    className="size-6 border-2 bg-background/85 backdrop-blur data-[state=checked]:bg-primary"
-                                  />
-                                </div>
                               ) : null}
                             </div>
                             <div
@@ -3799,15 +3729,7 @@ function LibraryView({
                                   <TooltipContent>{text.convert.converted}</TooltipContent>
                                 </Tooltip>
                               ) : null}
-                              {/* 选择模式：右上角复选框 */}
-                              {selectMode ? (
-                                <div className="pointer-events-none absolute top-1.5 right-1.5">
-                                  <Checkbox
-                                    checked={picked}
-                                    className="size-6 border-2 bg-background/85 backdrop-blur data-[state=checked]:bg-primary"
-                                  />
-                                </div>
-                              ) : job ? (
+                              {job ? (
                                 /* 队列状态角标（转换入口已并入选中 + 顶栏「转换所选」，封面不再放单独转换按钮） */
                                 <div className="absolute top-1.5 right-1.5 flex max-w-[calc(100%-0.75rem)] justify-end">
                                   <Badge
@@ -5069,15 +4991,15 @@ function AppSidebar({
                   <SidebarMenu>
                     {group.items.map((item, itemIdx) => {
                       const uniqueKey = `${group.titleKey}-${item.id}-${itemIdx}`
-                      // 「所有漫画」即文件夹树根：单击选中书架根，双击展开/收起
+                      // 「所有漫画」即文件夹树根：单击选中库根目录，双击展开/收起
                       if (item.id === 'library') {
                         return (
                           <LibraryNav
                             key={uniqueKey}
                             locale={locale}
-                            active={activeView === 'library' && fileNav.fileDir === null}
+                            active={activeView === 'library' && fileNav.fileDir === fileNav.root}
                             onShelf={() => {
-                              fileNav.exitToShelf()
+                              if (fileNav.root) fileNav.openFolder(fileNav.root)
                               onSelect('library')
                             }}
                           />
