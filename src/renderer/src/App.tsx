@@ -2856,7 +2856,7 @@ function LibraryView({
         open={importReq !== null}
         onOpenChange={(o) => (!o && !importReq?.busy ? setImportReq(null) : undefined)}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="flex max-h-[85vh] flex-col sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{text.library.importBooks}</DialogTitle>
             <DialogDescription>
@@ -2869,9 +2869,9 @@ function LibraryView({
             </DialogDescription>
           </DialogHeader>
           {importReq ? (
-            <div className="space-y-3">
-              <ScrollArea className="max-h-56 rounded-md border">
-                <div className="divide-y">
+            <>
+              <div className="min-h-0 flex-1 space-y-3 overflow-y-auto">
+                <div className="divide-y rounded-md border">
                   {importReq.scan.candidates.map((item) => (
                     <div key={item.sourcePath} className="flex items-center gap-2 px-3 py-2">
                       <BookText className="size-4 shrink-0 text-muted-foreground" />
@@ -2886,19 +2886,19 @@ function LibraryView({
                     </div>
                   ))}
                 </div>
-              </ScrollArea>
-              <label className="flex items-start gap-2 rounded-md border border-destructive/25 bg-destructive/5 p-3 text-sm">
-                <Checkbox
-                  checked={importReq.deleteSourceAfter}
-                  disabled={importReq.busy}
-                  onCheckedChange={(checked) =>
-                    setImportReq((s) => (s ? { ...s, deleteSourceAfter: checked === true } : s))
-                  }
-                />
-                <span className="leading-5 text-muted-foreground">
-                  {text.library.deleteSourceAfterImport}
-                </span>
-              </label>
+                <label className="flex items-start gap-2 rounded-md border border-destructive/25 bg-destructive/5 p-3 text-sm">
+                  <Checkbox
+                    checked={importReq.deleteSourceAfter}
+                    disabled={importReq.busy}
+                    onCheckedChange={(checked) =>
+                      setImportReq((s) => (s ? { ...s, deleteSourceAfter: checked === true } : s))
+                    }
+                  />
+                  <span className="leading-5 text-muted-foreground">
+                    {text.library.deleteSourceAfterImport}
+                  </span>
+                </label>
+              </div>
               <DialogFooter>
                 <Button
                   type="button"
@@ -2919,7 +2919,7 @@ function LibraryView({
                   )}
                 </Button>
               </DialogFooter>
-            </div>
+            </>
           ) : null}
         </DialogContent>
       </Dialog>
@@ -3496,9 +3496,23 @@ function LibraryView({
                 </div>
               )
             ) : series.length === 0 ? (
-              <p className="py-16 text-center text-sm text-muted-foreground">
-                {text.library.noSeries}
-              </p>
+              <div className="flex min-h-[60vh] items-center justify-center p-6">
+                <Empty>
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      <BookUp />
+                    </EmptyMedia>
+                    <EmptyTitle>{text.library.emptyLibraryTitle}</EmptyTitle>
+                    <EmptyDescription>{text.library.emptyLibraryDesc}</EmptyDescription>
+                  </EmptyHeader>
+                  <EmptyContent>
+                    <Button size="lg" onClick={importIntoLibrary}>
+                      <FolderOpen className="size-4" />
+                      {text.library.importBooks}
+                    </Button>
+                  </EmptyContent>
+                </Empty>
+              </div>
             ) : viewMode === 'list' ? (
               // 列表视图：部=纯文字行（三角在右），展开后部名吸顶、其下卷册以封面网格呈现；
               // 书=不可展开的叶子文字行。

@@ -62,6 +62,8 @@ export const uiText = {
       rescan: '重新扫描',
       emptyTitle: '还没有漫画库',
       emptyDescription: '新建一个库包，再用「导入卷册」把漫画文件夹或压缩包加进来，开始整理你的漫画。',
+      emptyLibraryTitle: '这个库还是空的',
+      emptyLibraryDesc: '点下面的按钮，把漫画文件夹或压缩包导入进来。',
       loading: '正在扫描漫画库…',
       noSeries: '这个文件夹里没有找到漫画作品。',
       noVolumes: '这个作品下没有可识别的卷册。',
@@ -432,6 +434,8 @@ export const uiText = {
       emptyTitle: 'No library yet',
       emptyDescription:
         'Create a library package, then use “Import volumes” to add comic folders or archives and start organizing.',
+      emptyLibraryTitle: 'This library is empty',
+      emptyLibraryDesc: 'Import comic folders or archives to get started.',
       loading: 'Scanning library…',
       noSeries: 'No comic series found in this folder.',
       noVolumes: 'No recognizable volumes under this series.',
