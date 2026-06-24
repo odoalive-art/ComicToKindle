@@ -383,12 +383,23 @@ export interface DirNode {
   hasSubfolders: boolean
 }
 
-/** 文件视图：某目录下的完整直接内容（子文件夹卡 + 可读单文件 + 自身是否可当一卷读） */
+export interface RawPlainFile {
+  id: string
+  path: string
+  name: string
+  ext: string
+  sizeBytes: number
+  coverUrl: string | null
+}
+
+/** 文件视图：某目录下的完整直接内容（子文件夹卡 + 可读单文件 + 普通文件 + 自身是否可当一卷读） */
 export interface RawListing {
   /** 直接子文件夹（忠实，含空目录），带封面/子项数供网格卡片展示 */
   folders: Array<DirNode & { childCount: number; coverUrl: string | null }>
   /** 直接放着的可读单文件（cbz/pdf/epub），各算一卷 */
   files: LibraryVolume[]
+  /** 其他直接文件（含图片、分卷续卷和普通文档），用于文件整理 */
+  plainFiles: RawPlainFile[]
   /** 本文件夹自身是否直接铺着图片（可作为一卷阅读） */
   self: { readable: boolean; pageCount: number; coverUrl: string | null }
 }
@@ -403,6 +414,18 @@ const sortedVolumeFiles = (entries: import('fs').Dirent[]): string[] =>
   entries
     .filter(
       (e) => e.isFile() && !isHidden(e.name) && isVolumeFile(e.name) && !isSplitContinuation(e.name)
+    )
+    .map((e) => e.name)
+    .sort(naturalSort)
+
+const sortedPlainFiles = (entries: import('fs').Dirent[]): string[] =>
+  entries
+    .filter(
+      (e) =>
+        e.isFile() &&
+        !isHidden(e.name) &&
+        // 可读单文件由 files 表达，避免同一文件在网格中重复出现；分卷续卷仍作为普通文件展示。
+        !(isVolumeFile(e.name) && !isSplitContinuation(e.name))
     )
     .map((e) => e.name)
     .sort(naturalSort)
@@ -436,7 +459,8 @@ async function listDirRaw(dir: string): Promise<RawListing> {
     folderNames.map(async (name) => {
       const path = join(dir, name)
       const sub = await readDirSafe(path)
-      const childCount = sortedChildDirs(sub).length + sortedVolumeFiles(sub).length // 直接子文件夹 + 直接可读文件
+      const childCount =
+        sortedChildDirs(sub).length + sortedVolumeFiles(sub).length + sortedPlainFiles(sub).length
       const cover = await findFirstImage(path)
       return {
         id: path,
@@ -451,6 +475,20 @@ async function listDirRaw(dir: string): Promise<RawListing> {
 
   const fileNames = sortedVolumeFiles(entries)
   const files = await Promise.all(fileNames.map((name) => buildFileVolume(join(dir, name), name)))
+  const plainFiles = await Promise.all(
+    sortedPlainFiles(entries).map(async (name) => {
+      const path = join(dir, name)
+      const stat = await fs.stat(path)
+      return {
+        id: path,
+        path,
+        name,
+        ext: extname(name).replace(/^\./, '').toUpperCase(),
+        sizeBytes: stat.size,
+        coverUrl: isImage(name) ? toThumbUrl(path) : null
+      }
+    })
+  )
 
   // 自身直接含图片 → 可作为一卷读
   const hasDirectImage = entries.some((e) => e.isFile() && !isHidden(e.name) && isImage(e.name))
@@ -460,7 +498,7 @@ async function listDirRaw(dir: string): Promise<RawListing> {
     self = { readable: true, pageCount, coverUrl: cover ? toThumbUrl(cover) : null }
   }
 
-  return { folders, files, self }
+  return { folders, files, plainFiles, self }
 }
 
 /** 按阅读顺序递归收集一卷的所有页：本级图片（自然排序）在前，再依次进入子文件夹（自然排序） */

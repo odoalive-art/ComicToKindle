@@ -15,7 +15,7 @@ ComicToKindle 目前是一个桌面应用工作台，已打通核心闭环:**本
 - shadcn/ui 组件体系
 - 构建和打包脚本
 - `src/renderer/src/App.tsx` 中的侧边栏工作台壳
-- **真实漫画库浏览**：扫描本地目录，按「部 / 卷册」两级展示（详见「漫画库数据层」）
+- **真实漫画库浏览**：递归扫描本地目录（任意深度，自动识别部/卷、隐藏空目录），书架视图多级下钻 + 面包屑；左侧文件夹树可作为目录导航，内容区仍使用统一网格做忠实磁盘整理（详见「漫画库数据层」）
 - **压缩包来源**：CBZ/ZIP/CBR/RAR/7z 卷册（含加密 zip、多卷分卷，共享密码池，解压进度）解出图片供阅读 + 转换（详见「压缩包来源层」）
 - **文档来源**：PDF 单文件卷册渲染为页面图片；图片型 EPUB 按 OPF spine / XHTML 图片引用抽成页面（详见「文档来源层」）
 - **卷册阅读器**：单页 / 双页、左右阅读方向、记住每卷续读进度；网格封面走缩略图缓存
@@ -101,14 +101,12 @@ Renderer process
 
 漫画库的文件系统访问全部在 main 进程，renderer 通过 preload 暴露的 `window.api.library.*` 调用，不直接用 Node API。
 
-**目录约定**（识别两级结构）：
+**扫描模型**（`classifyDir` / `listChildren`，递归判定，不预设固定层级）：
 
-```txt
-库根目录 / 部(文件夹) / 卷册(文件夹或单文件) / [单话子文件夹] / 图片
-```
-
-- **部（series）**= 顶层文件夹，命名通常为 `[作者] 标题`，解析出作者与标题。
-- **卷册（volume）**= 第二层；文件夹封面取首图、递归统计页数，遇到「单话」子文件夹会下钻取图。`kind: 'folder' | 'file'`，`sourceType: 'folder' | 'archive' | 'pdf' | 'epub'`；file 卷可为压缩包、PDF 或图片型 EPUB，分卷只展示入口卷。
+- **卷（volume / book）**= 目录**直接**含图片，或直接放着 cbz/pdf/epub 单文件；其下「单话」子文件夹由 collectPages 递归收图。`kind: 'folder' | 'file'`，`sourceType: 'folder' | 'archive' | 'pdf' | 'epub'`；file 卷可为压缩包、PDF 或图片型 EPUB，分卷只展示入口卷。
+- **部（series）**= 目录自身无漫画、但**子树里**递归地有 → 可下钻容器，**支持任意深度嵌套**（部里可再有子部）。命名通常为 `[作者] 标题`，解析出作者与标题。
+- **空目录**（整棵子树都没有漫画资源）→ **不展示**（只识别含真实漫画资源的目录）。
+- 顶层书架与「部」下钻共用 `listChildren`，每级返回同构的 `LibraryEntry[]`（书/卷 或 可继续下钻的部）；前端用路径栈 + 面包屑做多级导航。
 - **每部名称/作者覆盖**：默认从 `[作者] 标题` 解析；用户可在应用内改写，覆盖存 `settings.json` 的 `seriesMeta`（按部文件夹名为键），扫描时叠加，**不改本地文件夹名**。
 - 文件名一律按**自然排序**（`2.jpg` 在 `10.jpg` 前）。
 
@@ -117,8 +115,10 @@ Renderer process
 ```txt
 library:pickFolder    系统目录选择器，选中后写入 settings.json 并返回路径
 library:getSavedRoot  读取已保存的库根目录（不存在/失效则返回 null）
-library:scan          扫描库根 → LibrarySeries[]（含封面 URL、卷数）
-library:listVolumes   扫描某部 → LibraryVolume[]（含封面 URL、页数、kind）
+library:scan          扫描库根 → LibraryEntry[]（书/卷 或 部，含封面 URL、卷数/页数）
+library:listVolumes   列某部下条目 → LibraryEntry[]（可含可继续下钻的子部）
+library:listSubdirs   目录树导航：某目录的直接子文件夹（忠实磁盘含空目录）→ DirNode[]
+library:listDirRaw    目录网格数据：某目录完整直接内容（子文件夹 + 可读单文件 + 普通文件 + 自身可读）→ RawListing
 library:listPages     按阅读顺序递归收集一卷所有页 → comic:// URL[]
 library:setSeriesMeta 写某部名称/作者覆盖到 settings.json 的 seriesMeta → 叠加后的 {title, author}
 library:rename        重命名部/卷（真改本地文件名）→ 新绝对路径；顶层部改名时迁移 seriesMeta 键
@@ -136,7 +136,16 @@ library:trash         把若干部/卷移入系统废纸篓（shell.trashItem，
 ```txt
 LibrarySeries  id, path, name, title, author, volumeCount, coverUrl
 LibraryVolume  id, path, name, title, kind('folder'|'file'), sourceType('folder'|'archive'|'pdf'|'epub'), pageCount, coverUrl
+LibraryEntry   (LibrarySeries & {type:'folder'}) | (LibraryVolume & {type:'book', author})
+DirNode        id, path, name, hasSubfolders                 // 目录树节点
+RawPlainFile   id, path, name, ext, sizeBytes, coverUrl
+RawListing     folders[]（DirNode + childCount/coverUrl）, files(LibraryVolume[]), plainFiles(RawPlainFile[]), self{readable,pageCount,coverUrl}
 ```
+
+**浏览与目录导航**（同一份库根，内容区统一网格）：
+
+- **书架视图**：走 `scan`/`listVolumes` 的智能预处理（部/卷判定、隐藏空目录、单话折叠），适合翻着读；多级下钻 + 面包屑。
+- **左侧文件夹树导航**：走 `listSubdirs`/`listDirRaw`，**1:1 映射磁盘**（不隐藏空目录、不折叠、不强分部/卷）。文件夹树常驻左侧边栏（「所有漫画」即树根），点文件夹相当于切换面包屑定位；内容区仍复用书架网格的选中、右键、框选、空白取消和卡片样式，并忠实展示该目录的直接子文件夹、可读漫画单文件、普通文件和图片文件。拖卡片到树节点/文件夹卡=移动（复用 `library:move`），导航状态（库根/当前目录/树展开/拖拽源/版本）由 App 层 `FileNavContext` 跨边栏与内容区共享，文件操作后用 version 自增触发两侧重载。
 
 ## 压缩包来源层
 
@@ -170,7 +179,7 @@ LibraryVolume         ... + locked?(加密且未解锁缓存)
 
 `src/main/document.ts`，把 PDF 与图片型 EPUB 规范化为“按阅读顺序排列的图片页”，供阅读器、封面缩略图和 Kindle 转换流水线复用。
 
-- **PDF**：使用 `pdfjs-dist/legacy/build/pdf.mjs` 读取页面，`@napi-rs/canvas` 在 main 进程离线渲染为 PNG，当前渲染 scale=2；缓存落 `userData/documents/<hash>/pages/`，`hash = sha1(路径 + mtime + size + document-v1)`，源文件变化后自动失效。PDF.js 的 standard fonts / cmaps / wasm 资源随 `pdfjs-dist` 运行时依赖进入包内。
+- **PDF**：使用 `pdfjs-dist/legacy/build/pdf.mjs` 读取页面，`@napi-rs/canvas` 在 main 进程离线渲染为 PNG，当前渲染 scale=2；缓存落 `userData/documents/<hash>/pages/`，`hash = sha1(路径 + mtime + size + document-v2)`，源文件变化后自动失效。库网格的 PDF 封面只渲染首页（`getPdfCoverImage` → `<hash>/cover.png`）。PDF.js 的 standard fonts / cmaps / wasm 资源随 `pdfjs-dist` 运行时依赖进入包内。**踩坑（pdfjs v6）**：销毁要调 `loadingTask.destroy()`，`doc` 上没有 `destroy`——早期误用 `doc.destroy()` 会在 `finally` 抛错吞掉已渲染好的封面/页面（表现为「PDF 封面首次进入不渲染、返回再进才出现」，且整本页面缓存的 manifest 永不写入）。
 - **图片型 EPUB**：EPUB 本质是 zip，仍用内置 7-Zip 解包到临时 raw 目录；解析 `META-INF/container.xml` 找 OPF，再按 OPF spine 顺序读取 XHTML 中的 `<img>` / SVG `<image>` 本地图片引用，复制成 `pages/0001.ext`。若 spine 中找不到图片，则回退按 manifest 中的 image item 顺序抽取。纯文本/重排 EPUB 不在首版支持范围内，最终没有可用图片时返回 `NO_IMAGES`。
 - **缓存与协议**：完成后写 `.manifest.json`，`getCachedDocumentImages()` 命中即复用；`comic://` 协议放行 `userData/documents/`，因此文档页可以和普通图片/压缩包图片一样进入封面、阅读器和转换。
 - **IPC 复用**：没有新增 `document:*` IPC。`archive:prepare` 在检测到 PDF/EPUB 时委托 `prepareDocument()`；renderer 的阅读/转换前置准备流程保持一致，只把文案改为通用的“准备页面/处理中”。
@@ -297,8 +306,9 @@ webpush:reveal      兜底：在 Finder 定位产物，方便手动拖入
   （面包屑 + 操作图标按钮：编辑 / 转换活动 / 重新扫描 / 切换文件夹）。
   侧栏开合按钮在桌面态位于边栏顶部（不在内容顶栏，使面包屑与网格左缘对齐）；
   仅窄屏（侧栏切 offcanvas，isMobile）时内容顶栏左侧才出现开合入口。
-  未设库 → 空状态选目录；一级部封面网格 → 二级卷册封面网格。
-  **双击进入**：双击部卡进卷册、双击卷卡进 VolumeReader（单页/双页、左右方向、续读、相邻页预加载）。
+  未设库 → 空状态选目录；顶层书架封面网格 → 双击部逐级下钻（部里可再有子部，面包屑显示
+  完整路径、各级可点回，FolderStackCard 复用书摞卡）。图标/列表两种书架视图。
+  **双击进入**：双击部卡逐级下钻、双击卷卡进 VolumeReader（单页/双页、左右方向、续读、相邻页预加载）。
   **单击选中**：部 / 卷单击高亮（封面 ring 描边 + 标题/作者浅色反白底 bg-accent，整卡为选中单位）；
   部为单选（纯视觉反馈），卷支持多选——Cmd/Ctrl 点累加、空白拖动框选（marquee，pointer capture）、
   Cmd·Ctrl+A 全选；选中后顶栏切为「已选计数 + 全选 + 转换所选 + 退出」，封面出现复选框。
@@ -307,6 +317,14 @@ webpush:reveal      兜底：在 Finder 定位产物，方便手动拖入
   失效、内容下方空白命不中）。封面经 comic:// 加载、内描边、显示续读进度条；
   队列中/中断/失败显示状态角标，已转换显示「已转换」图标角标（封面不再放单独转换按钮）。
   转换入口：选中 → 顶栏「转换所选」——单本走单本确认弹窗（含封面预览），多本走批量确认弹窗。
+
+左侧文件夹树导航（忠实磁盘整理）
+  左侧边栏「所有漫画」即文件夹树根（shadcn Collapsible + SidebarMenuButton + SidebarMenuSub 范式，
+  点名字回书架根、点右侧箭头展开/收起其下文件夹）；点任一文件夹相当于切换面包屑定位，
+  内容区仍是统一网格（子文件夹 + 可读单文件 + 普通文件/图片文件 + 自身可读入口）。
+  1:1 忠实磁盘（不隐藏空目录、不折叠、不强分部/卷）。所有直接文件/文件夹都可点击、选中、
+  右键；**拖卡片到树节点/文件夹卡 = 移动**（封面 <img> 设 draggable=false 防其劫持拖拽手势）。
+  状态由 App 层 `FileNavContext` 跨边栏与内容区共享（见「漫画库数据层 · 浏览与目录导航」）。
 
 转换活动（队列）
   转换状态由 App 层 hook `useConvertActivity` 管理（队列顺序处理、进度订阅、产物刷新），

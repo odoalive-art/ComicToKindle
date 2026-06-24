@@ -81,7 +81,6 @@ import {
   SidebarGroupLabel,
   SidebarInset,
   SidebarMenu,
-  SidebarMenuAction,
   SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -91,7 +90,7 @@ import {
   SidebarTrigger,
   useSidebar
 } from '@/components/ui/sidebar'
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -229,7 +228,7 @@ function App(): React.JSX.Element {
     setNavKids((prev) => new Map(prev).set(dir, list))
   }, [])
 
-  // 切库 → 重置文件视图与树，预载根目录子文件夹
+  // 切库 → 重置树导航选中目录，预载根目录子文件夹
   useEffect(() => {
     setFileDir(null)
     setNavKids(new Map())
@@ -404,10 +403,9 @@ type LibraryBook = Extract<LibraryEntry, { type: 'book' }>
 type LibraryDirEntry = Awaited<ReturnType<Window['api']['library']['listVolumes']>>[number]
 type LibraryVolume = Extract<LibraryDirEntry, { type: 'book' }>
 type Artifact = Awaited<ReturnType<Window['api']['artifacts']['list']>>[number]
-// 文件视图（忠实磁盘）：树节点 + 某目录的完整直接内容
+// 目录树导航 + 某目录的忠实磁盘内容
 type DirNode = Awaited<ReturnType<Window['api']['library']['listSubdirs']>>[number]
 type RawListing = Awaited<ReturnType<Window['api']['library']['listDirRaw']>>
-type RawFolder = RawListing['folders'][number]
 type RawVolume = RawListing['files'][number]
 
 // ============ 文件导航共享状态（边栏文件夹树 ↔ 内容网格）============
@@ -415,9 +413,9 @@ type RawVolume = RawListing['files'][number]
 interface FileNavValue {
   root: string | null
   setRoot: (r: string | null) => void
-  /** null = 书架视图；非空 = 文件视图，展示该目录的网格 */
+  /** null = 书架根；非空 = 左树导航选中的目录，内容区仍展示统一网格 */
   fileDir: string | null
-  /** 进入文件视图看某目录（并切到库视图） */
+  /** 进入某目录（并切到库视图） */
   openFolder: (dir: string) => void
   /** 回到书架视图 */
   exitToShelf: () => void
@@ -464,7 +462,7 @@ function CoverImage({
       alt={alt}
       loading="lazy"
       decoding="async"
-      draggable={false} // 否则原生图片拖拽会劫持卡片的 HTML5 拖拽手势（文件视图拖动移动）
+      draggable={false} // 否则原生图片拖拽会劫持卡片的 HTML5 拖拽手势（目录网格拖动移动）
       onError={() => setFailed(true)}
       className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
     />
@@ -533,8 +531,8 @@ function FolderStackCard({
   )
 }
 
-// ============ 文件视图（Eagle 式：左常驻文件夹树 + 右混合网格，拖到树节点=移动）============
-// 与书架视图相反：1:1 忠实磁盘，不隐藏空目录、不折叠单话、不强分部/卷，专供整理。
+// ============ 左侧文件夹树导航（内容区仍使用统一网格）============
+// 树只负责定位目录；右侧网格负责选中、右键、拖拽、打开等交互。
 
 const basenameOf = (p: string): string => p.split('/').filter(Boolean).pop() ?? p
 
@@ -566,7 +564,7 @@ async function fileNavMove(
 
 /**
  * 边栏「所有漫画」项 = 文件夹树根（不再单列 Library 标签）：
- * 点名字 = 回书架；点右侧箭头 = 展开/收起其下真实文件夹（FileTreeNode）；可作拖放目标=移到库根。
+ * 单击 = 选中书架根；双击 = 展开/收起其下真实文件夹（FileTreeNode）；可作拖放目标=移到库根。
  */
 function LibraryNav({
   locale,
@@ -584,43 +582,60 @@ function LibraryNav({
   const isOver = !!root && fileNav.dropTarget === root
   const children = root ? (fileNav.kids.get(root) ?? []) : []
   return (
-    <Collapsible
-      open={open}
-      onOpenChange={() => root && fileNav.toggleNode(root)}
-      asChild
-      className="group/coll"
-    >
+    <Collapsible open={open} asChild className="group/coll">
       <SidebarMenuItem>
-        <SidebarMenuButton
-          isActive={active}
-          tooltip={text.nav.library}
-          className={isOver ? 'bg-sidebar-accent ring-1 ring-sidebar-ring' : ''}
-          onClick={onShelf}
-          onDragOver={(e) => {
-            if (!root) return
-            e.preventDefault()
-            e.dataTransfer.dropEffect = 'move'
-            fileNav.setDropTarget(root)
-          }}
-          onDragLeave={() => fileNav.setDropTarget(null)}
-          onDrop={(e) => {
-            if (!root) return
-            e.preventDefault()
-            fileNav.setDropTarget(null)
-            void fileNavMove(fileNav, text, root)
-          }}
-        >
-          <Library className="size-4 shrink-0" />
-          <span>{text.nav.library}</span>
-        </SidebarMenuButton>
         {root ? (
-          <CollapsibleTrigger asChild>
-            <SidebarMenuAction className="text-muted-foreground">
-              <ChevronRight className="transition-transform group-data-[state=open]/coll:rotate-90" />
-              <span className="sr-only">{text.library.viewFile}</span>
-            </SidebarMenuAction>
-          </CollapsibleTrigger>
-        ) : null}
+          <SidebarMenuButton
+            asChild
+            isActive={active}
+            tooltip={text.nav.library}
+            className={`group/tree-row ${isOver ? 'bg-sidebar-accent ring-1 ring-sidebar-ring' : ''}`}
+          >
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={onShelf}
+              onDoubleClick={() => fileNav.toggleNode(root)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  onShelf()
+                }
+              }}
+              onDragOver={(e) => {
+                e.preventDefault()
+                e.dataTransfer.dropEffect = 'move'
+                fileNav.setDropTarget(root)
+              }}
+              onDragLeave={() => fileNav.setDropTarget(null)}
+              onDrop={(e) => {
+                e.preventDefault()
+                fileNav.setDropTarget(null)
+                void fileNavMove(fileNav, text, root)
+              }}
+            >
+              <Library className="size-4 shrink-0" />
+              <span className="min-w-0 flex-1 truncate">{text.nav.library}</span>
+              <button
+                type="button"
+                aria-label={text.library.viewFile}
+                className="flex size-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground/65 transition-colors hover:text-foreground"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  fileNav.toggleNode(root)
+                }}
+                onDoubleClick={(e) => e.stopPropagation()}
+              >
+                <ChevronRight className="size-4 transition-transform group-data-[state=open]/coll:rotate-90" />
+              </button>
+            </div>
+          </SidebarMenuButton>
+        ) : (
+          <SidebarMenuButton isActive={active} tooltip={text.nav.library} onClick={onShelf}>
+            <Library className="size-4 shrink-0" />
+            <span className="min-w-0 flex-1 truncate">{text.nav.library}</span>
+          </SidebarMenuButton>
+        )}
         <CollapsibleContent>
           <SidebarMenuSub className="mr-0 translate-x-px pr-0">
             {children.map((c) => (
@@ -637,12 +652,9 @@ function LibraryNav({
   )
 }
 
-const FILE_GRID =
-  'grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'
-
 /**
  * 文件夹树节点（shadcn sidebar 树范式：Collapsible + SidebarMenuButton + SidebarMenuSub）。
- * 点节点 = 进入该文件夹的文件视图并展开；右侧拖放目标高亮；子节点懒加载。
+ * 单击节点 = 进入该文件夹；双击节点 = 展开/收起；右侧拖放目标高亮；子节点懒加载。
  */
 function FileTreeNode({
   node,
@@ -670,7 +682,7 @@ function FileTreeNode({
     }
   }
 
-  // 叶子文件夹（无下级）：纯导航按钮，左侧留出与展开箭头等宽的占位
+  // 叶子文件夹（无下级）：纯文字导航，和内容区网格保持轻量目录定位感。
   if (!node.hasSubfolders) {
     return (
       <SidebarMenuItem>
@@ -680,39 +692,49 @@ function FileTreeNode({
           onClick={() => fileNav.openFolder(node.path)}
           {...dropProps}
         >
-          <span className="size-4 shrink-0" />
-          <Folder className="size-4 shrink-0 text-muted-foreground" />
-          <span className="truncate">{node.name}</span>
+          <span className="min-w-0 flex-1 truncate">{node.name}</span>
         </SidebarMenuButton>
       </SidebarMenuItem>
     )
   }
 
-  // 含下级：可折叠。点按钮 = 导航 + 切换展开；children 懒加载
+  // 含下级：单击定位目录，双击展开/收起；children 懒加载
   return (
-    <Collapsible
-      open={open}
-      onOpenChange={() => fileNav.toggleNode(node.path)}
-      asChild
-      className="group/coll"
-    >
+    <Collapsible open={open} asChild className="group/coll">
       <SidebarMenuItem>
-        <CollapsibleTrigger asChild>
-          <SidebarMenuButton
-            isActive={active}
-            className={dropCls}
+        <SidebarMenuButton
+          asChild
+          isActive={active}
+          className={`group/tree-row ${dropCls}`}
+          {...dropProps}
+        >
+          <div
+            role="button"
+            tabIndex={0}
             onClick={() => fileNav.openFolder(node.path)}
-            {...dropProps}
+            onDoubleClick={() => fileNav.toggleNode(node.path)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                fileNav.openFolder(node.path)
+              }
+            }}
           >
-            <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]/coll:rotate-90" />
-            {open ? (
-              <FolderOpen className="size-4 shrink-0 text-muted-foreground" />
-            ) : (
-              <Folder className="size-4 shrink-0 text-muted-foreground" />
-            )}
-            <span className="truncate">{node.name}</span>
-          </SidebarMenuButton>
-        </CollapsibleTrigger>
+            <span className="min-w-0 flex-1 truncate">{node.name}</span>
+            <button
+              type="button"
+              aria-label={`${open ? '收起' : '展开'} ${node.name}`}
+              className="flex size-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground/65 transition-colors hover:text-foreground"
+              onClick={(e) => {
+                e.stopPropagation()
+                fileNav.toggleNode(node.path)
+              }}
+              onDoubleClick={(e) => e.stopPropagation()}
+            >
+              <ChevronRight className="size-4 transition-transform group-data-[state=open]/coll:rotate-90" />
+            </button>
+          </div>
+        </SidebarMenuButton>
         <CollapsibleContent>
           <SidebarMenuSub className="mr-0 translate-x-px pr-0">
             {(fileNav.kids.get(node.path) ?? []).map((c) => (
@@ -725,560 +747,21 @@ function FileTreeNode({
   )
 }
 
-function FileView({
-  locale,
-  onOpenVolume
-}: {
-  locale: LanguageMode
-  onOpenVolume: (vol: RawVolume) => void
-}): React.JSX.Element {
-  const text = uiText[locale]
-  const fileNav = useFileNav()
-  const root = fileNav.root ?? ''
-  const currentDir = fileNav.fileDir ?? root
-  const [listing, setListing] = useState<RawListing | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [picked, setPicked] = useState<Set<string>>(new Set())
-  const [dropTarget, setDropTarget] = useState<string | null>(null)
-  const [renameReq, setRenameReq] = useState<{ path: string; name: string; busy: boolean } | null>(
-    null
-  )
-  const [newFolderReq, setNewFolderReq] = useState<{ name: string; busy: boolean } | null>(null)
-  const [deleteReq, setDeleteReq] = useState<{ paths: string[]; busy: boolean } | null>(null)
-
-  const fileopErr = (e: unknown): string => fileopErrText(e, text)
-
-  // 当前目录或文件操作版本变化 → 拉网格内容（树由 App 层据 version 同步）
-  useEffect(() => {
-    let active = true
-    setPicked(new Set())
-    setLoading(true)
-    window.api.library
-      .listDirRaw(currentDir)
-      .then((l) => active && setListing(l))
-      .catch(
-        () =>
-          active &&
-          setListing({
-            folders: [],
-            files: [],
-            self: { readable: false, pageCount: 0, coverUrl: null }
-          })
-      )
-      .finally(() => active && setLoading(false))
-    return () => {
-      active = false
-    }
-  }, [currentDir, fileNav.version])
-
-  const navigate = (dir: string): void => fileNav.openFolder(dir)
-
-  const doMove = async (paths: string[], dest: string): Promise<void> => {
-    if (paths.length === 0) return
-    try {
-      await window.api.library.move(paths, dest)
-      toast.success(text.fileops.moved(paths.length))
-      setPicked(new Set())
-      fileNav.bump()
-    } catch (e) {
-      toast.error(fileopErr(e))
-    }
-  }
-
-  const submitRename = async (): Promise<void> => {
-    if (!renameReq || renameReq.busy || !renameReq.name.trim()) return
-    setRenameReq((s) => (s ? { ...s, busy: true } : s))
-    try {
-      await window.api.library.rename(renameReq.path, renameReq.name)
-      setRenameReq(null)
-      toast.success(text.fileops.renamed)
-      fileNav.bump()
-    } catch (e) {
-      toast.error(fileopErr(e))
-      setRenameReq((s) => (s ? { ...s, busy: false } : s))
-    }
-  }
-
-  const submitNewFolder = async (): Promise<void> => {
-    if (!newFolderReq || newFolderReq.busy || !newFolderReq.name.trim()) return
-    setNewFolderReq((s) => (s ? { ...s, busy: true } : s))
-    try {
-      await window.api.library.createFolder(currentDir, newFolderReq.name)
-      setNewFolderReq(null)
-      toast.success(text.fileops.created)
-      fileNav.bump()
-    } catch (e) {
-      toast.error(fileopErr(e))
-      setNewFolderReq((s) => (s ? { ...s, busy: false } : s))
-    }
-  }
-
-  const submitDelete = async (): Promise<void> => {
-    if (!deleteReq || deleteReq.busy) return
-    setDeleteReq((s) => (s ? { ...s, busy: true } : s))
-    try {
-      await window.api.library.trash(deleteReq.paths)
-      toast.success(text.fileops.deleted(deleteReq.paths.length))
-      setDeleteReq(null)
-      setPicked(new Set())
-      fileNav.bump()
-    } catch (e) {
-      toast.error(fileopErr(e))
-      setDeleteReq((s) => (s ? { ...s, busy: false } : s))
-    }
-  }
-
-  // 点击卡片：普通点=单选，⌘/Ctrl 点=切换多选
-  const onCardClick = (path: string, e: React.MouseEvent): void => {
-    if (e.metaKey || e.ctrlKey) {
-      setPicked((prev) => {
-        const next = new Set(prev)
-        if (next.has(path)) next.delete(path)
-        else next.add(path)
-        return next
-      })
-    } else {
-      setPicked(new Set([path]))
-    }
-  }
-
-  // 右键命中：在选区内则对整组，否则只对它
-  const targetsOf = (path: string): string[] =>
-    picked.has(path) && picked.size > 1 ? [...picked] : [path]
-
-  const onCardDragStart = (path: string): void => {
-    fileNav.setDragPaths(picked.has(path) && picked.size > 1 ? [...picked] : [path])
-  }
-
-  // 面包屑：root → currentDir
-  const crumbs: Array<{ name: string; path: string }> = (() => {
-    const out: Array<{ name: string; path: string }> = [{ name: text.nav.library, path: root }]
-    if (currentDir.startsWith(root)) {
-      let acc = root
-      for (const seg of currentDir.slice(root.length).split('/').filter(Boolean)) {
-        acc = `${acc}/${seg}`
-        out.push({ name: seg, path: acc })
-      }
-    }
-    return out
-  })()
-
-  const isEmpty =
-    !loading &&
-    listing !== null &&
-    listing.folders.length === 0 &&
-    listing.files.length === 0 &&
-    !listing.self.readable
-
-  return (
-    <div className="flex min-h-0 flex-1">
-      {/* 面包屑 + 网格（文件夹树常驻左侧边栏，见 AppSidebar） */}
-      <div className="flex min-w-0 flex-1 flex-col">
-        <div className="flex h-10 shrink-0 items-center gap-1 border-b px-3 text-sm">
-          <Breadcrumb className="min-w-0 flex-1">
-            <BreadcrumbList className="flex-nowrap">
-              {crumbs.map((c, i) => {
-                const last = i === crumbs.length - 1
-                return (
-                  <React.Fragment key={c.path}>
-                    {i > 0 ? <BreadcrumbSeparator className="shrink-0" /> : null}
-                    <BreadcrumbItem className="min-w-0">
-                      {last ? (
-                        <BreadcrumbPage className="truncate font-medium">{c.name}</BreadcrumbPage>
-                      ) : (
-                        <BreadcrumbLink asChild>
-                          <button
-                            type="button"
-                            className="truncate"
-                            onClick={() => navigate(c.path)}
-                          >
-                            {c.name}
-                          </button>
-                        </BreadcrumbLink>
-                      )}
-                    </BreadcrumbItem>
-                  </React.Fragment>
-                )
-              })}
-            </BreadcrumbList>
-          </Breadcrumb>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-7 shrink-0"
-                onClick={() => setNewFolderReq({ name: '', busy: false })}
-              >
-                <FolderPlus className="size-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{text.fileops.newFolder}</TooltipContent>
-          </Tooltip>
-        </div>
-
-        <div className="min-h-0 flex-1 overflow-y-auto p-3">
-          {loading ? (
-            <div className="flex h-full items-center justify-center text-muted-foreground">
-              <Loader2 className="size-5 animate-spin" />
-            </div>
-          ) : isEmpty ? (
-            <p className="py-16 text-center text-sm text-muted-foreground">
-              {text.fileView.emptyFolder}
-            </p>
-          ) : (
-            <div className={FILE_GRID}>
-              {/* 本文件夹自身可读（直接铺着图片）→ 阅读入口 */}
-              {listing?.self.readable ? (
-                <button
-                  type="button"
-                  onDoubleClick={() =>
-                    onOpenVolume({
-                      id: currentDir,
-                      path: currentDir,
-                      name: basenameOf(currentDir),
-                      title: basenameOf(currentDir),
-                      kind: 'folder',
-                      sourceType: 'folder',
-                      pageCount: listing.self.pageCount,
-                      coverUrl: listing.self.coverUrl
-                    } as RawVolume)
-                  }
-                  className="group flex cursor-default flex-col gap-1.5 text-left"
-                >
-                  <AspectRatio
-                    ratio={3 / 4}
-                    className="relative overflow-hidden rounded-md bg-muted ring-1 ring-primary/40"
-                  >
-                    <CoverImage src={listing.self.coverUrl} alt="" />
-                    <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 bg-primary/85 py-1 text-xs font-medium text-primary-foreground">
-                      <BookOpen className="size-3.5" />
-                      {text.fileView.readFolder}
-                    </div>
-                  </AspectRatio>
-                  <div className="truncate text-xs text-muted-foreground">
-                    {text.library.pageUnit(listing.self.pageCount)}
-                  </div>
-                </button>
-              ) : null}
-
-              {/* 子文件夹卡（可下钻 / 可作为移动目标） */}
-              {listing?.folders.map((f) => (
-                <FileFolderCard
-                  key={f.path}
-                  folder={f}
-                  picked={picked.has(f.path)}
-                  dropTarget={dropTarget === f.path}
-                  itemLabel={text.fileView.itemUnit(f.childCount)}
-                  renameLabel={text.fileops.rename}
-                  deleteLabel={text.fileops.delete}
-                  onClick={(e) => onCardClick(f.path, e)}
-                  onOpen={() => navigate(f.path)}
-                  onDragStart={() => onCardDragStart(f.path)}
-                  onDropMove={() => doMove(fileNav.getDragPaths(), f.path)}
-                  setDropTarget={(v) => setDropTarget(v ? f.path : null)}
-                  onRename={() => setRenameReq({ path: f.path, name: f.name, busy: false })}
-                  onDelete={() => setDeleteReq({ paths: targetsOf(f.path), busy: false })}
-                />
-              ))}
-
-              {/* 可读单文件（cbz/pdf/epub） */}
-              {listing?.files.map((v) => (
-                <FileVolumeCard
-                  key={v.path}
-                  vol={v}
-                  picked={picked.has(v.path)}
-                  typeLabel={fileVolumeTypeLabel(v, text)}
-                  renameLabel={text.fileops.rename}
-                  deleteLabel={text.fileops.delete}
-                  onClick={(e) => onCardClick(v.path, e)}
-                  onOpen={() => onOpenVolume(v)}
-                  onDragStart={() => onCardDragStart(v.path)}
-                  onRename={() => setRenameReq({ path: v.path, name: v.name, busy: false })}
-                  onDelete={() => setDeleteReq({ paths: targetsOf(v.path), busy: false })}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* 重命名 */}
-      <Dialog
-        open={renameReq !== null}
-        onOpenChange={(o) => (!o && !renameReq?.busy ? setRenameReq(null) : undefined)}
-      >
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>{text.fileops.renameTitle}</DialogTitle>
-            <DialogDescription>{text.fileops.renameDesc}</DialogDescription>
-          </DialogHeader>
-          <Input
-            autoFocus
-            value={renameReq?.name ?? ''}
-            placeholder={text.fileops.namePlaceholder}
-            onChange={(e) => setRenameReq((s) => (s ? { ...s, name: e.target.value } : s))}
-            onKeyDown={(e) => e.key === 'Enter' && void submitRename()}
-          />
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setRenameReq(null)}>
-              {text.fileops.cancel}
-            </Button>
-            <Button onClick={() => void submitRename()} disabled={renameReq?.busy}>
-              {text.fileops.confirm}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* 新建文件夹 */}
-      <Dialog
-        open={newFolderReq !== null}
-        onOpenChange={(o) => (!o && !newFolderReq?.busy ? setNewFolderReq(null) : undefined)}
-      >
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>{text.fileops.newFolderTitle}</DialogTitle>
-            <DialogDescription>{text.fileops.newFolderDesc}</DialogDescription>
-          </DialogHeader>
-          <Input
-            autoFocus
-            value={newFolderReq?.name ?? ''}
-            placeholder={text.fileops.newFolderPlaceholder}
-            onChange={(e) => setNewFolderReq((s) => (s ? { ...s, name: e.target.value } : s))}
-            onKeyDown={(e) => e.key === 'Enter' && void submitNewFolder()}
-          />
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setNewFolderReq(null)}>
-              {text.fileops.cancel}
-            </Button>
-            <Button onClick={() => void submitNewFolder()} disabled={newFolderReq?.busy}>
-              {text.fileops.confirm}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* 删除确认 */}
-      <AlertDialog
-        open={deleteReq !== null}
-        onOpenChange={(o) => (!o && !deleteReq?.busy ? setDeleteReq(null) : undefined)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{text.fileops.deleteTitle}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {text.fileops.deleteDesc(deleteReq?.paths.length ?? 0)}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteReq?.busy}>{text.fileops.cancel}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(e) => {
-                e.preventDefault()
-                void submitDelete()
-              }}
-            >
-              {text.fileops.delete}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
-  )
-}
-
-/** 文件视图：子文件夹卡（可下钻、可拖入移动） */
-function FileFolderCard({
-  folder,
-  picked,
-  dropTarget,
-  itemLabel,
-  renameLabel,
-  deleteLabel,
-  onClick,
-  onOpen,
-  onDragStart,
-  onDropMove,
-  setDropTarget,
-  onRename,
-  onDelete
-}: {
-  folder: RawFolder
-  picked: boolean
-  dropTarget: boolean
-  itemLabel: string
-  renameLabel: string
-  deleteLabel: string
-  onClick: (e: React.MouseEvent) => void
-  onOpen: () => void
-  onDragStart: () => void
-  onDropMove: () => void
-  setDropTarget: (v: boolean) => void
-  onRename: () => void
-  onDelete: () => void
-}): React.JSX.Element {
-  return (
-    <ContextMenu>
-      <ContextMenuTrigger asChild>
-        <div
-          draggable
-          onDragStart={(e) => {
-            e.dataTransfer.effectAllowed = 'move'
-            e.dataTransfer.setData('text/plain', 'move')
-            onDragStart()
-          }}
-          onClick={onClick}
-          onDoubleClick={onOpen}
-          onDragOver={(e) => {
-            e.preventDefault()
-            e.dataTransfer.dropEffect = 'move'
-            setDropTarget(true)
-          }}
-          onDragLeave={() => setDropTarget(false)}
-          onDrop={(e) => {
-            e.preventDefault()
-            setDropTarget(false)
-            onDropMove()
-          }}
-          className="group flex cursor-default flex-col gap-1.5 text-left"
-        >
-          <AspectRatio
-            ratio={3 / 4}
-            className={`relative overflow-hidden rounded-md bg-muted transition-all ${
-              dropTarget
-                ? 'ring-2 ring-primary'
-                : picked
-                  ? 'ring-2 ring-primary ring-offset-2 ring-offset-background'
-                  : ''
-            }`}
-          >
-            {folder.coverUrl ? (
-              <CoverImage src={folder.coverUrl} alt={folder.name} />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center text-muted-foreground">
-                <Folder className="size-10" />
-              </div>
-            )}
-            <Badge
-              variant="secondary"
-              className="absolute top-1 right-1 gap-1 bg-background/85 px-1.5 text-[10px] backdrop-blur"
-            >
-              <Folder className="size-3" />
-              {itemLabel}
-            </Badge>
-          </AspectRatio>
-          <div
-            className={`truncate rounded px-1 text-xs font-medium ${picked ? 'bg-accent' : ''}`}
-            title={folder.name}
-          >
-            {folder.name}
-          </div>
-        </div>
-      </ContextMenuTrigger>
-      <ContextMenuContent>
-        <ContextMenuItem onSelect={() => setTimeout(onRename, 0)}>
-          <Pencil className="size-4" />
-          {renameLabel}
-        </ContextMenuItem>
-        <ContextMenuSeparator />
-        <ContextMenuItem variant="destructive" onSelect={() => setTimeout(onDelete, 0)}>
-          <Trash2 className="size-4" />
-          {deleteLabel}
-        </ContextMenuItem>
-      </ContextMenuContent>
-    </ContextMenu>
-  )
-}
-
-/** 文件视图：可读单文件卡（cbz/pdf/epub） */
-function FileVolumeCard({
-  vol,
-  picked,
-  typeLabel,
-  renameLabel,
-  deleteLabel,
-  onClick,
-  onOpen,
-  onDragStart,
-  onRename,
-  onDelete
-}: {
-  vol: RawVolume
-  picked: boolean
-  typeLabel: string
-  renameLabel: string
-  deleteLabel: string
-  onClick: (e: React.MouseEvent) => void
-  onOpen: () => void
-  onDragStart: () => void
-  onRename: () => void
-  onDelete: () => void
-}): React.JSX.Element {
-  return (
-    <ContextMenu>
-      <ContextMenuTrigger asChild>
-        <div
-          draggable
-          onDragStart={(e) => {
-            e.dataTransfer.effectAllowed = 'move'
-            e.dataTransfer.setData('text/plain', 'move')
-            onDragStart()
-          }}
-          onClick={onClick}
-          onDoubleClick={onOpen}
-          className="group flex cursor-default flex-col gap-1.5 text-left"
-        >
-          <AspectRatio
-            ratio={3 / 4}
-            className={`relative overflow-hidden rounded-md bg-muted transition-all ${
-              picked ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''
-            }`}
-          >
-            <CoverImage src={vol.coverUrl} alt={vol.title} quiet />
-            {!vol.coverUrl ? (
-              <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-muted-foreground">
-                {vol.locked ? (
-                  <Lock className="size-8" />
-                ) : vol.sourceType === 'archive' ? (
-                  <FileArchive className="size-8" />
-                ) : (
-                  <FileText className="size-8" />
-                )}
-              </div>
-            ) : null}
-          </AspectRatio>
-          <div className="min-w-0">
-            <div
-              className={`truncate rounded px-1 text-xs font-medium ${picked ? 'bg-accent' : ''}`}
-              title={vol.title}
-            >
-              {vol.title}
-            </div>
-            <div className="truncate px-1 text-[11px] text-muted-foreground">{typeLabel}</div>
-          </div>
-        </div>
-      </ContextMenuTrigger>
-      <ContextMenuContent>
-        <ContextMenuItem onSelect={() => setTimeout(onRename, 0)}>
-          <Pencil className="size-4" />
-          {renameLabel}
-        </ContextMenuItem>
-        <ContextMenuSeparator />
-        <ContextMenuItem variant="destructive" onSelect={() => setTimeout(onDelete, 0)}>
-          <Trash2 className="size-4" />
-          {deleteLabel}
-        </ContextMenuItem>
-      </ContextMenuContent>
-    </ContextMenu>
-  )
-}
-
 function fileVolumeTypeLabel(v: RawVolume, text: (typeof uiText)[LanguageMode]): string {
   if (v.sourceType === 'pdf') return text.library.pdfVolume
   if (v.sourceType === 'epub') return text.library.epubVolume
   if (v.sourceType === 'archive') return text.library.fileVolume
   return text.library.pageUnit(v.pageCount)
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  const kb = bytes / 1024
+  if (kb < 1024) return `${kb.toFixed(kb >= 10 ? 0 : 1)} KB`
+  const mb = kb / 1024
+  if (mb < 1024) return `${mb.toFixed(mb >= 10 ? 0 : 1)} MB`
+  const gb = mb / 1024
+  return `${gb.toFixed(gb >= 10 ? 0 : 1)} GB`
 }
 
 const LIBRARY_GRID =
@@ -2218,8 +1701,12 @@ function LibraryView({
   const [selectedSeriesPath, setSelectedSeriesPath] = useState<string | null>(null)
   // 书架视图模式（图标/列表）+ 列表视图里就地展开的部 + 各部卷册缓存
   const [viewMode, setViewMode] = useState<LibraryViewMode>(getInitialLibraryView)
-  // 文件视图（Eagle 式忠实磁盘整理器）：由边栏文件夹树驱动，fileNav.fileDir 非空即进入
+  // 左侧树只是目录导航器；fileNav.fileDir 非空时，内容区仍使用同一套网格交互展示该目录。
   const fileMode = fileNav.fileDir !== null
+  const currentFileDir = fileNav.fileDir
+  const [rawListing, setRawListing] = useState<RawListing | null>(null)
+  const [rawLoading, setRawLoading] = useState(false)
+  const [rawDropTarget, setRawDropTarget] = useState<string | null>(null)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [volCache, setVolCache] = useState<Map<string, LibraryDirEntry[]>>(new Map())
   // 框选（橡皮筋）：在空白处按下拖动进入多选
@@ -2319,6 +1806,37 @@ function LibraryView({
       /* 刷新失败保持原状 */
     }
   }, [selected])
+
+  useEffect(() => {
+    if (currentFileDir === null) {
+      setRawListing(null)
+      return
+    }
+    setSelected(null)
+    setTrail([])
+    setVolumes([])
+    setSelectedSeriesPath(null)
+    setSelectedVols(new Set())
+    setSelectMode(false)
+    let active = true
+    setRawLoading(true)
+    window.api.library
+      .listDirRaw(currentFileDir)
+      .then((listing) => active && setRawListing(listing))
+      .catch(() => {
+        if (!active) return
+        setRawListing({
+          folders: [],
+          files: [],
+          plainFiles: [],
+          self: { readable: false, pageCount: 0, coverUrl: null }
+        })
+      })
+      .finally(() => active && setRawLoading(false))
+    return () => {
+      active = false
+    }
+  }, [currentFileDir, fileNav.version])
 
   const requestUnlock = (vol: LibraryVolume): Promise<boolean> =>
     new Promise((resolve) => {
@@ -2479,6 +1997,7 @@ function LibraryView({
 
   // 操作后刷新：卷册视图刷卷，部视图重扫
   const refreshAfterFileop = async (): Promise<void> => {
+    fileNav.bump()
     if (root) await loadSeries(root)
     if (selected) await refreshVolumes()
     // 列表视图：重拉已展开各部的卷册缓存（文件操作可能改了卷的增删/命名）
@@ -2570,7 +2089,7 @@ function LibraryView({
   }
 
   const openNewFolder = (): void => {
-    const parent = selected ? selected.path : root
+    const parent = currentFileDir ?? selected?.path ?? root
     if (!parent) return
     setNewFolderReq({ parent, name: '', busy: false })
   }
@@ -2593,6 +2112,18 @@ function LibraryView({
   const moveTargets = (): LibrarySeries[] =>
     series.filter((s): s is LibrarySeries => s.type === 'folder' && s.path !== selected?.path)
 
+  const rawSelectablePaths = useMemo(
+    () =>
+      rawListing
+        ? [
+            ...rawListing.folders.map((item) => item.path),
+            ...rawListing.files.map((item) => item.path),
+            ...rawListing.plainFiles.map((item) => item.path)
+          ]
+        : [],
+    [rawListing]
+  )
+
   const exitSelect = (): void => {
     setSelectMode(false)
     setSelectedVols(new Set())
@@ -2609,6 +2140,41 @@ function LibraryView({
     setSelectMode(next.size > 0)
   }
 
+  const onFileGridClick = (path: string, e: React.MouseEvent): void => {
+    const additive = e.metaKey || e.ctrlKey || selectMode
+    const next = new Set(additive ? selectedVols : [])
+    if (additive && next.has(path)) next.delete(path)
+    else next.add(path)
+    setSelectedVols(next)
+    setSelectMode(next.size > 0)
+  }
+
+  const onFileGridContext = (path: string): void => {
+    if (selectedVols.has(path)) return
+    setSelectedVols(new Set([path]))
+    setSelectMode(true)
+  }
+
+  const fileGridTargets = (path: string): string[] =>
+    selectedVols.has(path) && selectedVols.size > 1 ? [...selectedVols] : [path]
+
+  const onFileGridDragStart = (path: string): void => {
+    fileNav.setDragPaths(fileGridTargets(path))
+  }
+
+  const moveDraggedToFolder = async (dest: string): Promise<void> => {
+    const paths = fileNav.getDragPaths()
+    if (paths.length === 0) return
+    try {
+      await window.api.library.move(paths, dest)
+      toast.success(text.fileops.moved(paths.length))
+      exitSelect()
+      await refreshAfterFileop()
+    } catch (e) {
+      toast.error(fileopErr(e))
+    }
+  }
+
   // 双击打开阅读器：先清掉选择态再进入（解压/解锁仍在 openVolume 内处理）
   const onVolumeOpen = async (vol: LibraryVolume): Promise<void> => {
     exitSelect()
@@ -2617,9 +2183,13 @@ function LibraryView({
 
   // 当前层里可选/可转换的「卷」(book)——子部不参与多选与批量转换
   const bookVolumes = volumes.filter((v): v is LibraryVolume => v.type === 'book')
-  const allSelected = bookVolumes.length > 0 && selectedVols.size === bookVolumes.length
+  const allSelected = fileMode
+    ? rawSelectablePaths.length > 0 && selectedVols.size === rawSelectablePaths.length
+    : bookVolumes.length > 0 && selectedVols.size === bookVolumes.length
   const toggleAll = (): void => {
-    setSelectedVols(allSelected ? new Set() : new Set(bookVolumes.map((v) => v.path)))
+    const paths = fileMode ? rawSelectablePaths : bookVolumes.map((v) => v.path)
+    setSelectedVols(allSelected ? new Set() : new Set(paths))
+    setSelectMode(!allSelected && paths.length > 0)
   }
 
   // 转换所选：单本走单本确认弹窗（含封面预览），多本走批量确认弹窗
@@ -2698,8 +2268,8 @@ function LibraryView({
   const onWrapPointerMove = (e: React.PointerEvent<HTMLDivElement>): void => {
     const d = marqueeDrag.current
     if (!d) return
-    // 框选橡皮筋仅在卷册层有意义（部层无批量动作）
-    if (selected === null || volumes.length === 0) return
+    // 框选橡皮筋在卷册层和目录网格里生效；顶层书架仍只做单选反馈。
+    if (!fileMode && (selected === null || volumes.length === 0)) return
     const x = e.clientX - d.wrapRect.left
     const y = e.clientY - d.wrapRect.top
     if (!d.moved && Math.hypot(x - d.startX, y - d.startY) < 6) return
@@ -2898,6 +2468,13 @@ function LibraryView({
       const t = e.target as HTMLElement | null
       // 输入类控件内保留原生全选
       if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return
+      if (fileMode) {
+        if (rawSelectablePaths.length === 0) return
+        e.preventDefault()
+        setSelectMode(true)
+        setSelectedVols(new Set(rawSelectablePaths))
+        return
+      }
       if (selected === null || volumes.length === 0) return
       e.preventDefault()
       setSelectMode(true)
@@ -2905,7 +2482,7 @@ function LibraryView({
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [selected, volumes])
+  }, [fileMode, rawSelectablePaths, selected, volumes])
 
   // 阅读某一卷：接管整个内容区
   if (readingVolume) {
@@ -2920,7 +2497,29 @@ function LibraryView({
     )
   }
 
-  const showVolumes = selected !== null
+  const fileCrumbs = useMemo(() => {
+    if (!root || !currentFileDir || !currentFileDir.startsWith(root)) {
+      return [{ name: text.nav.library, path: root ?? '' }]
+    }
+    const crumbs: Array<{ name: string; path: string }> = [{ name: text.nav.library, path: root }]
+    let acc = root
+    for (const seg of currentFileDir.slice(root.length).split('/').filter(Boolean)) {
+      acc = `${acc}/${seg}`
+      crumbs.push({ name: seg, path: acc })
+    }
+    return crumbs
+  }, [currentFileDir, root, text.nav.library])
+
+  const rawIsEmpty =
+    fileMode &&
+    !rawLoading &&
+    rawListing !== null &&
+    rawListing.folders.length === 0 &&
+    rawListing.files.length === 0 &&
+    rawListing.plainFiles.length === 0 &&
+    !rawListing.self.readable
+
+  const showVolumes = !fileMode && selected !== null
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -3465,54 +3064,91 @@ function LibraryView({
             // 容器不设 no-drag：flex-1 撑满的空白区随顶栏可拖；只有内部可点链接单独 no-drag
             <Breadcrumb className="min-w-0 flex-1">
               <BreadcrumbList className="flex-nowrap">
-                <BreadcrumbItem className="shrink-0">
-                  {showVolumes ? (
-                    <BreadcrumbLink asChild>
-                      <button
-                        type="button"
-                        onClick={backToSeries}
-                        style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-                      >
-                        {text.nav.library}
-                      </button>
-                    </BreadcrumbLink>
-                  ) : (
-                    <BreadcrumbPage className="font-semibold text-foreground">
-                      {text.nav.library}
-                    </BreadcrumbPage>
-                  )}
-                </BreadcrumbItem>
-                {/* 下钻路径：祖先部可点击跳回，栈顶（当前部）为不可点的当前页 */}
-                {trail.map((node, i) => {
-                  const isLast = i === trail.length - 1
-                  return (
-                    <React.Fragment key={node.path}>
-                      <BreadcrumbSeparator className="shrink-0" />
-                      <BreadcrumbItem className="min-w-0">
-                        {isLast ? (
-                          <BreadcrumbPage
-                            className="truncate font-semibold text-foreground"
-                            title={node.title}
-                          >
-                            {node.title}
-                          </BreadcrumbPage>
-                        ) : (
-                          <BreadcrumbLink asChild>
-                            <button
-                              type="button"
-                              onClick={() => void navigateTrail(i)}
-                              className="truncate"
-                              title={node.title}
-                              style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+                {fileMode ? (
+                  fileCrumbs.map((node, i) => {
+                    const isLast = i === fileCrumbs.length - 1
+                    return (
+                      <React.Fragment key={`${node.path}-${i}`}>
+                        {i > 0 ? <BreadcrumbSeparator className="shrink-0" /> : null}
+                        <BreadcrumbItem className={i === 0 ? 'shrink-0' : 'min-w-0'}>
+                          {isLast ? (
+                            <BreadcrumbPage
+                              className="truncate font-semibold text-foreground"
+                              title={node.name}
                             >
-                              {node.title}
-                            </button>
-                          </BreadcrumbLink>
-                        )}
-                      </BreadcrumbItem>
-                    </React.Fragment>
-                  )
-                })}
+                              {node.name}
+                            </BreadcrumbPage>
+                          ) : (
+                            <BreadcrumbLink asChild>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  node.path ? fileNav.openFolder(node.path) : fileNav.exitToShelf()
+                                }
+                                className="truncate"
+                                title={node.name}
+                                style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+                              >
+                                {node.name}
+                              </button>
+                            </BreadcrumbLink>
+                          )}
+                        </BreadcrumbItem>
+                      </React.Fragment>
+                    )
+                  })
+                ) : (
+                  <>
+                    <BreadcrumbItem className="shrink-0">
+                      {showVolumes ? (
+                        <BreadcrumbLink asChild>
+                          <button
+                            type="button"
+                            onClick={backToSeries}
+                            style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+                          >
+                            {text.nav.library}
+                          </button>
+                        </BreadcrumbLink>
+                      ) : (
+                        <BreadcrumbPage className="font-semibold text-foreground">
+                          {text.nav.library}
+                        </BreadcrumbPage>
+                      )}
+                    </BreadcrumbItem>
+                    {/* 下钻路径：祖先部可点击跳回，栈顶（当前部）为不可点的当前页 */}
+                    {trail.map((node, i) => {
+                      const isLast = i === trail.length - 1
+                      return (
+                        <React.Fragment key={node.path}>
+                          <BreadcrumbSeparator className="shrink-0" />
+                          <BreadcrumbItem className="min-w-0">
+                            {isLast ? (
+                              <BreadcrumbPage
+                                className="truncate font-semibold text-foreground"
+                                title={node.title}
+                              >
+                                {node.title}
+                              </BreadcrumbPage>
+                            ) : (
+                              <BreadcrumbLink asChild>
+                                <button
+                                  type="button"
+                                  onClick={() => void navigateTrail(i)}
+                                  className="truncate"
+                                  title={node.title}
+                                  style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+                                >
+                                  {node.title}
+                                </button>
+                              </BreadcrumbLink>
+                            )}
+                          </BreadcrumbItem>
+                        </React.Fragment>
+                      )
+                    })}
+                  </>
+                )}
               </BreadcrumbList>
             </Breadcrumb>
           )}
@@ -3526,14 +3162,16 @@ function LibraryView({
                   <Button variant="ghost" size="sm" onClick={toggleAll}>
                     {allSelected ? text.activity.selectNone : text.activity.selectAll}
                   </Button>
-                  <Button
-                    size="sm"
-                    disabled={selectedVols.size === 0}
-                    onClick={() => convertSelected()}
-                  >
-                    <BookUp className="size-4" />
-                    {text.activity.convertSelected(selectedVols.size)}
-                  </Button>
+                  {!fileMode ? (
+                    <Button
+                      size="sm"
+                      disabled={selectedVols.size === 0}
+                      onClick={() => convertSelected()}
+                    >
+                      <BookUp className="size-4" />
+                      {text.activity.convertSelected(selectedVols.size)}
+                    </Button>
+                  ) : null}
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button variant="ghost" size="icon" onClick={exitSelect}>
@@ -3641,8 +3279,6 @@ function LibraryView({
               </EmptyContent>
             </Empty>
           </div>
-        ) : fileMode ? (
-          <FileView locale={locale} onOpenVolume={(v) => void onVolumeOpen(v as LibraryVolume)} />
         ) : (
           // 用原生滚动容器而非 Radix ScrollArea：后者 Viewport 内层 display:table 使
           // min-h-full 失效、内容下方空白不在容器内（空白单击取消选择会失灵）。容器自身
@@ -3665,7 +3301,369 @@ function LibraryView({
                 }}
               />
             ) : null}
-            {loading && !showVolumes ? (
+            {fileMode ? (
+              rawLoading && rawListing === null ? (
+                <div className="h-full" />
+              ) : rawIsEmpty ? (
+                <p className="py-16 text-center text-sm text-muted-foreground">
+                  {text.fileView.emptyFolder}
+                </p>
+              ) : (
+                <div className={LIBRARY_GRID}>
+                  {rawListing?.self.readable ? (
+                    <button
+                      type="button"
+                      onDoubleClick={() =>
+                        void onVolumeOpen({
+                          id: currentFileDir ?? '',
+                          path: currentFileDir ?? '',
+                          name: basenameOf(currentFileDir ?? ''),
+                          title: basenameOf(currentFileDir ?? ''),
+                          kind: 'folder',
+                          sourceType: 'folder',
+                          pageCount: rawListing.self.pageCount,
+                          coverUrl: rawListing.self.coverUrl,
+                          type: 'book',
+                          author: null
+                        })
+                      }
+                      className="group flex cursor-default flex-col gap-2 text-left"
+                    >
+                      <div className="relative">
+                        <AspectRatio
+                          ratio={3 / 4}
+                          className="relative overflow-hidden rounded-lg bg-muted ring-1 ring-primary/40 transition-all"
+                        >
+                          <CoverImage src={rawListing.self.coverUrl} alt="" />
+                          <div className="pointer-events-none absolute inset-0 rounded-lg border border-foreground/10" />
+                          <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 bg-primary/85 py-1 text-xs font-medium text-primary-foreground">
+                            <BookOpen className="size-3.5" />
+                            {text.fileView.readFolder}
+                          </div>
+                        </AspectRatio>
+                      </div>
+                      <div className="min-w-0 rounded-md px-1.5 py-0.5">
+                        <div
+                          className="truncate text-sm font-medium"
+                          title={basenameOf(currentFileDir ?? '')}
+                        >
+                          {basenameOf(currentFileDir ?? '')}
+                        </div>
+                        <div className="truncate text-xs text-muted-foreground">
+                          {text.library.pageUnit(rawListing.self.pageCount)}
+                        </div>
+                      </div>
+                    </button>
+                  ) : null}
+
+                  {rawListing?.folders.map((folder) => {
+                    const picked = selectedVols.has(folder.path)
+                    const isDrop = rawDropTarget === folder.path
+                    return (
+                      <ContextMenu key={folder.path}>
+                        <ContextMenuTrigger asChild>
+                          <div
+                            data-vol-card
+                            data-vol-path={folder.path}
+                            draggable
+                            onClick={(e) => onFileGridClick(folder.path, e)}
+                            onContextMenu={() => onFileGridContext(folder.path)}
+                            onDoubleClick={() => fileNav.openFolder(folder.path)}
+                            onDragStart={(e) => {
+                              e.dataTransfer.effectAllowed = 'move'
+                              e.dataTransfer.setData('text/plain', 'move')
+                              onFileGridDragStart(folder.path)
+                            }}
+                            onDragOver={(e) => {
+                              e.preventDefault()
+                              e.dataTransfer.dropEffect = 'move'
+                              setRawDropTarget(folder.path)
+                            }}
+                            onDragLeave={() => setRawDropTarget(null)}
+                            onDrop={(e) => {
+                              e.preventDefault()
+                              setRawDropTarget(null)
+                              void moveDraggedToFolder(folder.path)
+                            }}
+                            className="group flex cursor-default flex-col gap-2 text-left"
+                          >
+                            <div className="relative">
+                              <AspectRatio
+                                ratio={3 / 4}
+                                className={`relative overflow-hidden rounded-lg bg-muted transition-all ${
+                                  isDrop
+                                    ? 'ring-2 ring-primary'
+                                    : picked
+                                      ? 'ring-2 ring-primary ring-offset-2 ring-offset-background'
+                                      : selectMode
+                                        ? 'brightness-[0.7] dark:brightness-[0.82]'
+                                        : ''
+                                }`}
+                              >
+                                {folder.coverUrl ? (
+                                  <CoverImage src={folder.coverUrl} alt={folder.name} />
+                                ) : (
+                                  <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                                    <Folder className="size-10" />
+                                  </div>
+                                )}
+                                <div className="pointer-events-none absolute inset-0 rounded-lg border border-foreground/10" />
+                              </AspectRatio>
+                              <Badge
+                                variant="secondary"
+                                className="absolute top-1.5 right-1.5 max-w-[calc(100%-0.75rem)] gap-1 truncate bg-background/85 backdrop-blur"
+                              >
+                                <Folder className="size-3" />
+                                {text.fileView.itemUnit(folder.childCount)}
+                              </Badge>
+                              {selectMode ? (
+                                <div className="pointer-events-none absolute top-1.5 left-1.5">
+                                  <Checkbox
+                                    checked={picked}
+                                    className="size-6 border-2 bg-background/85 backdrop-blur data-[state=checked]:bg-primary"
+                                  />
+                                </div>
+                              ) : null}
+                            </div>
+                            <div
+                              className={`min-w-0 rounded-md px-1.5 py-0.5 ${
+                                picked ? 'bg-accent text-accent-foreground' : ''
+                              }`}
+                            >
+                              <div className="truncate text-sm font-medium" title={folder.name}>
+                                {folder.name}
+                              </div>
+                              <div className="truncate text-xs text-muted-foreground">
+                                {text.fileView.itemUnit(folder.childCount)}
+                              </div>
+                            </div>
+                          </div>
+                        </ContextMenuTrigger>
+                        <ContextMenuContent>
+                          <ContextMenuItem
+                            onSelect={() =>
+                              deferOpen(() =>
+                                setRenameReq({ path: folder.path, name: folder.name, busy: false })
+                              )
+                            }
+                          >
+                            <Pencil className="size-4" />
+                            {text.fileops.rename}
+                          </ContextMenuItem>
+                          <ContextMenuSeparator />
+                          <ContextMenuItem
+                            variant="destructive"
+                            onSelect={() =>
+                              deferOpen(() =>
+                                setDeleteReq({
+                                  paths: fileGridTargets(folder.path),
+                                  busy: false
+                                })
+                              )
+                            }
+                          >
+                            <Trash2 className="size-4" />
+                            {text.fileops.delete}
+                          </ContextMenuItem>
+                        </ContextMenuContent>
+                      </ContextMenu>
+                    )
+                  })}
+
+                  {rawListing?.files.map((file) => {
+                    const picked = selectedVols.has(file.path)
+                    return (
+                      <ContextMenu key={file.path}>
+                        <ContextMenuTrigger asChild>
+                          <div
+                            data-vol-card
+                            data-vol-path={file.path}
+                            draggable
+                            onClick={(e) => onFileGridClick(file.path, e)}
+                            onContextMenu={() => onFileGridContext(file.path)}
+                            onDoubleClick={() => void onVolumeOpen(file as LibraryVolume)}
+                            onDragStart={(e) => {
+                              e.dataTransfer.effectAllowed = 'move'
+                              e.dataTransfer.setData('text/plain', 'move')
+                              onFileGridDragStart(file.path)
+                            }}
+                            className="group flex cursor-default flex-col gap-2 text-left"
+                          >
+                            <div className="relative">
+                              <AspectRatio
+                                ratio={3 / 4}
+                                className={`relative overflow-hidden rounded-lg bg-muted transition-all ${
+                                  picked
+                                    ? 'ring-2 ring-primary ring-offset-2 ring-offset-background'
+                                    : selectMode
+                                      ? 'brightness-[0.7] dark:brightness-[0.82]'
+                                      : ''
+                                }`}
+                              >
+                                <CoverImage src={file.coverUrl} alt={file.title} quiet />
+                                {!file.coverUrl ? (
+                                  <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-muted-foreground">
+                                    {file.locked ? (
+                                      <Lock className="size-8" />
+                                    ) : file.sourceType === 'archive' ? (
+                                      <FileArchive className="size-8" />
+                                    ) : (
+                                      <FileText className="size-8" />
+                                    )}
+                                  </div>
+                                ) : null}
+                                <div className="pointer-events-none absolute inset-0 rounded-lg border border-foreground/10" />
+                              </AspectRatio>
+                              {selectMode ? (
+                                <div className="pointer-events-none absolute top-1.5 right-1.5">
+                                  <Checkbox
+                                    checked={picked}
+                                    className="size-6 border-2 bg-background/85 backdrop-blur data-[state=checked]:bg-primary"
+                                  />
+                                </div>
+                              ) : null}
+                            </div>
+                            <div
+                              className={`min-w-0 rounded-md px-1.5 py-0.5 ${
+                                picked ? 'bg-accent text-accent-foreground' : ''
+                              }`}
+                            >
+                              <div className="truncate text-sm font-medium" title={file.title}>
+                                {file.title}
+                              </div>
+                              <div className="truncate text-xs text-muted-foreground">
+                                {fileVolumeTypeLabel(file, text)}
+                              </div>
+                            </div>
+                          </div>
+                        </ContextMenuTrigger>
+                        <ContextMenuContent>
+                          <ContextMenuItem
+                            onSelect={() =>
+                              deferOpen(() =>
+                                setRenameReq({ path: file.path, name: file.name, busy: false })
+                              )
+                            }
+                          >
+                            <Pencil className="size-4" />
+                            {text.fileops.rename}
+                          </ContextMenuItem>
+                          <ContextMenuSeparator />
+                          <ContextMenuItem
+                            variant="destructive"
+                            onSelect={() =>
+                              deferOpen(() =>
+                                setDeleteReq({ paths: fileGridTargets(file.path), busy: false })
+                              )
+                            }
+                          >
+                            <Trash2 className="size-4" />
+                            {text.fileops.delete}
+                          </ContextMenuItem>
+                        </ContextMenuContent>
+                      </ContextMenu>
+                    )
+                  })}
+
+                  {rawListing?.plainFiles.map((file) => {
+                    const picked = selectedVols.has(file.path)
+                    return (
+                      <ContextMenu key={file.path}>
+                        <ContextMenuTrigger asChild>
+                          <div
+                            data-vol-card
+                            data-vol-path={file.path}
+                            draggable
+                            onClick={(e) => onFileGridClick(file.path, e)}
+                            onContextMenu={() => onFileGridContext(file.path)}
+                            onDragStart={(e) => {
+                              e.dataTransfer.effectAllowed = 'move'
+                              e.dataTransfer.setData('text/plain', 'move')
+                              onFileGridDragStart(file.path)
+                            }}
+                            className="group flex cursor-default flex-col gap-2 text-left"
+                          >
+                            <div className="relative">
+                              <AspectRatio
+                                ratio={3 / 4}
+                                className={`relative overflow-hidden rounded-lg bg-muted transition-all ${
+                                  picked
+                                    ? 'ring-2 ring-primary ring-offset-2 ring-offset-background'
+                                    : selectMode
+                                      ? 'brightness-[0.7] dark:brightness-[0.82]'
+                                      : ''
+                                }`}
+                              >
+                                {file.coverUrl ? (
+                                  <CoverImage src={file.coverUrl} alt={file.name} />
+                                ) : (
+                                  <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                                    <FileText className="size-8" />
+                                  </div>
+                                )}
+                                <div className="pointer-events-none absolute inset-0 rounded-lg border border-foreground/10" />
+                              </AspectRatio>
+                              {file.ext ? (
+                                <Badge
+                                  variant="secondary"
+                                  className="absolute top-1.5 right-1.5 max-w-[calc(100%-0.75rem)] truncate bg-background/85 backdrop-blur"
+                                >
+                                  {file.ext}
+                                </Badge>
+                              ) : null}
+                              {selectMode ? (
+                                <div className="pointer-events-none absolute top-1.5 left-1.5">
+                                  <Checkbox
+                                    checked={picked}
+                                    className="size-6 border-2 bg-background/85 backdrop-blur data-[state=checked]:bg-primary"
+                                  />
+                                </div>
+                              ) : null}
+                            </div>
+                            <div
+                              className={`min-w-0 rounded-md px-1.5 py-0.5 ${
+                                picked ? 'bg-accent text-accent-foreground' : ''
+                              }`}
+                            >
+                              <div className="truncate text-sm font-medium" title={file.name}>
+                                {file.name}
+                              </div>
+                              <div className="truncate text-xs text-muted-foreground">
+                                {formatFileSize(file.sizeBytes)}
+                              </div>
+                            </div>
+                          </div>
+                        </ContextMenuTrigger>
+                        <ContextMenuContent>
+                          <ContextMenuItem
+                            onSelect={() =>
+                              deferOpen(() =>
+                                setRenameReq({ path: file.path, name: file.name, busy: false })
+                              )
+                            }
+                          >
+                            <Pencil className="size-4" />
+                            {text.fileops.rename}
+                          </ContextMenuItem>
+                          <ContextMenuSeparator />
+                          <ContextMenuItem
+                            variant="destructive"
+                            onSelect={() =>
+                              deferOpen(() =>
+                                setDeleteReq({ paths: fileGridTargets(file.path), busy: false })
+                              )
+                            }
+                          >
+                            <Trash2 className="size-4" />
+                            {text.fileops.delete}
+                          </ContextMenuItem>
+                        </ContextMenuContent>
+                      </ContextMenu>
+                    )
+                  })}
+                </div>
+              )
+            ) : loading && !showVolumes ? (
               <div className={LIBRARY_GRID}>
                 {Array.from({ length: 12 }).map((_, i) => (
                   <div key={i} className="flex flex-col gap-2">
@@ -5071,7 +5069,7 @@ function AppSidebar({
                   <SidebarMenu>
                     {group.items.map((item, itemIdx) => {
                       const uniqueKey = `${group.titleKey}-${item.id}-${itemIdx}`
-                      // 「所有漫画」即文件夹树根：点名字回书架、点箭头展开其下文件夹
+                      // 「所有漫画」即文件夹树根：单击选中书架根，双击展开/收起
                       if (item.id === 'library') {
                         return (
                           <LibraryNav

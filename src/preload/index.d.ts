@@ -40,9 +40,19 @@ export interface DirNode {
 }
 
 /** 文件视图：某目录下的完整直接内容（忠实磁盘，不做部/卷折叠/隐藏） */
+export interface RawPlainFile {
+  id: string
+  path: string
+  name: string
+  ext: string
+  sizeBytes: number
+  coverUrl: string | null
+}
+
 export interface RawListing {
   folders: Array<DirNode & { childCount: number; coverUrl: string | null }>
   files: LibraryVolume[]
+  plainFiles: RawPlainFile[]
   self: { readable: boolean; pageCount: number; coverUrl: string | null }
 }
 
