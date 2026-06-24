@@ -4,7 +4,7 @@ import { electronAPI } from '@electron-toolkit/preload'
 // Custom APIs for renderer
 const api = {
   library: {
-    create: (name: string): Promise<string | null> => ipcRenderer.invoke('library:create', name),
+    create: (): Promise<string | null> => ipcRenderer.invoke('library:create'),
     open: (): Promise<string | null> => ipcRenderer.invoke('library:open'),
     getSaved: (): Promise<string | null> => ipcRenderer.invoke('library:getSaved'),
     view: () => ipcRenderer.invoke('library:view'),

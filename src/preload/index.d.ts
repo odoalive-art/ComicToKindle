@@ -83,7 +83,7 @@ export interface ImportProgress {
 }
 
 export interface LibraryAPI {
-  create: (name: string) => Promise<string | null>
+  create: () => Promise<string | null>
   open: () => Promise<string | null>
   getSaved: () => Promise<string | null>
   view: () => Promise<LibraryView>

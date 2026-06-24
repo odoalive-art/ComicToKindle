@@ -2103,10 +2103,12 @@ function LibraryView({
   }
 
   const createManagedLibrary = async (): Promise<void> => {
-    const name = window.prompt(text.library.createLibrary, 'ComicToKindle')
-    if (!name?.trim()) return
+    if (!window.api?.library) {
+      toast.error('漫画库接口未就绪，请重启 npm run dev')
+      return
+    }
     try {
-      const created = await window.api.library.create(name.trim())
+      const created = await window.api.library.create()
       if (!created) return
       setRoot(created)
       setSelected(null)
@@ -2114,7 +2116,7 @@ function LibraryView({
       setVolumes([])
       await loadSeries(created)
     } catch (err) {
-      toast.error(`${err}`)
+      toast.error(`${err}`.includes('NAME_EXISTS') ? text.fileops.errNameExists : `${err}`)
     }
   }
 

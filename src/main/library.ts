@@ -1245,17 +1245,20 @@ function handleComicProtocol(): void {
 export function setupLibrary(): void {
   handleComicProtocol()
 
-  ipcMain.handle('library:create', async (event, name: string) => {
+  ipcMain.handle('library:create', async (event) => {
     const win = BrowserWindow.fromWebContents(event.sender)
-    const options: Electron.OpenDialogOptions = {
-      properties: ['openDirectory', 'createDirectory'],
-      title: '选择新库包保存位置'
+    const options: Electron.SaveDialogOptions = {
+      title: '新建 ComicToKindle 库包',
+      defaultPath: `ComicToKindle${MANAGED_EXT}`,
+      nameFieldLabel: '库包名称',
+      buttonLabel: '新建',
+      properties: ['createDirectory']
     }
-    const { canceled, filePaths } = win
-      ? await dialog.showOpenDialog(win, options)
-      : await dialog.showOpenDialog(options)
-    if (canceled || filePaths.length === 0) return null
-    return createLibrary(filePaths[0], name)
+    const { canceled, filePath } = win
+      ? await dialog.showSaveDialog(win, options)
+      : await dialog.showSaveDialog(options)
+    if (canceled || !filePath) return null
+    return createLibrary(dirname(filePath), basename(filePath))
   })
 
   ipcMain.handle('library:open', async (event) => {
