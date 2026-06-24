@@ -40,19 +40,7 @@ const api = {
     getSavedRoot: (): Promise<string | null> => ipcRenderer.invoke('library:getSavedRoot'),
     scan: (root: string) => ipcRenderer.invoke('library:scan', root),
     listVolumes: (seriesPath: string) => ipcRenderer.invoke('library:listVolumes', seriesPath),
-    listSubdirs: (dir: string) => ipcRenderer.invoke('library:listSubdirs', dir),
-    listDirRaw: (dir: string) => ipcRenderer.invoke('library:listDirRaw', dir),
-    inspectVolume: (volumePath: string) => ipcRenderer.invoke('library:inspectVolume', volumePath),
-    listPages: (volumePath: string) => ipcRenderer.invoke('library:listPages', volumePath),
-    setSeriesMeta: (name: string, meta: { title: string; author: string | null }) =>
-      ipcRenderer.invoke('library:setSeriesMeta', name, meta),
-    rename: (targetPath: string, newName: string): Promise<string> =>
-      ipcRenderer.invoke('library:rename', targetPath, newName),
-    move: (sourcePaths: string[], destDir: string): Promise<void> =>
-      ipcRenderer.invoke('library:move', sourcePaths, destDir),
-    createFolder: (parentPath: string, name: string): Promise<string> =>
-      ipcRenderer.invoke('library:createFolder', parentPath, name),
-    trash: (paths: string[]): Promise<void> => ipcRenderer.invoke('library:trash', paths)
+    listPages: (volumePath: string) => ipcRenderer.invoke('library:listPages', volumePath)
   },
   archive: {
     prepare: (filePath: string) => ipcRenderer.invoke('archive:prepare', filePath),

@@ -82,47 +82,6 @@ export interface ImportProgress {
   name: string
 }
 
-/** 文件视图树节点：某目录的一个直接子文件夹（忠实磁盘） */
-export interface DirNode {
-  id: string
-  path: string
-  name: string
-  hasSubfolders: boolean
-}
-
-/** 文件视图：某目录下的完整直接内容（忠实磁盘，不做部/卷折叠/隐藏） */
-export interface RawPlainFile {
-  id: string
-  path: string
-  name: string
-  ext: string
-  sizeBytes: number
-  coverUrl: string | null
-}
-
-export interface RawListing {
-  folders: Array<
-    DirNode & {
-      childCount: number
-      coverUrl: string | null
-      title: string
-      author: string | null
-      readable: boolean
-      pageCount: number
-    }
-  >
-  files: LibraryVolume[]
-  plainFiles: RawPlainFile[]
-  self: {
-    readable: boolean
-    pageCount: number
-    coverUrl: string | null
-    name: string
-    title: string
-    author: string | null
-  }
-}
-
 export interface LibraryAPI {
   create: (name: string) => Promise<string | null>
   open: () => Promise<string | null>
@@ -154,32 +113,9 @@ export interface LibraryAPI {
   pickFolder: () => Promise<string | null>
   getSavedRoot: () => Promise<string | null>
   scan: (root: string) => Promise<LibraryEntry[]>
-  /** 列出某「部」目录下的条目（可能含可继续下钻的子部），与顶层书架同构 */
+  /** 列出某「部」下的卷册条目（托管库读 manifest） */
   listVolumes: (seriesPath: string) => Promise<LibraryEntry[]>
-  /** 文件视图树：某目录的直接子文件夹（忠实，含空目录） */
-  listSubdirs: (dir: string) => Promise<DirNode[]>
-  /** 文件视图网格：某目录的完整直接内容（忠实磁盘） */
-  listDirRaw: (dir: string) => Promise<RawListing>
-  /** 懒加载单文件卷的页数/加密态/封面（列目录瞬开后由 renderer 后台补齐） */
-  inspectVolume: (volumePath: string) => Promise<{
-    pageCount: number
-    locked: boolean
-    coverUrl: string | null
-  }>
   listPages: (volumePath: string) => Promise<string[]>
-  /** 保存某部漫画的名称/作者覆盖（按部文件夹名为键），返回叠加后的结果 */
-  setSeriesMeta: (
-    name: string,
-    meta: { title: string; author: string | null }
-  ) => Promise<{ title: string; author: string | null }>
-  /** 重命名部/卷（文件夹或单文件，库内），返回新绝对路径 */
-  rename: (targetPath: string, newName: string) => Promise<string>
-  /** 把若干部/卷移动到目标文件夹（同库内） */
-  move: (sourcePaths: string[], destDir: string) => Promise<void>
-  /** 在父目录下新建文件夹，返回新绝对路径 */
-  createFolder: (parentPath: string, name: string) => Promise<string>
-  /** 把若干部/卷移入系统废纸篓 */
-  trash: (paths: string[]) => Promise<void>
 }
 
 export type ArchivePrepareStatus = 'ready' | 'needs-password' | 'error'
