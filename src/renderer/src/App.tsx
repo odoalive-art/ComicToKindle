@@ -1990,7 +1990,8 @@ function LibraryView({
     // 这类事件的 DOM target 不在 wrap 内——若不剔除，点击菜单项会被误判为「空白处按下」从而
     // 起框选 + setPointerCapture，吞掉点击，导致菜单项点了没反应、菜单也不收起。
     if (!wrap.contains(el)) return
-    if (el.closest('[data-vol-card],[data-series-card]')) return
+    // 卡片与交互元素（空状态的导入按钮等）不触发框选，否则 setPointerCapture 会吞掉点击
+    if (el.closest('button, a, [data-vol-card], [data-series-card]')) return
     const wrapRect = wrap.getBoundingClientRect()
     marqueeDrag.current = {
       startX: e.clientX - wrapRect.left,
@@ -2870,8 +2871,20 @@ function LibraryView({
           </DialogHeader>
           {importReq ? (
             <>
-              <div className="min-h-0 flex-1 space-y-3 overflow-y-auto">
-                <div className="divide-y rounded-md border">
+              <label className="flex shrink-0 items-start gap-2 rounded-md border border-destructive/25 bg-destructive/5 p-3 text-sm">
+                <Checkbox
+                  checked={importReq.deleteSourceAfter}
+                  disabled={importReq.busy}
+                  onCheckedChange={(checked) =>
+                    setImportReq((s) => (s ? { ...s, deleteSourceAfter: checked === true } : s))
+                  }
+                />
+                <span className="leading-5 text-muted-foreground">
+                  {text.library.deleteSourceAfterImport}
+                </span>
+              </label>
+              <ScrollArea className="min-h-0 flex-1 rounded-md border">
+                <div className="divide-y">
                   {importReq.scan.candidates.map((item) => (
                     <div key={item.sourcePath} className="flex items-center gap-2 px-3 py-2">
                       <BookText className="size-4 shrink-0 text-muted-foreground" />
@@ -2886,19 +2899,7 @@ function LibraryView({
                     </div>
                   ))}
                 </div>
-                <label className="flex items-start gap-2 rounded-md border border-destructive/25 bg-destructive/5 p-3 text-sm">
-                  <Checkbox
-                    checked={importReq.deleteSourceAfter}
-                    disabled={importReq.busy}
-                    onCheckedChange={(checked) =>
-                      setImportReq((s) => (s ? { ...s, deleteSourceAfter: checked === true } : s))
-                    }
-                  />
-                  <span className="leading-5 text-muted-foreground">
-                    {text.library.deleteSourceAfterImport}
-                  </span>
-                </label>
-              </div>
+              </ScrollArea>
               <DialogFooter>
                 <Button
                   type="button"
