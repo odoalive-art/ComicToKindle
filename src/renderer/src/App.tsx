@@ -84,11 +84,13 @@ import {
   SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
   SidebarProvider,
   SidebarSeparator,
   SidebarTrigger,
   useSidebar
 } from '@/components/ui/sidebar'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -248,12 +250,14 @@ function App(): React.JSX.Element {
     openFolder: (dir) => {
       setActiveView('library')
       setFileDir(dir)
-      // 展开 root→dir 整条链，方便左树定位
+      // 仅展开 root→dir 的祖先链（不含 dir 自身，dir 的展开/收起交给其节点的折叠开关，
+      // 否则点已展开的文件夹会被强制展开、无法收起）；方便左树定位选中项。
       if (libRoot && dir.startsWith(libRoot)) {
         const chain = new Set<string>([libRoot])
         let acc = libRoot
-        for (const seg of dir.slice(libRoot.length).split('/').filter(Boolean)) {
-          acc = `${acc}/${seg}`
+        const segs = dir.slice(libRoot.length).split('/').filter(Boolean)
+        for (let i = 0; i < segs.length - 1; i++) {
+          acc = `${acc}/${segs[i]}`
           chain.add(acc)
         }
         setNavExpanded((prev) => new Set([...prev, ...chain]))
@@ -565,116 +569,97 @@ function FileTree({ locale }: { locale: LanguageMode }): React.JSX.Element | nul
     }
   }
   return (
-    <div className="px-1 pb-1">
-      <FileTreeRow
-        node={rootNode}
-        depth={0}
-        currentDir={fileNav.fileDir ?? ''}
-        expanded={fileNav.expanded}
-        kids={fileNav.kids}
-        dropTarget={fileNav.dropTarget}
-        onToggle={fileNav.toggleNode}
-        onSelect={fileNav.openFolder}
-        onDropMove={(dest) => void dropMove(dest)}
-        setDropTarget={fileNav.setDropTarget}
-      />
-    </div>
+    <SidebarMenu>
+      <FileTreeNode node={rootNode} onDropTo={(dest) => void dropMove(dest)} />
+    </SidebarMenu>
   )
 }
 
 const FILE_GRID =
   'grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'
 
-/** 左侧文件夹树的一行（含懒加载子节点、拖放目标高亮） */
-function FileTreeRow({
+/**
+ * 文件夹树节点（shadcn sidebar 树范式：Collapsible + SidebarMenuButton + SidebarMenuSub）。
+ * 点节点 = 进入该文件夹的文件视图并展开；右侧拖放目标高亮；子节点懒加载。
+ */
+function FileTreeNode({
   node,
-  depth,
-  currentDir,
-  expanded,
-  kids,
-  dropTarget,
-  onToggle,
-  onSelect,
-  onDropMove,
-  setDropTarget
+  onDropTo
 }: {
   node: DirNode
-  depth: number
-  currentDir: string
-  expanded: Set<string>
-  kids: Map<string, DirNode[]>
-  dropTarget: string | null
-  onToggle: (path: string) => void
-  onSelect: (path: string) => void
-  onDropMove: (dest: string) => void
-  setDropTarget: (path: string | null) => void
+  onDropTo: (dest: string) => void
 }): React.JSX.Element {
-  const isOpen = expanded.has(node.path)
-  const selected = currentDir === node.path
-  const children = kids.get(node.path)
-  return (
-    <div>
-      <div
-        onClick={() => onSelect(node.path)}
-        onDragOver={(e) => {
-          e.preventDefault()
-          e.dataTransfer.dropEffect = 'move'
-          setDropTarget(node.path)
-        }}
-        onDragLeave={() => setDropTarget(null)}
-        onDrop={(e) => {
-          e.preventDefault()
-          setDropTarget(null)
-          onDropMove(node.path)
-        }}
-        style={{ paddingLeft: depth * 14 + 8 }}
-        className={`flex h-7 cursor-default items-center gap-1 rounded-md pr-2 text-sm ${
-          dropTarget === node.path
-            ? 'bg-primary/20 ring-1 ring-primary'
-            : selected
-              ? 'bg-accent text-accent-foreground'
-              : 'hover:bg-accent/50'
-        }`}
-      >
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation()
-            if (node.hasSubfolders) onToggle(node.path)
-          }}
-          className={`flex size-4 shrink-0 items-center justify-center rounded text-muted-foreground ${
-            node.hasSubfolders ? 'hover:bg-foreground/10' : 'invisible'
-          }`}
+  const fileNav = useFileNav()
+  const open = fileNav.expanded.has(node.path)
+  const active = fileNav.fileDir === node.path
+  const isOver = fileNav.dropTarget === node.path
+  const dropCls = isOver ? 'bg-sidebar-accent ring-1 ring-sidebar-ring' : ''
+  const dropProps = {
+    onDragOver: (e: React.DragEvent) => {
+      e.preventDefault()
+      e.dataTransfer.dropEffect = 'move'
+      fileNav.setDropTarget(node.path)
+    },
+    onDragLeave: () => fileNav.setDropTarget(null),
+    onDrop: (e: React.DragEvent) => {
+      e.preventDefault()
+      fileNav.setDropTarget(null)
+      onDropTo(node.path)
+    }
+  }
+
+  // 叶子文件夹（无下级）：纯导航按钮，左侧留出与展开箭头等宽的占位
+  if (!node.hasSubfolders) {
+    return (
+      <SidebarMenuItem>
+        <SidebarMenuButton
+          isActive={active}
+          className={dropCls}
+          onClick={() => fileNav.openFolder(node.path)}
+          {...dropProps}
         >
-          {isOpen ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
-        </button>
-        {isOpen ? (
-          <FolderOpen className="size-4 shrink-0 text-muted-foreground" />
-        ) : (
+          <span className="size-4 shrink-0" />
           <Folder className="size-4 shrink-0 text-muted-foreground" />
-        )}
-        <span className="min-w-0 flex-1 truncate" title={node.name}>
-          {node.name}
-        </span>
-      </div>
-      {isOpen && children
-        ? children.map((c) => (
-            <FileTreeRow
-              key={c.path}
-              node={c}
-              depth={depth + 1}
-              currentDir={currentDir}
-              expanded={expanded}
-              kids={kids}
-              dropTarget={dropTarget}
-              onToggle={onToggle}
-              onSelect={onSelect}
-              onDropMove={onDropMove}
-              setDropTarget={setDropTarget}
-            />
-          ))
-        : null}
-    </div>
+          <span className="truncate">{node.name}</span>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    )
+  }
+
+  // 含下级：可折叠。点按钮 = 导航 + 切换展开；children 懒加载
+  return (
+    <Collapsible
+      open={open}
+      onOpenChange={() => fileNav.toggleNode(node.path)}
+      asChild
+      className="group/coll"
+    >
+      <SidebarMenuItem>
+        <CollapsibleTrigger asChild>
+          <SidebarMenuButton
+            isActive={active}
+            className={dropCls}
+            onClick={() => fileNav.openFolder(node.path)}
+            {...dropProps}
+          >
+            <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]/coll:rotate-90" />
+            {open ? (
+              <FolderOpen className="size-4 shrink-0 text-muted-foreground" />
+            ) : (
+              <Folder className="size-4 shrink-0 text-muted-foreground" />
+            )}
+            <span className="truncate">{node.name}</span>
+          </SidebarMenuButton>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <SidebarMenuSub className="mr-0 translate-x-px pr-0">
+            {(fileNav.kids.get(node.path) ?? []).map((c) => (
+              <FileTreeNode key={c.path} node={c} onDropTo={onDropTo} />
+            ))}
+          </SidebarMenuSub>
+        </CollapsibleContent>
+      </SidebarMenuItem>
+    </Collapsible>
   )
 }
 
