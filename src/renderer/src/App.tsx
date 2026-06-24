@@ -1750,8 +1750,10 @@ function LibraryView({
     }
   }
 
+  // 重新扫描：不只刷顶层书架，还要刷新当前打开的部卷册与已展开各部的缓存，
+  // 否则在卷册视图里导入新文件后点重扫不生效（须退回上级再进才刷新）。
   const rescan = async (): Promise<void> => {
-    if (root) await loadSeries(root)
+    await refreshAfterFileop()
   }
 
   // 顶层书架卡单击 = 选中高亮（单选，纯视觉反馈）；双击才进入（书→阅读器 / 部→卷册）
