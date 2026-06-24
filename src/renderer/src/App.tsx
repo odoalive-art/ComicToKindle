@@ -352,6 +352,7 @@ function CoverImage({
       alt={alt}
       loading="lazy"
       decoding="async"
+      draggable={false} // 否则原生图片拖拽会劫持卡片的 HTML5 拖拽手势（文件视图拖动移动）
       onError={() => setFailed(true)}
       className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
     />
@@ -461,6 +462,7 @@ function FileTreeRow({
         onClick={() => onSelect(node.path)}
         onDragOver={(e) => {
           e.preventDefault()
+          e.dataTransfer.dropEffect = 'move'
           setDropTarget(node.path)
         }}
         onDragLeave={() => setDropTarget(null)}
@@ -986,11 +988,16 @@ function FileFolderCard({
       <ContextMenuTrigger asChild>
         <div
           draggable
-          onDragStart={onDragStart}
+          onDragStart={(e) => {
+            e.dataTransfer.effectAllowed = 'move'
+            e.dataTransfer.setData('text/plain', 'move')
+            onDragStart()
+          }}
           onClick={onClick}
           onDoubleClick={onOpen}
           onDragOver={(e) => {
             e.preventDefault()
+            e.dataTransfer.dropEffect = 'move'
             setDropTarget(true)
           }}
           onDragLeave={() => setDropTarget(false)}
@@ -1078,7 +1085,11 @@ function FileVolumeCard({
       <ContextMenuTrigger asChild>
         <div
           draggable
-          onDragStart={onDragStart}
+          onDragStart={(e) => {
+            e.dataTransfer.effectAllowed = 'move'
+            e.dataTransfer.setData('text/plain', 'move')
+            onDragStart()
+          }}
           onClick={onClick}
           onDoubleClick={onOpen}
           className="group flex cursor-default flex-col gap-1.5 text-left"
