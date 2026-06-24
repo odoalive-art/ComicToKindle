@@ -71,11 +71,7 @@ export interface ArchiveProgress {
 
 export interface ArchiveAPI {
   prepare: (filePath: string) => Promise<ArchivePrepareResult>
-  unlock: (
-    filePath: string,
-    password: string,
-    remember: boolean
-  ) => Promise<ArchivePrepareResult>
+  unlock: (filePath: string, password: string, remember: boolean) => Promise<ArchivePrepareResult>
   onProgress: (cb: (payload: ArchiveProgress) => void) => () => void
 }
 

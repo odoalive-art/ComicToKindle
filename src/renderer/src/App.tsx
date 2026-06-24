@@ -1,13 +1,68 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import type { LucideIcon } from 'lucide-react'
-import { Archive, ArrowLeft, ArrowLeftRight, BookOpen, BookOpenCheck, CheckCircle2, Clock3, Component, FileText, FolderOpen, Library, Loader2, Moon, BookText, Send, Settings, Sun, SwatchBook, AlertCircle, ChevronDown, ChevronLeft, ChevronRight, Globe, Mail, FolderPlus, ImageOff, RefreshCw, BookUp, FileDown, Trash2, RotateCcw, X, Lock, FileArchive, Eye, EyeOff, Pencil, FolderInput, Puzzle, List, LayoutGrid } from 'lucide-react'
+import {
+  Archive,
+  ArrowLeft,
+  ArrowLeftRight,
+  BookOpen,
+  BookOpenCheck,
+  CheckCircle2,
+  Clock3,
+  Component,
+  FileText,
+  FolderOpen,
+  Library,
+  Loader2,
+  Moon,
+  BookText,
+  Send,
+  Settings,
+  Sun,
+  SwatchBook,
+  AlertCircle,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Globe,
+  Mail,
+  FolderPlus,
+  ImageOff,
+  RefreshCw,
+  BookUp,
+  FileDown,
+  Trash2,
+  RotateCcw,
+  X,
+  Lock,
+  FileArchive,
+  Eye,
+  EyeOff,
+  Pencil,
+  FolderInput,
+  Puzzle,
+  List,
+  LayoutGrid
+} from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { TrafficLights } from '@/components/ui/traffic-lights'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
 import { Toaster } from '@/components/ui/sonner'
@@ -16,23 +71,66 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Slider } from '@/components/ui/slider'
 import { Switch } from '@/components/ui/switch'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarInset, SidebarMenu, SidebarMenuBadge, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarSeparator, SidebarTrigger, useSidebar } from '@/components/ui/sidebar'
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuBadge,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarSeparator,
+  SidebarTrigger,
+  useSidebar
+} from '@/components/ui/sidebar'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
-import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from '@/components/ui/context-menu'
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle
+} from '@/components/ui/empty'
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger
+} from '@/components/ui/context-menu'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from '@/components/ui/alert-dialog'
 import { AspectRatio } from '@/components/ui/aspect-ratio'
 import { Badge } from '@/components/ui/badge'
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator
+} from '@/components/ui/breadcrumb'
 import { ButtonGroup } from '@/components/ui/button-group'
 import { uiText, type LanguageMode } from './i18n'
 
 // 开发期组件/规范演示页：仅 dev 构建载入，生产包里整段不存在（含 recharts 等重依赖）
-const DevShowcase = import.meta.env.DEV
-  ? React.lazy(() => import('./dev/Showcase'))
-  : null
+const DevShowcase = import.meta.env.DEV ? React.lazy(() => import('./dev/Showcase')) : null
 
 type ViewId =
   | 'library'
@@ -46,7 +144,6 @@ type ViewId =
   | 'archive'
 
 type ThemeMode = 'light' | 'dark'
-
 
 type SidebarGroupItem = {
   id: ViewId
@@ -62,9 +159,7 @@ type SidebarGroupConfig = {
 const sidebarGroups: SidebarGroupConfig[] = [
   {
     titleKey: 'groupMyLibrary',
-    items: [
-      { id: 'library', icon: Library, badge: '128' }
-    ]
+    items: [{ id: 'library', icon: Library, badge: '128' }]
   },
   {
     titleKey: 'groupKindleSend',
@@ -166,10 +261,7 @@ function App(): React.JSX.Element {
               {activeView === 'archive' ? (
                 <ArchiveView locale={languageMode} />
               ) : activeView === 'web-push' ? (
-                <WebPushView
-                  locale={languageMode}
-                  onGotoArchive={() => setActiveView('archive')}
-                />
+                <WebPushView locale={languageMode} onGotoArchive={() => setActiveView('archive')} />
               ) : activeView === 'devices-emails' ? (
                 <DeliverySettingsView locale={languageMode} />
               ) : activeView === 'convert-settings' ? (
@@ -223,7 +315,10 @@ function AppHeader({ languageMode, activeNavItemId }: AppHeaderProps): React.JSX
 type LibraryEntry = Awaited<ReturnType<Window['api']['library']['scan']>>[number]
 type LibrarySeries = Extract<LibraryEntry, { type: 'folder' }>
 type LibraryBook = Extract<LibraryEntry, { type: 'book' }>
-type LibraryVolume = Awaited<ReturnType<Window['api']['library']['listVolumes']>>[number]
+// 某「部」下钻后列出的条目同样是 LibraryEntry（书/卷 或 可继续下钻的子部）。
+// 「卷(可读单元)」即其中的 book 变体——读图/转换/解锁等只处理它。
+type LibraryDirEntry = Awaited<ReturnType<Window['api']['library']['listVolumes']>>[number]
+type LibraryVolume = Extract<LibraryDirEntry, { type: 'book' }>
 type Artifact = Awaited<ReturnType<Window['api']['artifacts']['list']>>[number]
 
 function CoverImage({
@@ -253,6 +348,68 @@ function CoverImage({
       onError={() => setFailed(true)}
       className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
     />
+  )
+}
+
+/** 「部」书摞卡的可点击视觉（错位卡片 + 卷数角标 + 标题/作者），下钻容器复用。 */
+function FolderStackCard({
+  item,
+  picked,
+  volumeUnitLabel,
+  unknownAuthor,
+  onClick,
+  onDoubleClick
+}: {
+  item: LibrarySeries
+  picked: boolean
+  volumeUnitLabel: string
+  unknownAuthor: string
+  onClick: () => void
+  onDoubleClick: () => void
+}): React.JSX.Element {
+  return (
+    <button
+      type="button"
+      data-series-card
+      onClick={onClick}
+      onDoubleClick={onDoubleClick}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') onDoubleClick()
+      }}
+      className="group flex cursor-default flex-col gap-2 text-left"
+    >
+      <div className="group relative">
+        {/* 背后两层错位卡片，暗示「文件夹里有多卷」 */}
+        <div className="pointer-events-none absolute inset-0 translate-x-1.5 translate-y-1.5 rounded-lg bg-muted-foreground/20" />
+        <div className="pointer-events-none absolute inset-0 translate-x-[3px] translate-y-[3px] rounded-lg bg-muted-foreground/30" />
+        <AspectRatio
+          ratio={3 / 4}
+          className={`relative overflow-hidden rounded-lg bg-muted transition-all ${
+            picked ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''
+          }`}
+        >
+          <CoverImage src={item.coverUrl} alt={item.title} />
+          <div className="pointer-events-none absolute inset-0 rounded-lg border border-foreground/10" />
+        </AspectRatio>
+        <Badge
+          variant="secondary"
+          className="absolute top-1.5 right-1.5 max-w-[calc(100%-0.75rem)] gap-1 truncate bg-background/85 backdrop-blur"
+        >
+          <Library className="size-3" />
+          {volumeUnitLabel}
+        </Badge>
+      </div>
+      <div
+        className={`min-w-0 rounded-md px-1.5 py-0.5 ${
+          picked ? 'bg-accent text-accent-foreground' : ''
+        }`}
+      >
+        <div className="truncate text-sm font-medium" title={item.title}>
+          {item.title}
+        </div>
+        <div className="truncate text-xs text-muted-foreground">{item.author ?? unknownAuthor}</div>
+      </div>
+    </button>
   )
 }
 
@@ -638,7 +795,11 @@ function PdfReader({
           {volume.title}
         </span>
       </header>
-      <iframe title={volume.title} src={src} className="min-h-0 w-full flex-1 border-0 bg-neutral-900" />
+      <iframe
+        title={volume.title}
+        src={src}
+        className="min-h-0 w-full flex-1 border-0 bg-neutral-900"
+      />
     </div>
   )
 }
@@ -1174,7 +1335,9 @@ function LibraryView({
   const [root, setRoot] = useState<string | null>(null)
   const [series, setSeries] = useState<LibraryEntry[]>([])
   const [selected, setSelected] = useState<LibrarySeries | null>(null)
-  const [volumes, setVolumes] = useState<LibraryVolume[]>([])
+  // 下钻路径栈（面包屑）：[根下的部, 子部, …]，selected 恒为栈顶（当前所在部）
+  const [trail, setTrail] = useState<LibrarySeries[]>([])
+  const [volumes, setVolumes] = useState<LibraryDirEntry[]>([])
   const [readingVolume, setReadingVolume] = useState<LibraryVolume | null>(null)
   const [loading, setLoading] = useState(false)
   // 多选模式：先勾选若干卷再批量转换（替代「转换整部」入口）
@@ -1185,7 +1348,7 @@ function LibraryView({
   // 书架视图模式（图标/列表）+ 列表视图里就地展开的部 + 各部卷册缓存
   const [viewMode, setViewMode] = useState<LibraryViewMode>(getInitialLibraryView)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
-  const [volCache, setVolCache] = useState<Map<string, LibraryVolume[]>>(new Map())
+  const [volCache, setVolCache] = useState<Map<string, LibraryDirEntry[]>>(new Map())
   // 框选（橡皮筋）：在空白处按下拖动进入多选
   const gridWrapRef = React.useRef<HTMLDivElement>(null)
   const [marquee, setMarquee] = useState<{
@@ -1447,7 +1610,7 @@ function LibraryView({
     if (selected) await refreshVolumes()
     // 列表视图：重拉已展开各部的卷册缓存（文件操作可能改了卷的增删/命名）
     if (expanded.size > 0) {
-      const fresh = new Map<string, LibraryVolume[]>()
+      const fresh = new Map<string, LibraryDirEntry[]>()
       await Promise.all(
         [...expanded].map(async (p) => {
           fresh.set(p, await window.api.library.listVolumes(p))
@@ -1493,7 +1656,14 @@ function LibraryView({
   }
 
   const submitMoveToNewFolder = async (): Promise<void> => {
-    if (!moveReq || moveReq.busy || moveNewFolderName === null || !moveNewFolderName.trim() || !root) return
+    if (
+      !moveReq ||
+      moveReq.busy ||
+      moveNewFolderName === null ||
+      !moveNewFolderName.trim() ||
+      !root
+    )
+      return
     setMoveReq((s) => (s ? { ...s, busy: true } : s))
     try {
       const newPath = await window.api.library.createFolder(root, moveNewFolderName)
@@ -1572,15 +1742,17 @@ function LibraryView({
     await openVolume(vol)
   }
 
-  const allSelected = volumes.length > 0 && selectedVols.size === volumes.length
+  // 当前层里可选/可转换的「卷」(book)——子部不参与多选与批量转换
+  const bookVolumes = volumes.filter((v): v is LibraryVolume => v.type === 'book')
+  const allSelected = bookVolumes.length > 0 && selectedVols.size === bookVolumes.length
   const toggleAll = (): void => {
-    setSelectedVols(allSelected ? new Set() : new Set(volumes.map((v) => v.path)))
+    setSelectedVols(allSelected ? new Set() : new Set(bookVolumes.map((v) => v.path)))
   }
 
   // 转换所选：单本走单本确认弹窗（含封面预览），多本走批量确认弹窗
   const convertSelected = (): void => {
     if (!selected || selectedVols.size === 0) return
-    const picked = volumes.filter((v) => selectedVols.has(v.path))
+    const picked = bookVolumes.filter((v) => selectedVols.has(v.path))
     if (picked.length === 1) {
       enqueueVolume(picked[0])
       return
@@ -1679,19 +1851,17 @@ function LibraryView({
       bottom: d.wrapRect.top + top + height
     }
     const hit = new Set(d.base)
-    gridWrapRef.current
-      ?.querySelectorAll<HTMLElement>('[data-vol-card]')
-      .forEach((card) => {
-        const r = card.getBoundingClientRect()
-        const intersect = !(
-          r.right < sel.left ||
-          r.left > sel.right ||
-          r.bottom < sel.top ||
-          r.top > sel.bottom
-        )
-        const path = card.dataset.volPath
-        if (path && intersect) hit.add(path)
-      })
+    gridWrapRef.current?.querySelectorAll<HTMLElement>('[data-vol-card]').forEach((card) => {
+      const r = card.getBoundingClientRect()
+      const intersect = !(
+        r.right < sel.left ||
+        r.left > sel.right ||
+        r.bottom < sel.top ||
+        r.top > sel.bottom
+      )
+      const path = card.dataset.volPath
+      if (path && intersect) hit.add(path)
+    })
     if (hit.size > 0) setSelectMode(true)
     setSelectedVols(hit)
   }
@@ -1743,6 +1913,7 @@ function LibraryView({
       if (!picked) return
       setRoot(picked)
       setSelected(null)
+      setTrail([])
       setVolumes([])
       await loadSeries(picked)
     } catch (err) {
@@ -1807,9 +1978,11 @@ function LibraryView({
     })
   }
 
-  const openSeries = async (item: LibrarySeries): Promise<void> => {
+  // 进入某「部」并设定下钻路径栈（栈顶恒为当前部）。从顶层进入与从部内继续下钻共用。
+  const enterSeries = async (item: LibrarySeries, nextTrail: LibrarySeries[]): Promise<void> => {
     exitSelect()
     setSelectedSeriesPath(null)
+    setTrail(nextTrail)
     setSelected(item)
     setLoading(true)
     try {
@@ -1821,9 +1994,17 @@ function LibraryView({
     }
   }
 
+  // 双击一个部 = 在当前路径基础上再深一层
+  const openSeries = (item: LibrarySeries): Promise<void> => enterSeries(item, [...trail, item])
+
+  // 面包屑点击某层 = 截断路径栈跳回该层
+  const navigateTrail = (index: number): Promise<void> =>
+    enterSeries(trail[index], trail.slice(0, index + 1))
+
   const backToSeries = (): void => {
     exitSelect()
     setSelected(null)
+    setTrail([])
     setVolumes([])
   }
 
@@ -1847,7 +2028,7 @@ function LibraryView({
       if (selected === null || volumes.length === 0) return
       e.preventDefault()
       setSelectMode(true)
-      setSelectedVols(new Set(volumes.map((v) => v.path)))
+      setSelectedVols(new Set(volumes.filter((v) => v.type === 'book').map((v) => v.path)))
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -1858,11 +2039,7 @@ function LibraryView({
     // PDF 来源走 Chromium 内置查看器（秒开，不预渲染整本）；其余走统一图片阅读器
     if (readingVolume.sourceType === 'pdf') {
       return (
-        <PdfReader
-          volume={readingVolume}
-          locale={locale}
-          onClose={() => setReadingVolume(null)}
-        />
+        <PdfReader volume={readingVolume} locale={locale} onClose={() => setReadingVolume(null)} />
       )
     }
     return (
@@ -1874,705 +2051,734 @@ function LibraryView({
 
   return (
     <TooltipProvider delayDuration={300}>
-    {/* 压缩包解锁对话框：阅读/转换前置遇加密包时弹出 */}
-    <Dialog open={unlockReq !== null} onOpenChange={(o) => (!o ? cancelUnlock() : undefined)}>
-      <DialogContent className="sm:max-w-sm">
-        <DialogHeader>
-          <DialogTitle>{text.archive.dialogTitle}</DialogTitle>
-          {unlockReq ? (
-            <DialogDescription>{text.archive.dialogDesc(unlockReq.vol.title)}</DialogDescription>
-          ) : null}
-        </DialogHeader>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault()
-            void submitUnlock()
-          }}
-          className="space-y-3"
-        >
-          {/* 用 text + CSS 遮罩而非 type=password：后者在 macOS/Chromium 下会强制英文输入法，
+      {/* 压缩包解锁对话框：阅读/转换前置遇加密包时弹出 */}
+      <Dialog open={unlockReq !== null} onOpenChange={(o) => (!o ? cancelUnlock() : undefined)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{text.archive.dialogTitle}</DialogTitle>
+            {unlockReq ? (
+              <DialogDescription>{text.archive.dialogDesc(unlockReq.vol.title)}</DialogDescription>
+            ) : null}
+          </DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              void submitUnlock()
+            }}
+            className="space-y-3"
+          >
+            {/* 用 text + CSS 遮罩而非 type=password：后者在 macOS/Chromium 下会强制英文输入法，
               无法输入中文密码。-webkit-text-security 既能掩码又保留 IME 输入。 */}
-          <div className="relative">
-            <Input
-              type="text"
-              autoFocus
-              autoComplete="off"
-              spellCheck={false}
-              className="pr-10"
-              style={
-                unlockReq?.show
-                  ? undefined
-                  : ({ WebkitTextSecurity: 'disc' } as React.CSSProperties)
-              }
-              value={unlockReq?.password ?? ''}
-              placeholder={text.archive.placeholder}
-              onChange={(e) =>
-                setUnlockReq((s) => (s ? { ...s, password: e.target.value, error: null } : s))
-              }
-            />
-            <button
-              type="button"
-              tabIndex={-1}
-              onClick={() => setUnlockReq((s) => (s ? { ...s, show: !s.show } : s))}
-              className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground"
+            <div className="relative">
+              <Input
+                type="text"
+                autoFocus
+                autoComplete="off"
+                spellCheck={false}
+                className="pr-10"
+                style={
+                  unlockReq?.show
+                    ? undefined
+                    : ({ WebkitTextSecurity: 'disc' } as React.CSSProperties)
+                }
+                value={unlockReq?.password ?? ''}
+                placeholder={text.archive.placeholder}
+                onChange={(e) =>
+                  setUnlockReq((s) => (s ? { ...s, password: e.target.value, error: null } : s))
+                }
+              />
+              <button
+                type="button"
+                tabIndex={-1}
+                onClick={() => setUnlockReq((s) => (s ? { ...s, show: !s.show } : s))}
+                className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground"
+              >
+                {unlockReq?.show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              </button>
+            </div>
+            {unlockReq?.error ? (
+              <p className="text-xs text-destructive">{unlockReq.error}</p>
+            ) : null}
+            <label className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Checkbox
+                checked={unlockReq?.remember ?? true}
+                onCheckedChange={(c) =>
+                  setUnlockReq((s) => (s ? { ...s, remember: c === true } : s))
+                }
+              />
+              {text.archive.remember}
+            </label>
+            {unlockReq?.busy ? (
+              <div className="space-y-1">
+                <div className="h-1.5 w-full overflow-hidden rounded bg-muted">
+                  <div
+                    className="h-full bg-primary transition-all"
+                    style={{ width: `${extractPct ?? 0}%` }}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {text.archive.extracting(extractPct ?? 0)}
+                </p>
+              </div>
+            ) : null}
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={cancelUnlock}>
+                {text.archive.cancel}
+              </Button>
+              <Button type="submit" disabled={!unlockReq?.password || unlockReq?.busy}>
+                {unlockReq?.busy ? (
+                  <>
+                    <Loader2 className="size-3.5 animate-spin" />
+                    {text.archive.unlocking}
+                  </>
+                ) : (
+                  text.archive.unlock
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+      {/* 单卷册转换前：确认书籍信息 */}
+      <Dialog
+        open={convertReq !== null}
+        onOpenChange={(o) => (!o ? setConvertReq(null) : undefined)}
+      >
+        <DialogContent className="sm:max-w-sm" aria-describedby={undefined}>
+          <DialogHeader>
+            <DialogTitle>{text.convertMeta.title}</DialogTitle>
+          </DialogHeader>
+          {convertReq ? (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                void submitConvert()
+              }}
+              className="space-y-3"
             >
-              {unlockReq?.show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-            </button>
-          </div>
-          {unlockReq?.error ? (
-            <p className="text-xs text-destructive">{unlockReq.error}</p>
-          ) : null}
-          <label className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Checkbox
-              checked={unlockReq?.remember ?? true}
-              onCheckedChange={(c) =>
-                setUnlockReq((s) => (s ? { ...s, remember: c === true } : s))
-              }
-            />
-            {text.archive.remember}
-          </label>
-          {unlockReq?.busy ? (
-            <div className="space-y-1">
-              <div className="h-1.5 w-full overflow-hidden rounded bg-muted">
-                <div
-                  className="h-full bg-primary transition-all"
-                  style={{ width: `${extractPct ?? 0}%` }}
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground">{text.convertMeta.series}</label>
+                <Input
+                  autoFocus
+                  value={convertReq.seriesTitle}
+                  onChange={(e) =>
+                    setConvertReq((s) => (s ? { ...s, seriesTitle: e.target.value } : s))
+                  }
                 />
               </div>
-              <p className="text-xs text-muted-foreground">
-                {text.archive.extracting(extractPct ?? 0)}
-              </p>
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground">{text.convertMeta.volume}</label>
+                <Input
+                  value={convertReq.volumeTitle}
+                  placeholder={text.convertMeta.volumePlaceholder}
+                  onChange={(e) =>
+                    setConvertReq((s) => (s ? { ...s, volumeTitle: e.target.value } : s))
+                  }
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground">{text.convertMeta.author}</label>
+                <Input
+                  value={convertReq.author}
+                  placeholder={text.convertMeta.authorPlaceholder}
+                  onChange={(e) => setConvertReq((s) => (s ? { ...s, author: e.target.value } : s))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground">
+                  {text.convertMeta.previewLabel}
+                </label>
+                <div className="flex items-center gap-3 rounded-lg border bg-card p-3 shadow-sm">
+                  <div className="flex h-16 w-12 shrink-0 items-center justify-center overflow-hidden rounded bg-muted text-muted-foreground">
+                    {convertReq.vol.coverUrl ? (
+                      <CoverImage src={convertReq.vol.coverUrl} alt="" quiet />
+                    ) : (
+                      <BookText className="size-5" />
+                    )}
+                  </div>
+                  <div className="min-w-0 space-y-0.5">
+                    <div
+                      className="line-clamp-2 text-sm font-medium"
+                      title={composeBookTitle(convertReq.seriesTitle, convertReq.volumeTitle)}
+                    >
+                      {composeBookTitle(convertReq.seriesTitle, convertReq.volumeTitle)}
+                    </div>
+                    <div className="truncate text-xs text-muted-foreground">
+                      {convertReq.author.trim() || text.convertMeta.authorPlaceholder}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="ghost" onClick={() => setConvertReq(null)}>
+                  {text.convertMeta.cancel}
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={!convertReq.volumeTitle.trim() && !convertReq.seriesTitle.trim()}
+                >
+                  {text.convertMeta.start}
+                </Button>
+              </DialogFooter>
+            </form>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+      {/* 多选批量转换前：确认共享漫画名/作者 + 各卷书名预览 */}
+      <Dialog
+        open={batchConvertReq !== null}
+        onOpenChange={(o) => (!o && !batchConvertReq?.busy ? setBatchConvertReq(null) : undefined)}
+      >
+        <DialogContent className="sm:max-w-md" aria-describedby={undefined}>
+          <DialogHeader>
+            <DialogTitle>
+              {text.convertMeta.batchTitle}
+              {batchConvertReq ? (
+                <span className="ml-2 text-xs font-normal text-muted-foreground">
+                  {text.convertMeta.batchCount(batchConvertReq.vols.length)}
+                </span>
+              ) : null}
+            </DialogTitle>
+          </DialogHeader>
+          {batchConvertReq ? (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                void submitBatchConvert()
+              }}
+              className="space-y-3"
+            >
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground">{text.convertMeta.series}</label>
+                <Input
+                  autoFocus
+                  value={batchConvertReq.seriesTitle}
+                  disabled={batchConvertReq.busy}
+                  onChange={(e) =>
+                    setBatchConvertReq((s) => (s ? { ...s, seriesTitle: e.target.value } : s))
+                  }
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground">{text.convertMeta.author}</label>
+                <Input
+                  value={batchConvertReq.author}
+                  placeholder={text.convertMeta.authorPlaceholder}
+                  disabled={batchConvertReq.busy}
+                  onChange={(e) =>
+                    setBatchConvertReq((s) => (s ? { ...s, author: e.target.value } : s))
+                  }
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground">
+                  {text.convertMeta.batchVolumes}
+                </label>
+                <ScrollArea className="max-h-52 rounded-lg border bg-card">
+                  <div className="divide-y">
+                    {batchConvertReq.vols.map((vol) => (
+                      <div
+                        key={vol.path}
+                        className="truncate px-3 py-1.5 text-sm"
+                        title={composeBookTitle(batchConvertReq.seriesTitle, vol.title)}
+                      >
+                        {composeBookTitle(batchConvertReq.seriesTitle, vol.title)}
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </div>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  disabled={batchConvertReq.busy}
+                  onClick={() => setBatchConvertReq(null)}
+                >
+                  {text.convertMeta.cancel}
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={batchConvertReq.busy || batchConvertReq.vols.length === 0}
+                >
+                  {text.convertMeta.start}
+                </Button>
+              </DialogFooter>
+            </form>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+      {/* 编辑某部漫画的名称/作者（持久化，不改本地文件夹） */}
+      <Dialog
+        open={seriesMetaReq !== null}
+        onOpenChange={(o) => (!o && !seriesMetaReq?.busy ? setSeriesMetaReq(null) : undefined)}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{text.seriesMeta.edit}</DialogTitle>
+            <DialogDescription>{text.seriesMeta.desc}</DialogDescription>
+          </DialogHeader>
+          {seriesMetaReq ? (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                void submitSeriesMeta()
+              }}
+              className="space-y-3"
+            >
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground">{text.seriesMeta.name}</label>
+                <Input
+                  autoFocus
+                  value={seriesMetaReq.title}
+                  onChange={(e) =>
+                    setSeriesMetaReq((s) => (s ? { ...s, title: e.target.value } : s))
+                  }
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground">{text.seriesMeta.author}</label>
+                <Input
+                  value={seriesMetaReq.author}
+                  placeholder={text.seriesMeta.authorPlaceholder}
+                  onChange={(e) =>
+                    setSeriesMetaReq((s) => (s ? { ...s, author: e.target.value } : s))
+                  }
+                />
+              </div>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setSeriesMetaReq(null)}
+                  disabled={seriesMetaReq.busy}
+                >
+                  {text.seriesMeta.cancel}
+                </Button>
+                <Button type="submit" disabled={!seriesMetaReq.title.trim() || seriesMetaReq.busy}>
+                  {text.seriesMeta.save}
+                </Button>
+              </DialogFooter>
+            </form>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+      {/* 文件整理：重命名（真·改本地文件名） */}
+      <Dialog
+        open={renameReq !== null}
+        onOpenChange={(o) => (!o && !renameReq?.busy ? setRenameReq(null) : undefined)}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{text.fileops.renameTitle}</DialogTitle>
+            <DialogDescription>{text.fileops.renameDesc}</DialogDescription>
+          </DialogHeader>
+          {renameReq ? (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                void submitRename()
+              }}
+              className="space-y-3"
+            >
+              <Input
+                autoFocus
+                value={renameReq.name}
+                placeholder={text.fileops.namePlaceholder}
+                onChange={(e) => setRenameReq((s) => (s ? { ...s, name: e.target.value } : s))}
+              />
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setRenameReq(null)}
+                  disabled={renameReq.busy}
+                >
+                  {text.fileops.cancel}
+                </Button>
+                <Button type="submit" disabled={!renameReq.name.trim() || renameReq.busy}>
+                  {text.fileops.confirm}
+                </Button>
+              </DialogFooter>
+            </form>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+      {/* 文件整理：新建文件夹 */}
+      <Dialog
+        open={newFolderReq !== null}
+        onOpenChange={(o) => (!o && !newFolderReq?.busy ? setNewFolderReq(null) : undefined)}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{text.fileops.newFolderTitle}</DialogTitle>
+            <DialogDescription>{text.fileops.newFolderDesc}</DialogDescription>
+          </DialogHeader>
+          {newFolderReq ? (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                void submitNewFolder()
+              }}
+              className="space-y-3"
+            >
+              <Input
+                autoFocus
+                value={newFolderReq.name}
+                placeholder={text.fileops.newFolderPlaceholder}
+                onChange={(e) => setNewFolderReq((s) => (s ? { ...s, name: e.target.value } : s))}
+              />
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setNewFolderReq(null)}
+                  disabled={newFolderReq.busy}
+                >
+                  {text.fileops.cancel}
+                </Button>
+                <Button type="submit" disabled={!newFolderReq.name.trim() || newFolderReq.busy}>
+                  {text.fileops.confirm}
+                </Button>
+              </DialogFooter>
+            </form>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+      {/* 文件整理：移动到另一部 */}
+      <Dialog
+        open={moveReq !== null}
+        onOpenChange={(o) => {
+          if (!o && !moveReq?.busy) {
+            setMoveReq(null)
+            setMoveNewFolderName(null)
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{text.fileops.moveTitle}</DialogTitle>
+            <DialogDescription>
+              {moveReq ? text.fileops.moveDesc(moveReq.sources.length) : ''}
+            </DialogDescription>
+          </DialogHeader>
+          {moveReq ? (
+            <div className="space-y-1">
+              {moveTargets().length === 0 ? (
+                <p className="py-3 text-center text-sm text-muted-foreground">
+                  {text.fileops.noMoveTarget}
+                </p>
+              ) : (
+                <div className="max-h-60 space-y-1 overflow-y-auto">
+                  {moveTargets().map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      disabled={moveReq.busy}
+                      onClick={() => void submitMove(t.path)}
+                      className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-accent disabled:opacity-50"
+                    >
+                      <FolderInput className="size-4 shrink-0 text-muted-foreground" />
+                      <span className="min-w-0 flex-1 truncate">{t.title}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="border-t pt-1">
+                {moveNewFolderName === null ? (
+                  <button
+                    type="button"
+                    disabled={moveReq.busy || !root}
+                    onClick={() => setMoveNewFolderName('')}
+                    className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
+                  >
+                    <FolderPlus className="size-4 shrink-0" />
+                    <span>{text.fileops.moveNewFolder}</span>
+                  </button>
+                ) : (
+                  <form
+                    className="flex items-center gap-2 px-1 py-1"
+                    onSubmit={(e) => {
+                      e.preventDefault()
+                      void submitMoveToNewFolder()
+                    }}
+                  >
+                    <Input
+                      autoFocus
+                      value={moveNewFolderName}
+                      onChange={(e) => setMoveNewFolderName(e.target.value)}
+                      placeholder={text.fileops.moveNewFolderPlaceholder}
+                      disabled={moveReq.busy}
+                      className="h-8 flex-1 text-sm"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      disabled={moveReq.busy}
+                      onClick={() => setMoveNewFolderName(null)}
+                    >
+                      <X className="size-4" />
+                    </Button>
+                    <Button
+                      type="submit"
+                      size="sm"
+                      disabled={moveReq.busy || !moveNewFolderName.trim()}
+                    >
+                      {text.fileops.confirm}
+                    </Button>
+                  </form>
+                )}
+              </div>
             </div>
           ) : null}
           <DialogFooter>
-            <Button type="button" variant="ghost" onClick={cancelUnlock}>
-              {text.archive.cancel}
-            </Button>
-            <Button type="submit" disabled={!unlockReq?.password || unlockReq?.busy}>
-              {unlockReq?.busy ? (
-                <>
-                  <Loader2 className="size-3.5 animate-spin" />
-                  {text.archive.unlocking}
-                </>
-              ) : (
-                text.archive.unlock
-              )}
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setMoveReq(null)}
+              disabled={moveReq?.busy}
+            >
+              {text.fileops.cancel}
             </Button>
           </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-    {/* 单卷册转换前：确认书籍信息 */}
-    <Dialog open={convertReq !== null} onOpenChange={(o) => (!o ? setConvertReq(null) : undefined)}>
-      <DialogContent className="sm:max-w-sm" aria-describedby={undefined}>
-        <DialogHeader>
-          <DialogTitle>{text.convertMeta.title}</DialogTitle>
-        </DialogHeader>
-        {convertReq ? (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault()
-              void submitConvert()
-            }}
-            className="space-y-3"
-          >
-            <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground">{text.convertMeta.series}</label>
-              <Input
-                autoFocus
-                value={convertReq.seriesTitle}
-                onChange={(e) =>
-                  setConvertReq((s) => (s ? { ...s, seriesTitle: e.target.value } : s))
-                }
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground">{text.convertMeta.volume}</label>
-              <Input
-                value={convertReq.volumeTitle}
-                placeholder={text.convertMeta.volumePlaceholder}
-                onChange={(e) =>
-                  setConvertReq((s) => (s ? { ...s, volumeTitle: e.target.value } : s))
-                }
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground">{text.convertMeta.author}</label>
-              <Input
-                value={convertReq.author}
-                placeholder={text.convertMeta.authorPlaceholder}
-                onChange={(e) => setConvertReq((s) => (s ? { ...s, author: e.target.value } : s))}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground">
-                {text.convertMeta.previewLabel}
-              </label>
-              <div className="flex items-center gap-3 rounded-lg border bg-card p-3 shadow-sm">
-                <div className="flex h-16 w-12 shrink-0 items-center justify-center overflow-hidden rounded bg-muted text-muted-foreground">
-                  {convertReq.vol.coverUrl ? (
-                    <CoverImage src={convertReq.vol.coverUrl} alt="" quiet />
+        </DialogContent>
+      </Dialog>
+      {/* 文件整理：删除到废纸篓 */}
+      <AlertDialog
+        open={deleteReq !== null}
+        onOpenChange={(o) => (!o && !deleteReq?.busy ? setDeleteReq(null) : undefined)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{text.fileops.deleteTitle}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteReq ? text.fileops.deleteDesc(deleteReq.paths.length) : ''}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteReq?.busy}>{text.fileops.cancel}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault()
+                void submitDelete()
+              }}
+              disabled={deleteReq?.busy}
+            >
+              {text.fileops.delete}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <div className="flex min-h-0 flex-1 flex-col bg-background">
+        {/* 合并后的顶栏：侧栏开关 + 标题/面包屑 + 操作 */}
+        <header
+          className="flex h-12 shrink-0 items-center gap-2 border-b bg-background px-4"
+          style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
+        >
+          {/* 窄屏（侧栏 offcanvas）时补一个开合入口 */}
+          {isMobile ? (
+            <SidebarTrigger
+              className="-ml-1 size-8 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+            />
+          ) : null}
+          {selectMode ? (
+            // 文本标签：保持可拖动（不加 no-drag），让占满的空白区也能拖窗
+            <span className="min-w-0 flex-1 truncate text-sm font-medium">
+              {text.activity.selectedCount(selectedVols.size)}
+            </span>
+          ) : (
+            // 容器不设 no-drag：flex-1 撑满的空白区随顶栏可拖；只有内部可点链接单独 no-drag
+            <Breadcrumb className="min-w-0 flex-1">
+              <BreadcrumbList className="flex-nowrap">
+                <BreadcrumbItem className="shrink-0">
+                  {showVolumes ? (
+                    <BreadcrumbLink asChild>
+                      <button
+                        type="button"
+                        onClick={backToSeries}
+                        style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+                      >
+                        {text.nav.library}
+                      </button>
+                    </BreadcrumbLink>
                   ) : (
-                    <BookText className="size-5" />
+                    <BreadcrumbPage className="font-semibold text-foreground">
+                      {text.nav.library}
+                    </BreadcrumbPage>
                   )}
-                </div>
-                <div className="min-w-0 space-y-0.5">
-                  <div
-                    className="line-clamp-2 text-sm font-medium"
-                    title={composeBookTitle(convertReq.seriesTitle, convertReq.volumeTitle)}
+                </BreadcrumbItem>
+                {/* 下钻路径：祖先部可点击跳回，栈顶（当前部）为不可点的当前页 */}
+                {trail.map((node, i) => {
+                  const isLast = i === trail.length - 1
+                  return (
+                    <React.Fragment key={node.path}>
+                      <BreadcrumbSeparator className="shrink-0" />
+                      <BreadcrumbItem className="min-w-0">
+                        {isLast ? (
+                          <BreadcrumbPage
+                            className="truncate font-semibold text-foreground"
+                            title={node.title}
+                          >
+                            {node.title}
+                          </BreadcrumbPage>
+                        ) : (
+                          <BreadcrumbLink asChild>
+                            <button
+                              type="button"
+                              onClick={() => void navigateTrail(i)}
+                              className="truncate"
+                              title={node.title}
+                              style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+                            >
+                              {node.title}
+                            </button>
+                          </BreadcrumbLink>
+                        )}
+                      </BreadcrumbItem>
+                    </React.Fragment>
+                  )
+                })}
+              </BreadcrumbList>
+            </Breadcrumb>
+          )}
+          {root ? (
+            <div
+              className="ml-2 flex shrink-0 items-center gap-1"
+              style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+            >
+              {selectMode ? (
+                <>
+                  <Button variant="ghost" size="sm" onClick={toggleAll}>
+                    {allSelected ? text.activity.selectNone : text.activity.selectAll}
+                  </Button>
+                  <Button
+                    size="sm"
+                    disabled={selectedVols.size === 0}
+                    onClick={() => convertSelected()}
                   >
-                    {composeBookTitle(convertReq.seriesTitle, convertReq.volumeTitle)}
-                  </div>
-                  <div className="truncate text-xs text-muted-foreground">
-                    {convertReq.author.trim() || text.convertMeta.authorPlaceholder}
-                  </div>
-                </div>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => setConvertReq(null)}>
-                {text.convertMeta.cancel}
-              </Button>
-              <Button type="submit" disabled={!convertReq.volumeTitle.trim() && !convertReq.seriesTitle.trim()}>
-                {text.convertMeta.start}
-              </Button>
-            </DialogFooter>
-          </form>
-        ) : null}
-      </DialogContent>
-    </Dialog>
-    {/* 多选批量转换前：确认共享漫画名/作者 + 各卷书名预览 */}
-    <Dialog
-      open={batchConvertReq !== null}
-      onOpenChange={(o) =>
-        !o && !batchConvertReq?.busy ? setBatchConvertReq(null) : undefined
-      }
-    >
-      <DialogContent className="sm:max-w-md" aria-describedby={undefined}>
-        <DialogHeader>
-          <DialogTitle>
-            {text.convertMeta.batchTitle}
-            {batchConvertReq ? (
-              <span className="ml-2 text-xs font-normal text-muted-foreground">
-                {text.convertMeta.batchCount(batchConvertReq.vols.length)}
-              </span>
-            ) : null}
-          </DialogTitle>
-        </DialogHeader>
-        {batchConvertReq ? (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault()
-              void submitBatchConvert()
-            }}
-            className="space-y-3"
-          >
-            <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground">{text.convertMeta.series}</label>
-              <Input
-                autoFocus
-                value={batchConvertReq.seriesTitle}
-                disabled={batchConvertReq.busy}
-                onChange={(e) =>
-                  setBatchConvertReq((s) => (s ? { ...s, seriesTitle: e.target.value } : s))
-                }
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground">{text.convertMeta.author}</label>
-              <Input
-                value={batchConvertReq.author}
-                placeholder={text.convertMeta.authorPlaceholder}
-                disabled={batchConvertReq.busy}
-                onChange={(e) =>
-                  setBatchConvertReq((s) => (s ? { ...s, author: e.target.value } : s))
-                }
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground">
-                {text.convertMeta.batchVolumes}
-              </label>
-              <ScrollArea className="max-h-52 rounded-lg border bg-card">
-                <div className="divide-y">
-                  {batchConvertReq.vols.map((vol) => (
-                    <div
-                      key={vol.path}
-                      className="truncate px-3 py-1.5 text-sm"
-                      title={composeBookTitle(batchConvertReq.seriesTitle, vol.title)}
-                    >
-                      {composeBookTitle(batchConvertReq.seriesTitle, vol.title)}
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            </div>
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="ghost"
-                disabled={batchConvertReq.busy}
-                onClick={() => setBatchConvertReq(null)}
-              >
-                {text.convertMeta.cancel}
-              </Button>
-              <Button
-                type="submit"
-                disabled={batchConvertReq.busy || batchConvertReq.vols.length === 0}
-              >
-                {text.convertMeta.start}
-              </Button>
-            </DialogFooter>
-          </form>
-        ) : null}
-      </DialogContent>
-    </Dialog>
-    {/* 编辑某部漫画的名称/作者（持久化，不改本地文件夹） */}
-    <Dialog
-      open={seriesMetaReq !== null}
-      onOpenChange={(o) => (!o && !seriesMetaReq?.busy ? setSeriesMetaReq(null) : undefined)}
-    >
-      <DialogContent className="sm:max-w-sm">
-        <DialogHeader>
-          <DialogTitle>{text.seriesMeta.edit}</DialogTitle>
-          <DialogDescription>{text.seriesMeta.desc}</DialogDescription>
-        </DialogHeader>
-        {seriesMetaReq ? (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault()
-              void submitSeriesMeta()
-            }}
-            className="space-y-3"
-          >
-            <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground">{text.seriesMeta.name}</label>
-              <Input
-                autoFocus
-                value={seriesMetaReq.title}
-                onChange={(e) =>
-                  setSeriesMetaReq((s) => (s ? { ...s, title: e.target.value } : s))
-                }
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground">{text.seriesMeta.author}</label>
-              <Input
-                value={seriesMetaReq.author}
-                placeholder={text.seriesMeta.authorPlaceholder}
-                onChange={(e) =>
-                  setSeriesMetaReq((s) => (s ? { ...s, author: e.target.value } : s))
-                }
-              />
-            </div>
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => setSeriesMetaReq(null)}
-                disabled={seriesMetaReq.busy}
-              >
-                {text.seriesMeta.cancel}
-              </Button>
-              <Button type="submit" disabled={!seriesMetaReq.title.trim() || seriesMetaReq.busy}>
-                {text.seriesMeta.save}
-              </Button>
-            </DialogFooter>
-          </form>
-        ) : null}
-      </DialogContent>
-    </Dialog>
-    {/* 文件整理：重命名（真·改本地文件名） */}
-    <Dialog
-      open={renameReq !== null}
-      onOpenChange={(o) => (!o && !renameReq?.busy ? setRenameReq(null) : undefined)}
-    >
-      <DialogContent className="sm:max-w-sm">
-        <DialogHeader>
-          <DialogTitle>{text.fileops.renameTitle}</DialogTitle>
-          <DialogDescription>{text.fileops.renameDesc}</DialogDescription>
-        </DialogHeader>
-        {renameReq ? (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault()
-              void submitRename()
-            }}
-            className="space-y-3"
-          >
-            <Input
-              autoFocus
-              value={renameReq.name}
-              placeholder={text.fileops.namePlaceholder}
-              onChange={(e) => setRenameReq((s) => (s ? { ...s, name: e.target.value } : s))}
-            />
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => setRenameReq(null)}
-                disabled={renameReq.busy}
-              >
-                {text.fileops.cancel}
-              </Button>
-              <Button type="submit" disabled={!renameReq.name.trim() || renameReq.busy}>
-                {text.fileops.confirm}
-              </Button>
-            </DialogFooter>
-          </form>
-        ) : null}
-      </DialogContent>
-    </Dialog>
-    {/* 文件整理：新建文件夹 */}
-    <Dialog
-      open={newFolderReq !== null}
-      onOpenChange={(o) => (!o && !newFolderReq?.busy ? setNewFolderReq(null) : undefined)}
-    >
-      <DialogContent className="sm:max-w-sm">
-        <DialogHeader>
-          <DialogTitle>{text.fileops.newFolderTitle}</DialogTitle>
-          <DialogDescription>{text.fileops.newFolderDesc}</DialogDescription>
-        </DialogHeader>
-        {newFolderReq ? (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault()
-              void submitNewFolder()
-            }}
-            className="space-y-3"
-          >
-            <Input
-              autoFocus
-              value={newFolderReq.name}
-              placeholder={text.fileops.newFolderPlaceholder}
-              onChange={(e) => setNewFolderReq((s) => (s ? { ...s, name: e.target.value } : s))}
-            />
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => setNewFolderReq(null)}
-                disabled={newFolderReq.busy}
-              >
-                {text.fileops.cancel}
-              </Button>
-              <Button type="submit" disabled={!newFolderReq.name.trim() || newFolderReq.busy}>
-                {text.fileops.confirm}
-              </Button>
-            </DialogFooter>
-          </form>
-        ) : null}
-      </DialogContent>
-    </Dialog>
-    {/* 文件整理：移动到另一部 */}
-    <Dialog
-      open={moveReq !== null}
-      onOpenChange={(o) => {
-        if (!o && !moveReq?.busy) {
-          setMoveReq(null)
-          setMoveNewFolderName(null)
-        }
-      }}
-    >
-      <DialogContent className="sm:max-w-sm">
-        <DialogHeader>
-          <DialogTitle>{text.fileops.moveTitle}</DialogTitle>
-          <DialogDescription>
-            {moveReq ? text.fileops.moveDesc(moveReq.sources.length) : ''}
-          </DialogDescription>
-        </DialogHeader>
-        {moveReq ? (
-          <div className="space-y-1">
-            {moveTargets().length === 0 ? (
-              <p className="py-3 text-center text-sm text-muted-foreground">
-                {text.fileops.noMoveTarget}
-              </p>
-            ) : (
-              <div className="max-h-60 space-y-1 overflow-y-auto">
-                {moveTargets().map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    disabled={moveReq.busy}
-                    onClick={() => void submitMove(t.path)}
-                    className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-accent disabled:opacity-50"
-                  >
-                    <FolderInput className="size-4 shrink-0 text-muted-foreground" />
-                    <span className="min-w-0 flex-1 truncate">{t.title}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-            <div className="border-t pt-1">
-              {moveNewFolderName === null ? (
-                <button
-                  type="button"
-                  disabled={moveReq.busy || !root}
-                  onClick={() => setMoveNewFolderName('')}
-                  className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
-                >
-                  <FolderPlus className="size-4 shrink-0" />
-                  <span>{text.fileops.moveNewFolder}</span>
-                </button>
+                    <BookUp className="size-4" />
+                    {text.activity.convertSelected(selectedVols.size)}
+                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" onClick={exitSelect}>
+                        <X className="size-4" />
+                        <span className="sr-only">{text.activity.selectExit}</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{text.activity.selectExit}</TooltipContent>
+                  </Tooltip>
+                </>
               ) : (
-                <form
-                  className="flex items-center gap-2 px-1 py-1"
-                  onSubmit={(e) => { e.preventDefault(); void submitMoveToNewFolder() }}
-                >
-                  <Input
-                    autoFocus
-                    value={moveNewFolderName}
-                    onChange={(e) => setMoveNewFolderName(e.target.value)}
-                    placeholder={text.fileops.moveNewFolderPlaceholder}
-                    disabled={moveReq.busy}
-                    className="h-8 flex-1 text-sm"
+                <>
+                  {showVolumes ? (
+                    // 多选入口已并入卡片单击/框选，顶栏不再需要独立「选择」按钮
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => openSeriesMeta(selected)}
+                        >
+                          <Pencil className="size-4" />
+                          <span className="sr-only">{text.seriesMeta.edit}</span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>{text.seriesMeta.edit}</TooltipContent>
+                    </Tooltip>
+                  ) : null}
+                  {!showVolumes ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => switchView(viewMode === 'icon' ? 'list' : 'icon')}
+                        >
+                          {viewMode === 'icon' ? (
+                            <List className="size-4" />
+                          ) : (
+                            <LayoutGrid className="size-4" />
+                          )}
+                          <span className="sr-only">
+                            {viewMode === 'icon' ? text.library.viewList : text.library.viewIcon}
+                          </span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {viewMode === 'icon' ? text.library.viewList : text.library.viewIcon}
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : null}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" onClick={openNewFolder}>
+                        <FolderPlus className="size-4" />
+                        <span className="sr-only">{text.fileops.newFolder}</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{text.fileops.newFolder}</TooltipContent>
+                  </Tooltip>
+                  <ConvertActivityPopover
+                    activity={activity}
+                    locale={locale}
+                    onOpenArchive={onOpenArchive}
                   />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    disabled={moveReq.busy}
-                    onClick={() => setMoveNewFolderName(null)}
-                  >
-                    <X className="size-4" />
-                  </Button>
-                  <Button
-                    type="submit"
-                    size="sm"
-                    disabled={moveReq.busy || !moveNewFolderName.trim()}
-                  >
-                    {text.fileops.confirm}
-                  </Button>
-                </form>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" onClick={rescan} disabled={loading}>
+                        <RefreshCw className={`size-4 ${loading ? 'animate-spin' : ''}`} />
+                        <span className="sr-only">{text.library.rescan}</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{text.library.rescan}</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" onClick={chooseFolder}>
+                        <FolderOpen className="size-4" />
+                        <span className="sr-only">{text.library.changeFolder}</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{text.library.changeFolder}</TooltipContent>
+                  </Tooltip>
+                </>
               )}
             </div>
-          </div>
-        ) : null}
-        <DialogFooter>
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => setMoveReq(null)}
-            disabled={moveReq?.busy}
-          >
-            {text.fileops.cancel}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-    {/* 文件整理：删除到废纸篓 */}
-    <AlertDialog
-      open={deleteReq !== null}
-      onOpenChange={(o) => (!o && !deleteReq?.busy ? setDeleteReq(null) : undefined)}
-    >
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>{text.fileops.deleteTitle}</AlertDialogTitle>
-          <AlertDialogDescription>
-            {deleteReq ? text.fileops.deleteDesc(deleteReq.paths.length) : ''}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={deleteReq?.busy}>{text.fileops.cancel}</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={(e) => {
-              e.preventDefault()
-              void submitDelete()
-            }}
-            disabled={deleteReq?.busy}
-          >
-            {text.fileops.delete}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-    <div className="flex min-h-0 flex-1 flex-col bg-background">
-      {/* 合并后的顶栏：侧栏开关 + 标题/面包屑 + 操作 */}
-      <header
-        className="flex h-12 shrink-0 items-center gap-2 border-b bg-background px-4"
-        style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
-      >
-        {/* 窄屏（侧栏 offcanvas）时补一个开合入口 */}
-        {isMobile ? (
-          <SidebarTrigger
-            className="-ml-1 size-8 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-            style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-          />
-        ) : null}
-        {selectMode ? (
-          // 文本标签：保持可拖动（不加 no-drag），让占满的空白区也能拖窗
-          <span className="min-w-0 flex-1 truncate text-sm font-medium">
-            {text.activity.selectedCount(selectedVols.size)}
-          </span>
-        ) : (
-          // 容器不设 no-drag：flex-1 撑满的空白区随顶栏可拖；只有内部可点链接单独 no-drag
-          <Breadcrumb className="min-w-0 flex-1">
-            <BreadcrumbList className="flex-nowrap">
-              <BreadcrumbItem className="shrink-0">
-                {showVolumes ? (
-                  <BreadcrumbLink asChild>
-                    <button
-                      type="button"
-                      onClick={backToSeries}
-                      style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-                    >
-                      {text.nav.library}
-                    </button>
-                  </BreadcrumbLink>
-                ) : (
-                  <BreadcrumbPage className="font-semibold text-foreground">
-                    {text.nav.library}
-                  </BreadcrumbPage>
-                )}
-              </BreadcrumbItem>
-              {showVolumes && selected ? (
-                <>
-                  <BreadcrumbSeparator className="shrink-0" />
-                  <BreadcrumbItem className="min-w-0">
-                    <BreadcrumbPage
-                      className="truncate font-semibold text-foreground"
-                      title={selected.title}
-                    >
-                      {selected.title}
-                    </BreadcrumbPage>
-                  </BreadcrumbItem>
-                </>
-              ) : null}
-            </BreadcrumbList>
-          </Breadcrumb>
-        )}
-        {root ? (
-          <div
-            className="ml-2 flex shrink-0 items-center gap-1"
-            style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-          >
-            {selectMode ? (
-              <>
-                <Button variant="ghost" size="sm" onClick={toggleAll}>
-                  {allSelected ? text.activity.selectNone : text.activity.selectAll}
-                </Button>
-                <Button
-                  size="sm"
-                  disabled={selectedVols.size === 0}
-                  onClick={() => convertSelected()}
-                >
-                  <BookUp className="size-4" />
-                  {text.activity.convertSelected(selectedVols.size)}
-                </Button>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" onClick={exitSelect}>
-                      <X className="size-4" />
-                      <span className="sr-only">{text.activity.selectExit}</span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{text.activity.selectExit}</TooltipContent>
-                </Tooltip>
-              </>
-            ) : (
-              <>
-                {showVolumes ? (
-                  // 多选入口已并入卡片单击/框选，顶栏不再需要独立「选择」按钮
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" onClick={() => openSeriesMeta(selected)}>
-                        <Pencil className="size-4" />
-                        <span className="sr-only">{text.seriesMeta.edit}</span>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>{text.seriesMeta.edit}</TooltipContent>
-                  </Tooltip>
-                ) : null}
-                {!showVolumes ? (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => switchView(viewMode === 'icon' ? 'list' : 'icon')}
-                      >
-                        {viewMode === 'icon' ? (
-                          <List className="size-4" />
-                        ) : (
-                          <LayoutGrid className="size-4" />
-                        )}
-                        <span className="sr-only">
-                          {viewMode === 'icon' ? text.library.viewList : text.library.viewIcon}
-                        </span>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {viewMode === 'icon' ? text.library.viewList : text.library.viewIcon}
-                    </TooltipContent>
-                  </Tooltip>
-                ) : null}
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" onClick={openNewFolder}>
-                      <FolderPlus className="size-4" />
-                      <span className="sr-only">{text.fileops.newFolder}</span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{text.fileops.newFolder}</TooltipContent>
-                </Tooltip>
-                <ConvertActivityPopover
-                  activity={activity}
-                  locale={locale}
-                  onOpenArchive={onOpenArchive}
-                />
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" onClick={rescan} disabled={loading}>
-                      <RefreshCw className={`size-4 ${loading ? 'animate-spin' : ''}`} />
-                      <span className="sr-only">{text.library.rescan}</span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{text.library.rescan}</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" onClick={chooseFolder}>
-                      <FolderOpen className="size-4" />
-                      <span className="sr-only">{text.library.changeFolder}</span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{text.library.changeFolder}</TooltipContent>
-                </Tooltip>
-              </>
-            )}
-          </div>
-        ) : null}
-      </header>
+          ) : null}
+        </header>
 
-      {!root ? (
-        <div className="flex flex-1 items-center justify-center p-6">
-          <Empty>
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <FolderOpen />
-              </EmptyMedia>
-              <EmptyTitle>{text.library.emptyTitle}</EmptyTitle>
-              <EmptyDescription>{text.library.emptyDescription}</EmptyDescription>
-            </EmptyHeader>
-            <EmptyContent>
-              <Button onClick={chooseFolder}>
-                <FolderOpen className="size-4" />
-                {text.library.chooseFolder}
-              </Button>
-            </EmptyContent>
-          </Empty>
-        </div>
-      ) : (
-        // 用原生滚动容器而非 Radix ScrollArea：后者 Viewport 内层 display:table 使
-        // min-h-full 失效、内容下方空白不在容器内（空白单击取消选择会失灵）。容器自身
-        // 即滚动区 + 指针目标，撑满 flex 高度，下方空白也能命中。
-        <div
-          ref={gridWrapRef}
-          onPointerDown={onWrapPointerDown}
-          onPointerMove={onWrapPointerMove}
-          onPointerUp={onWrapPointerUp}
-          className="relative min-h-0 flex-1 overflow-y-auto p-4 select-none lg:p-6"
-        >
+        {!root ? (
+          <div className="flex flex-1 items-center justify-center p-6">
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <FolderOpen />
+                </EmptyMedia>
+                <EmptyTitle>{text.library.emptyTitle}</EmptyTitle>
+                <EmptyDescription>{text.library.emptyDescription}</EmptyDescription>
+              </EmptyHeader>
+              <EmptyContent>
+                <Button onClick={chooseFolder}>
+                  <FolderOpen className="size-4" />
+                  {text.library.chooseFolder}
+                </Button>
+              </EmptyContent>
+            </Empty>
+          </div>
+        ) : (
+          // 用原生滚动容器而非 Radix ScrollArea：后者 Viewport 内层 display:table 使
+          // min-h-full 失效、内容下方空白不在容器内（空白单击取消选择会失灵）。容器自身
+          // 即滚动区 + 指针目标，撑满 flex 高度，下方空白也能命中。
+          <div
+            ref={gridWrapRef}
+            onPointerDown={onWrapPointerDown}
+            onPointerMove={onWrapPointerMove}
+            onPointerUp={onWrapPointerUp}
+            className="relative min-h-0 flex-1 overflow-y-auto p-4 select-none lg:p-6"
+          >
             {marquee ? (
               <div
                 className="pointer-events-none absolute z-10 rounded-sm border border-primary bg-primary/15"
@@ -2602,128 +2808,178 @@ function LibraryView({
               ) : (
                 <div className={LIBRARY_GRID}>
                   {volumes.map((vol) => {
+                    // 子部：渲染为可继续下钻的「书摞」卡（双击进入更深一层）
+                    if (vol.type === 'folder') {
+                      return (
+                        <ContextMenu key={vol.id}>
+                          <ContextMenuTrigger asChild>
+                            <FolderStackCard
+                              item={vol}
+                              picked={selectedSeriesPath === vol.path}
+                              volumeUnitLabel={text.library.volumeUnit(vol.volumeCount)}
+                              unknownAuthor={text.library.unknownAuthor}
+                              onClick={() => onSeriesClick(vol)}
+                              onDoubleClick={() => void openSeries(vol)}
+                            />
+                          </ContextMenuTrigger>
+                          <ContextMenuContent>
+                            <ContextMenuItem onSelect={() => deferOpen(() => openSeriesMeta(vol))}>
+                              <Pencil className="size-4" />
+                              {text.seriesMeta.edit}
+                            </ContextMenuItem>
+                            <ContextMenuItem
+                              onSelect={() =>
+                                deferOpen(() =>
+                                  setRenameReq({ path: vol.path, name: vol.name, busy: false })
+                                )
+                              }
+                            >
+                              <FolderInput className="size-4" />
+                              {text.fileops.rename}
+                            </ContextMenuItem>
+                            <ContextMenuSeparator />
+                            <ContextMenuItem
+                              variant="destructive"
+                              onSelect={() =>
+                                deferOpen(() => setDeleteReq({ paths: [vol.path], busy: false }))
+                              }
+                            >
+                              <Trash2 className="size-4" />
+                              {text.fileops.delete}
+                            </ContextMenuItem>
+                          </ContextMenuContent>
+                        </ContextMenu>
+                      )
+                    }
                     const isConverted = convertedPaths.has(vol.path)
                     const job = jobByPath.get(vol.path)
                     const picked = selectedVols.has(vol.path)
                     return (
                       <ContextMenu key={vol.id}>
                         <ContextMenuTrigger asChild>
-                      <div
-                        data-vol-card
-                        data-vol-path={vol.path}
-                        onClick={(e) => onVolumeClick(vol, e)}
-                        onDoubleClick={() => void onVolumeOpen(vol)}
-                        className="group flex cursor-default flex-col gap-2 text-left"
-                      >
-                        <div className="relative">
-                          <div className="block w-full text-left">
-                            <AspectRatio
-                              ratio={3 / 4}
-                              className={`overflow-hidden rounded-lg bg-muted transition-all ${
-                                picked
-                                  ? 'ring-2 ring-primary ring-offset-2 ring-offset-background'
-                                  : selectMode
-                                    ? 'brightness-[0.7] dark:brightness-[0.82]'
-                                    : ''
-                              }`}
-                            >
-                              <CoverImage
-                                src={vol.coverUrl}
-                                alt={vol.title}
-                                quiet={vol.kind === 'file'}
-                              />
-                              {/* 压缩包卷册尚无封面：占位图标（加密则用锁） */}
-                              {!vol.coverUrl && vol.kind === 'file' ? (
-                                <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-muted-foreground">
-                                  {vol.locked ? (
-                                    <Lock className="size-8" />
-                                  ) : vol.sourceType === 'archive' ? (
-                                    <FileArchive className="size-8" />
-                                  ) : (
-                                    <FileText className="size-8" />
-                                  )}
+                          <div
+                            data-vol-card
+                            data-vol-path={vol.path}
+                            onClick={(e) => onVolumeClick(vol, e)}
+                            onDoubleClick={() => void onVolumeOpen(vol)}
+                            className="group flex cursor-default flex-col gap-2 text-left"
+                          >
+                            <div className="relative">
+                              <div className="block w-full text-left">
+                                <AspectRatio
+                                  ratio={3 / 4}
+                                  className={`overflow-hidden rounded-lg bg-muted transition-all ${
+                                    picked
+                                      ? 'ring-2 ring-primary ring-offset-2 ring-offset-background'
+                                      : selectMode
+                                        ? 'brightness-[0.7] dark:brightness-[0.82]'
+                                        : ''
+                                  }`}
+                                >
+                                  <CoverImage
+                                    src={vol.coverUrl}
+                                    alt={vol.title}
+                                    quiet={vol.kind === 'file'}
+                                  />
+                                  {/* 压缩包卷册尚无封面：占位图标（加密则用锁） */}
+                                  {!vol.coverUrl && vol.kind === 'file' ? (
+                                    <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-muted-foreground">
+                                      {vol.locked ? (
+                                        <Lock className="size-8" />
+                                      ) : vol.sourceType === 'archive' ? (
+                                        <FileArchive className="size-8" />
+                                      ) : (
+                                        <FileText className="size-8" />
+                                      )}
+                                    </div>
+                                  ) : null}
+                                  <div className="pointer-events-none absolute inset-0 rounded-lg border border-foreground/10" />
+                                  {(() => {
+                                    const prog = getProgress(vol.path)
+                                    if (prog <= 0 || vol.pageCount <= 0) return null
+                                    const readPct = Math.min(
+                                      100,
+                                      ((prog + 1) / vol.pageCount) * 100
+                                    )
+                                    return (
+                                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1 bg-black/30">
+                                        <div
+                                          className="h-full bg-primary"
+                                          style={{ width: `${readPct}%` }}
+                                        />
+                                      </div>
+                                    )
+                                  })()}
+                                </AspectRatio>
+                              </div>
+                              {/* 已转换角标：小封面下用图标圆点，避免文字撑破封面 */}
+                              {isConverted && !job ? (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Badge
+                                      variant="secondary"
+                                      className="absolute top-1.5 left-1.5 size-6 justify-center rounded-full bg-background/85 p-0 backdrop-blur"
+                                    >
+                                      <CheckCircle2 className="size-3.5 text-emerald-500" />
+                                    </Badge>
+                                  </TooltipTrigger>
+                                  <TooltipContent>{text.convert.converted}</TooltipContent>
+                                </Tooltip>
+                              ) : null}
+                              {/* 选择模式：右上角复选框 */}
+                              {selectMode ? (
+                                <div className="pointer-events-none absolute top-1.5 right-1.5">
+                                  <Checkbox
+                                    checked={picked}
+                                    className="size-6 border-2 bg-background/85 backdrop-blur data-[state=checked]:bg-primary"
+                                  />
+                                </div>
+                              ) : job ? (
+                                /* 队列状态角标（转换入口已并入选中 + 顶栏「转换所选」，封面不再放单独转换按钮） */
+                                <div className="absolute top-1.5 right-1.5 flex max-w-[calc(100%-0.75rem)] justify-end">
+                                  <Badge
+                                    variant="secondary"
+                                    className="pointer-events-none max-w-full gap-1 truncate bg-background/85 backdrop-blur"
+                                  >
+                                    {job.status === 'converting' ? (
+                                      <>
+                                        <Loader2 className="size-3 animate-spin" />
+                                        {text.convert.progress(Math.max(0, job.percent))}
+                                      </>
+                                    ) : job.status === 'queued' ? (
+                                      text.activity.queued
+                                    ) : job.status === 'interrupted' ? (
+                                      <span className="text-amber-500">
+                                        {text.activity.interrupted}
+                                      </span>
+                                    ) : (
+                                      <span className="text-destructive">
+                                        {text.activity.failed}
+                                      </span>
+                                    )}
+                                  </Badge>
                                 </div>
                               ) : null}
-                              <div className="pointer-events-none absolute inset-0 rounded-lg border border-foreground/10" />
-                              {(() => {
-                                const prog = getProgress(vol.path)
-                                if (prog <= 0 || vol.pageCount <= 0) return null
-                                const readPct = Math.min(100, ((prog + 1) / vol.pageCount) * 100)
-                                return (
-                                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1 bg-black/30">
-                                    <div
-                                      className="h-full bg-primary"
-                                      style={{ width: `${readPct}%` }}
-                                    />
-                                  </div>
-                                )
-                              })()}
-                            </AspectRatio>
-                          </div>
-                          {/* 已转换角标：小封面下用图标圆点，避免文字撑破封面 */}
-                          {isConverted && !job ? (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Badge
-                                  variant="secondary"
-                                  className="absolute top-1.5 left-1.5 size-6 justify-center rounded-full bg-background/85 p-0 backdrop-blur"
-                                >
-                                  <CheckCircle2 className="size-3.5 text-emerald-500" />
-                                </Badge>
-                              </TooltipTrigger>
-                              <TooltipContent>{text.convert.converted}</TooltipContent>
-                            </Tooltip>
-                          ) : null}
-                          {/* 选择模式：右上角复选框 */}
-                          {selectMode ? (
-                            <div className="pointer-events-none absolute top-1.5 right-1.5">
-                              <Checkbox
-                                checked={picked}
-                                className="size-6 border-2 bg-background/85 backdrop-blur data-[state=checked]:bg-primary"
-                              />
                             </div>
-                          ) : job ? (
-                            /* 队列状态角标（转换入口已并入选中 + 顶栏「转换所选」，封面不再放单独转换按钮） */
-                            <div className="absolute top-1.5 right-1.5 flex max-w-[calc(100%-0.75rem)] justify-end">
-                              <Badge
-                                variant="secondary"
-                                className="pointer-events-none max-w-full gap-1 truncate bg-background/85 backdrop-blur"
-                              >
-                                {job.status === 'converting' ? (
-                                  <>
-                                    <Loader2 className="size-3 animate-spin" />
-                                    {text.convert.progress(Math.max(0, job.percent))}
-                                  </>
-                                ) : job.status === 'queued' ? (
-                                  text.activity.queued
-                                ) : job.status === 'interrupted' ? (
-                                  <span className="text-amber-500">{text.activity.interrupted}</span>
-                                ) : (
-                                  <span className="text-destructive">{text.activity.failed}</span>
-                                )}
-                              </Badge>
+                            <div
+                              className={`min-w-0 rounded-md px-1.5 py-0.5 ${
+                                picked ? 'bg-accent text-accent-foreground' : ''
+                              }`}
+                            >
+                              <div className="truncate text-sm font-medium" title={vol.title}>
+                                {vol.title}
+                              </div>
+                              <div className="truncate text-xs text-muted-foreground">
+                                {(() => {
+                                  const prog = getProgress(vol.path)
+                                  if (prog > 0 && vol.pageCount > 0) {
+                                    return `${text.reader.resume} · ${text.reader.pageOf(prog + 1, vol.pageCount)}`
+                                  }
+                                  return volumeTypeLabel(vol)
+                                })()}
+                              </div>
                             </div>
-                          ) : null}
-                        </div>
-                        <div
-                          className={`min-w-0 rounded-md px-1.5 py-0.5 ${
-                            picked ? 'bg-accent text-accent-foreground' : ''
-                          }`}
-                        >
-                          <div className="truncate text-sm font-medium" title={vol.title}>
-                            {vol.title}
                           </div>
-                          <div className="truncate text-xs text-muted-foreground">
-                            {(() => {
-                              const prog = getProgress(vol.path)
-                              if (prog > 0 && vol.pageCount > 0) {
-                                return `${text.reader.resume} · ${text.reader.pageOf(prog + 1, vol.pageCount)}`
-                              }
-                              return volumeTypeLabel(vol)
-                            })()}
-                          </div>
-                        </div>
-                      </div>
                         </ContextMenuTrigger>
                         <ContextMenuContent>
                           <ContextMenuItem
@@ -2739,9 +2995,7 @@ function LibraryView({
                           <ContextMenuItem
                             disabled={moveTargets().length === 0}
                             onSelect={() =>
-                              deferOpen(() =>
-                                setMoveReq({ sources: volTargets(vol), busy: false })
-                              )
+                              deferOpen(() => setMoveReq({ sources: volTargets(vol), busy: false }))
                             }
                           >
                             <FolderInput className="size-4" />
@@ -2751,9 +3005,7 @@ function LibraryView({
                           <ContextMenuItem
                             variant="destructive"
                             onSelect={() =>
-                              deferOpen(() =>
-                                setDeleteReq({ paths: volTargets(vol), busy: false })
-                              )
+                              deferOpen(() => setDeleteReq({ paths: volTargets(vol), busy: false }))
                             }
                           >
                             <Trash2 className="size-4" />
@@ -2863,7 +3115,10 @@ function LibraryView({
                             }`}
                           >
                             <Library className="size-4 shrink-0 text-muted-foreground" />
-                            <span className="min-w-0 flex-1 truncate text-sm font-medium" title={item.title}>
+                            <span
+                              className="min-w-0 flex-1 truncate text-sm font-medium"
+                              title={item.title}
+                            >
                               {item.title}
                             </span>
                             <span className="shrink-0 truncate text-xs text-muted-foreground">
@@ -2927,6 +3182,20 @@ function LibraryView({
                         ) : (
                           <div className={LIST_VOLUME_GRID}>
                             {vols.map((v) => {
+                              // 子部：列表内仍以书摞卡呈现，双击进入下钻（切到该部的卷网格）
+                              if (v.type === 'folder') {
+                                return (
+                                  <FolderStackCard
+                                    key={v.id}
+                                    item={v}
+                                    picked={selectedSeriesPath === v.path}
+                                    volumeUnitLabel={text.library.volumeUnit(v.volumeCount)}
+                                    unknownAuthor={text.library.unknownAuthor}
+                                    onClick={() => onSeriesClick(v)}
+                                    onDoubleClick={() => void openSeries(v)}
+                                  />
+                                )
+                              }
                               const vConverted = convertedPaths.has(v.path)
                               const vjob = jobByPath.get(v.path)
                               const vprog = getProgress(v.path)
@@ -3005,7 +3274,10 @@ function LibraryView({
                                         ) : null}
                                       </div>
                                       <div className="min-w-0">
-                                        <div className="truncate text-xs font-medium" title={v.title}>
+                                        <div
+                                          className="truncate text-xs font-medium"
+                                          title={v.title}
+                                        >
                                           {v.title}
                                         </div>
                                         <div className="truncate text-[11px] text-muted-foreground">
@@ -3219,87 +3491,89 @@ function LibraryView({
                   }
                   // ② 部文件夹：错位「书摞」+ 卷数角标，双击进入看卷册
                   return (
-                  <ContextMenu key={item.id}>
-                    <ContextMenuTrigger asChild>
-                      <button
-                        type="button"
-                        data-series-card
-                        onClick={() => onSeriesClick(item)}
-                        onDoubleClick={() => void openSeries(item)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') void openSeries(item)
-                        }}
-                        className="group flex cursor-default flex-col gap-2 text-left"
-                      >
-                        <div className="group relative">
-                          {/* 背后两层错位卡片，暗示「文件夹里有多卷」 */}
-                          <div className="pointer-events-none absolute inset-0 translate-x-1.5 translate-y-1.5 rounded-lg bg-muted-foreground/20" />
-                          <div className="pointer-events-none absolute inset-0 translate-x-[3px] translate-y-[3px] rounded-lg bg-muted-foreground/30" />
-                          <AspectRatio
-                            ratio={3 / 4}
-                            className={`relative overflow-hidden rounded-lg bg-muted transition-all ${
-                              picked ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''
+                    <ContextMenu key={item.id}>
+                      <ContextMenuTrigger asChild>
+                        <button
+                          type="button"
+                          data-series-card
+                          onClick={() => onSeriesClick(item)}
+                          onDoubleClick={() => void openSeries(item)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') void openSeries(item)
+                          }}
+                          className="group flex cursor-default flex-col gap-2 text-left"
+                        >
+                          <div className="group relative">
+                            {/* 背后两层错位卡片，暗示「文件夹里有多卷」 */}
+                            <div className="pointer-events-none absolute inset-0 translate-x-1.5 translate-y-1.5 rounded-lg bg-muted-foreground/20" />
+                            <div className="pointer-events-none absolute inset-0 translate-x-[3px] translate-y-[3px] rounded-lg bg-muted-foreground/30" />
+                            <AspectRatio
+                              ratio={3 / 4}
+                              className={`relative overflow-hidden rounded-lg bg-muted transition-all ${
+                                picked
+                                  ? 'ring-2 ring-primary ring-offset-2 ring-offset-background'
+                                  : ''
+                              }`}
+                            >
+                              <CoverImage src={item.coverUrl} alt={item.title} />
+                              <div className="pointer-events-none absolute inset-0 rounded-lg border border-foreground/10" />
+                            </AspectRatio>
+                            <Badge
+                              variant="secondary"
+                              className="absolute top-1.5 right-1.5 max-w-[calc(100%-0.75rem)] gap-1 truncate bg-background/85 backdrop-blur"
+                            >
+                              <Library className="size-3" />
+                              {text.library.volumeUnit(item.volumeCount)}
+                            </Badge>
+                          </div>
+                          <div
+                            className={`min-w-0 rounded-md px-1.5 py-0.5 ${
+                              picked ? 'bg-accent text-accent-foreground' : ''
                             }`}
                           >
-                            <CoverImage src={item.coverUrl} alt={item.title} />
-                            <div className="pointer-events-none absolute inset-0 rounded-lg border border-foreground/10" />
-                          </AspectRatio>
-                          <Badge
-                            variant="secondary"
-                            className="absolute top-1.5 right-1.5 max-w-[calc(100%-0.75rem)] gap-1 truncate bg-background/85 backdrop-blur"
-                          >
-                            <Library className="size-3" />
-                            {text.library.volumeUnit(item.volumeCount)}
-                          </Badge>
-                        </div>
-                        <div
-                          className={`min-w-0 rounded-md px-1.5 py-0.5 ${
-                            picked ? 'bg-accent text-accent-foreground' : ''
-                          }`}
+                            <div className="truncate text-sm font-medium" title={item.title}>
+                              {item.title}
+                            </div>
+                            <div className="truncate text-xs text-muted-foreground">
+                              {item.author ?? text.library.unknownAuthor}
+                            </div>
+                          </div>
+                        </button>
+                      </ContextMenuTrigger>
+                      <ContextMenuContent>
+                        <ContextMenuItem onSelect={() => deferOpen(() => openSeriesMeta(item))}>
+                          <Pencil className="size-4" />
+                          {text.seriesMeta.edit}
+                        </ContextMenuItem>
+                        <ContextMenuItem
+                          onSelect={() =>
+                            deferOpen(() =>
+                              setRenameReq({ path: item.path, name: item.name, busy: false })
+                            )
+                          }
                         >
-                          <div className="truncate text-sm font-medium" title={item.title}>
-                            {item.title}
-                          </div>
-                          <div className="truncate text-xs text-muted-foreground">
-                            {item.author ?? text.library.unknownAuthor}
-                          </div>
-                        </div>
-                      </button>
-                    </ContextMenuTrigger>
-                    <ContextMenuContent>
-                      <ContextMenuItem onSelect={() => deferOpen(() => openSeriesMeta(item))}>
-                        <Pencil className="size-4" />
-                        {text.seriesMeta.edit}
-                      </ContextMenuItem>
-                      <ContextMenuItem
-                        onSelect={() =>
-                          deferOpen(() =>
-                            setRenameReq({ path: item.path, name: item.name, busy: false })
-                          )
-                        }
-                      >
-                        <FolderInput className="size-4" />
-                        {text.fileops.rename}
-                      </ContextMenuItem>
-                      <ContextMenuSeparator />
-                      <ContextMenuItem
-                        variant="destructive"
-                        onSelect={() =>
-                          deferOpen(() => setDeleteReq({ paths: [item.path], busy: false }))
-                        }
-                      >
-                        <Trash2 className="size-4" />
-                        {text.fileops.delete}
-                      </ContextMenuItem>
-                    </ContextMenuContent>
-                  </ContextMenu>
+                          <FolderInput className="size-4" />
+                          {text.fileops.rename}
+                        </ContextMenuItem>
+                        <ContextMenuSeparator />
+                        <ContextMenuItem
+                          variant="destructive"
+                          onSelect={() =>
+                            deferOpen(() => setDeleteReq({ paths: [item.path], busy: false }))
+                          }
+                        >
+                          <Trash2 className="size-4" />
+                          {text.fileops.delete}
+                        </ContextMenuItem>
+                      </ContextMenuContent>
+                    </ContextMenu>
                   )
                 })}
               </div>
             )}
-        </div>
-      )}
-    </div>
+          </div>
+        )}
+      </div>
     </TooltipProvider>
   )
 }
@@ -3590,7 +3864,13 @@ function DeliverySettingsView({ locale }: { locale: LanguageMode }): React.JSX.E
   )
 }
 
-function PageEmpty({ icon: Icon, label }: { icon: React.ElementType; label: string }): React.JSX.Element {
+function PageEmpty({
+  icon: Icon,
+  label
+}: {
+  icon: React.ElementType
+  label: string
+}): React.JSX.Element {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center text-muted-foreground">
       <Icon className="size-10 opacity-30" />
@@ -3706,89 +3986,87 @@ function ArchiveView({ locale }: { locale: LanguageMode }): React.JSX.Element {
     <ScrollArea className="min-h-0 flex-1">
       <div className="mx-auto w-full max-w-4xl p-4 lg:p-6">
         <div className="space-y-3">
-            {artifacts.map((a) => {
-              const totalBytes = a.outputs.reduce((sum, o) => sum + o.sizeBytes, 0)
-              return (
-                <div
-                  key={a.id}
-                  className="flex items-center gap-4 rounded-lg border bg-card p-4 text-card-foreground"
-                >
-                  <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-muted">
-                    <FileText className="size-5 text-muted-foreground" />
+          {artifacts.map((a) => {
+            const totalBytes = a.outputs.reduce((sum, o) => sum + o.sizeBytes, 0)
+            return (
+              <div
+                key={a.id}
+                className="flex items-center gap-4 rounded-lg border bg-card p-4 text-card-foreground"
+              >
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-muted">
+                  <FileText className="size-5 text-muted-foreground" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="truncate text-sm font-medium" title={artifactLabel(a)}>
+                      {artifactLabel(a)}
+                    </span>
+                    <Badge variant="secondary" className="shrink-0 gap-1">
+                      {statusIcon(a.status)}
+                      {statusLabel(a.status)}
+                    </Badge>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="truncate text-sm font-medium" title={artifactLabel(a)}>
-                        {artifactLabel(a)}
-                      </span>
-                      <Badge variant="secondary" className="shrink-0 gap-1">
-                        {statusIcon(a.status)}
-                        {statusLabel(a.status)}
-                      </Badge>
-                    </div>
-                    {a.author ? (
-                      <div className="mt-0.5 truncate text-xs text-muted-foreground">
-                        {a.author}
-                      </div>
-                    ) : null}
-                    <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
-                      <span>{t.volumeFiles(a.outputs.length)}</span>
-                      <span>{t.pages(a.pageCount)}</span>
-                      <span>{formatBytes(totalBytes)}</span>
-                      <span>{new Date(a.createdAt).toLocaleString()}</span>
-                    </div>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-1">
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={() => deliver(a)}
-                      disabled={delivering.has(a.id)}
-                    >
-                      {delivering.has(a.id) ? (
-                        <Loader2 className="size-4 animate-spin" />
-                      ) : (
-                        <Send className="size-4" />
-                      )}
-                      <span className="hidden lg:inline">
-                        {delivering.has(a.id) ? t.delivering : t.deliver}
-                      </span>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => webPush(a)}
-                      disabled={pushing.has(a.id)}
-                      title={t.webPush}
-                    >
-                      {pushing.has(a.id) ? (
-                        <Loader2 className="size-4 animate-spin" />
-                      ) : (
-                        <Globe className="size-4" />
-                      )}
-                      <span className="hidden lg:inline">{t.webPush}</span>
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => reveal(a.id)}>
-                      <FolderOpen className="size-4" />
-                      <span className="hidden lg:inline">{t.reveal}</span>
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => exportCopy(a.id)}>
-                      <FileDown className="size-4" />
-                      <span className="hidden lg:inline">{t.export}</span>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-destructive hover:text-destructive"
-                      onClick={() => remove(a.id)}
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
+                  {a.author ? (
+                    <div className="mt-0.5 truncate text-xs text-muted-foreground">{a.author}</div>
+                  ) : null}
+                  <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                    <span>{t.volumeFiles(a.outputs.length)}</span>
+                    <span>{t.pages(a.pageCount)}</span>
+                    <span>{formatBytes(totalBytes)}</span>
+                    <span>{new Date(a.createdAt).toLocaleString()}</span>
                   </div>
                 </div>
-              )
-            })}
-          </div>
+                <div className="flex shrink-0 items-center gap-1">
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => deliver(a)}
+                    disabled={delivering.has(a.id)}
+                  >
+                    {delivering.has(a.id) ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <Send className="size-4" />
+                    )}
+                    <span className="hidden lg:inline">
+                      {delivering.has(a.id) ? t.delivering : t.deliver}
+                    </span>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => webPush(a)}
+                    disabled={pushing.has(a.id)}
+                    title={t.webPush}
+                  >
+                    {pushing.has(a.id) ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <Globe className="size-4" />
+                    )}
+                    <span className="hidden lg:inline">{t.webPush}</span>
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => reveal(a.id)}>
+                    <FolderOpen className="size-4" />
+                    <span className="hidden lg:inline">{t.reveal}</span>
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => exportCopy(a.id)}>
+                    <FileDown className="size-4" />
+                    <span className="hidden lg:inline">{t.export}</span>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:text-destructive"
+                    onClick={() => remove(a.id)}
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
       </div>
     </ScrollArea>
   )
@@ -3909,38 +4187,36 @@ function AppSidebar({
         {sidebarGroups
           .filter((group) => import.meta.env.DEV || group.titleKey !== 'groupDevMode')
           .map((group, groupIdx) => (
-          <React.Fragment key={group.titleKey}>
-            {groupIdx > 0 ? <SidebarSeparator /> : null}
-            <SidebarGroup>
-              <SidebarGroupLabel>{text.sidebar[group.titleKey]}</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {group.items.map((item, itemIdx) => {
-                    const uniqueKey = `${group.titleKey}-${item.id}-${itemIdx}`
-                    return (
-                      <SidebarMenuItem key={uniqueKey}>
-                        <SidebarMenuButton
-                          isActive={item.id === activeView}
-                          onClick={() => onSelect(item.id)}
-                          tooltip={text.nav[item.id]}
-                        >
-                          <item.icon className="size-4 shrink-0" />
-                          <span>{text.nav[item.id]}</span>
-                        </SidebarMenuButton>
-                        {item.badge ? <SidebarMenuBadge>{item.badge}</SidebarMenuBadge> : null}
-                      </SidebarMenuItem>
-                    )
-                  })}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          </React.Fragment>
-        ))}
+            <React.Fragment key={group.titleKey}>
+              {groupIdx > 0 ? <SidebarSeparator /> : null}
+              <SidebarGroup>
+                <SidebarGroupLabel>{text.sidebar[group.titleKey]}</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {group.items.map((item, itemIdx) => {
+                      const uniqueKey = `${group.titleKey}-${item.id}-${itemIdx}`
+                      return (
+                        <SidebarMenuItem key={uniqueKey}>
+                          <SidebarMenuButton
+                            isActive={item.id === activeView}
+                            onClick={() => onSelect(item.id)}
+                            tooltip={text.nav[item.id]}
+                          >
+                            <item.icon className="size-4 shrink-0" />
+                            <span>{text.nav[item.id]}</span>
+                          </SidebarMenuButton>
+                          {item.badge ? <SidebarMenuBadge>{item.badge}</SidebarMenuBadge> : null}
+                        </SidebarMenuItem>
+                      )
+                    })}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            </React.Fragment>
+          ))}
       </SidebarContent>
 
-      <Separator
-        className={`bg-sidebar-border ${isMobile ? '' : '-mx-2 !w-auto'}`}
-      />
+      <Separator className={`bg-sidebar-border ${isMobile ? '' : '-mx-2 !w-auto'}`} />
       <SidebarFooter className="p-2 pt-2">
         <div className="flex items-center justify-between w-full gap-2">
           <SidebarMenu className="flex-1 min-w-0">

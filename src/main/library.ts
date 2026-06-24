@@ -24,9 +24,10 @@ import {
 /**
  * 漫画库数据层：目录扫描 + 封面/图片服务 + 库根目录持久化。
  *
- * 目录约定：
- *   根目录 / 部(文件夹) / 卷册(文件夹或单文件) / [单话子文件夹] / 图片
- *   部文件夹命名通常为 `[作者] 标题`。
+ * 扫描模型（见 classifyDir / listChildren）：不预设固定层级，递归判定每个目录的角色——
+ *   直接含图片或 cbz/pdf/epub 单文件 = 「卷」(可读单元，其下单话子文件夹按阅读顺序递归收图)；
+ *   自身无漫画但子树里有 = 「部」(可下钻容器，可任意深嵌套)；整棵子树无漫画则不展示。
+ *   部文件夹命名通常为 `[作者] 标题`，据此解析作者/标题（可被 seriesMeta 覆盖）。
  */
 
 const IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif', '.avif', '.bmp'])
@@ -78,8 +79,7 @@ const naturalSort = (a: string, b: string): number => collator.compare(a, b)
 
 const isImage = (name: string): boolean => IMAGE_EXTS.has(extname(name).toLowerCase())
 /** 可作为一卷展示的单文件：可解压归档（含分卷入口）或显示型 pdf/epub */
-const isVolumeFile = (name: string): boolean =>
-  isArchiveFile(name) || isDocumentFile(name)
+const isVolumeFile = (name: string): boolean => isArchiveFile(name) || isDocumentFile(name)
 const isHidden = (name: string): boolean => name.startsWith('.')
 
 // 当前库根目录，用于 comic:// 协议的越权访问校验
