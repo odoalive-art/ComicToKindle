@@ -42,8 +42,7 @@ import {
   Puzzle,
   List,
   LayoutGrid,
-  Folder,
-  FolderTree
+  Folder
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -213,6 +212,79 @@ function App(): React.JSX.Element {
   // 转换活动队列上提到 App 层，切换视图时不中断
   const convertActivity = useConvertActivity(languageMode)
 
+  // ---- 文件导航共享状态（边栏树 ↔ 内容网格）----
+  const [libRoot, setLibRoot] = useState<string | null>(null)
+  const [fileDir, setFileDir] = useState<string | null>(null)
+  const [navExpanded, setNavExpanded] = useState<Set<string>>(new Set())
+  const [navKids, setNavKids] = useState<Map<string, DirNode[]>>(new Map())
+  const [navVersion, setNavVersion] = useState(0)
+  const [navDropTarget, setNavDropTarget] = useState<string | null>(null)
+  const navDragPaths = React.useRef<string[]>([])
+
+  const ensureKids = React.useCallback(async (dir: string): Promise<void> => {
+    const list = await window.api.library.listSubdirs(dir)
+    setNavKids((prev) => new Map(prev).set(dir, list))
+  }, [])
+
+  // 切库 → 重置文件视图与树，预载根目录子文件夹
+  useEffect(() => {
+    setFileDir(null)
+    setNavKids(new Map())
+    setNavExpanded(libRoot ? new Set([libRoot]) : new Set())
+    if (libRoot) void ensureKids(libRoot)
+  }, [libRoot, ensureKids])
+
+  // 文件操作后：重载所有已展开节点的子文件夹（树同步增删/改名）
+  useEffect(() => {
+    if (navVersion === 0) return
+    navExpanded.forEach((p) => void ensureKids(p))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navVersion, ensureKids])
+
+  const fileNav: FileNavValue = {
+    root: libRoot,
+    setRoot: setLibRoot,
+    fileDir,
+    openFolder: (dir) => {
+      setActiveView('library')
+      setFileDir(dir)
+      // 展开 root→dir 整条链，方便左树定位
+      if (libRoot && dir.startsWith(libRoot)) {
+        const chain = new Set<string>([libRoot])
+        let acc = libRoot
+        for (const seg of dir.slice(libRoot.length).split('/').filter(Boolean)) {
+          acc = `${acc}/${seg}`
+          chain.add(acc)
+        }
+        setNavExpanded((prev) => new Set([...prev, ...chain]))
+        chain.forEach((p) => {
+          if (!navKids.has(p)) void ensureKids(p)
+        })
+      }
+    },
+    exitToShelf: () => setFileDir(null),
+    expanded: navExpanded,
+    toggleNode: (path) =>
+      setNavExpanded((prev) => {
+        const next = new Set(prev)
+        if (next.has(path)) next.delete(path)
+        else {
+          next.add(path)
+          if (!navKids.has(path)) void ensureKids(path)
+        }
+        return next
+      }),
+    kids: navKids,
+    version: navVersion,
+    bump: () => setNavVersion((v) => v + 1),
+    getDragPaths: () => navDragPaths.current,
+    setDragPaths: (paths) => {
+      navDragPaths.current = paths
+    },
+    dropTarget: navDropTarget,
+    setDropTarget: setNavDropTarget
+  }
+
   const isShowcaseView =
     activeView === 'design-components' ||
     activeView === 'foundation-standards' ||
@@ -233,55 +305,60 @@ function App(): React.JSX.Element {
   }, [languageMode])
 
   return (
-    <SidebarProvider>
-      <div className="flex h-dvh w-full bg-muted/50 text-foreground">
-        <AppSidebar
-          activeView={activeView}
-          locale={languageMode}
-          onSelect={setActiveView}
-          themeMode={themeMode}
-          setThemeMode={setThemeMode}
-          languageMode={languageMode}
-          setLanguageMode={setLanguageMode}
-        />
-        <SidebarInset className="flex min-w-0 flex-col overflow-hidden">
-          {activeView === 'library' ? (
-            // 库视图自带合并后的顶栏（标题/面包屑 + 操作），不再叠加 AppHeader
-            <LibraryView
-              locale={languageMode}
-              activity={convertActivity}
-              onOpenArchive={() => setActiveView('archive')}
-            />
-          ) : DevShowcase && isShowcaseView ? (
-            <React.Suspense fallback={<div className="flex-1 bg-background" />}>
-              <DevShowcase activeView={activeView} locale={languageMode} />
-            </React.Suspense>
-          ) : (
-            <>
-              <AppHeader languageMode={languageMode} activeNavItemId={activeView} />
+    <FileNavContext.Provider value={fileNav}>
+      <SidebarProvider>
+        <div className="flex h-dvh w-full bg-muted/50 text-foreground">
+          <AppSidebar
+            activeView={activeView}
+            locale={languageMode}
+            onSelect={setActiveView}
+            themeMode={themeMode}
+            setThemeMode={setThemeMode}
+            languageMode={languageMode}
+            setLanguageMode={setLanguageMode}
+          />
+          <SidebarInset className="flex min-w-0 flex-col overflow-hidden">
+            {activeView === 'library' ? (
+              // 库视图自带合并后的顶栏（标题/面包屑 + 操作），不再叠加 AppHeader
+              <LibraryView
+                locale={languageMode}
+                activity={convertActivity}
+                onOpenArchive={() => setActiveView('archive')}
+              />
+            ) : DevShowcase && isShowcaseView ? (
+              <React.Suspense fallback={<div className="flex-1 bg-background" />}>
+                <DevShowcase activeView={activeView} locale={languageMode} />
+              </React.Suspense>
+            ) : (
+              <>
+                <AppHeader languageMode={languageMode} activeNavItemId={activeView} />
 
-              {activeView === 'archive' ? (
-                <ArchiveView locale={languageMode} />
-              ) : activeView === 'web-push' ? (
-                <WebPushView locale={languageMode} onGotoArchive={() => setActiveView('archive')} />
-              ) : activeView === 'devices-emails' ? (
-                <DeliverySettingsView locale={languageMode} />
-              ) : activeView === 'convert-settings' ? (
-                <ConvertSettingsView locale={languageMode} />
-              ) : activeView === 'extensions' ? (
-                <PageEmpty
-                  icon={Puzzle}
-                  label={languageMode === 'zh' ? '暂无可用扩展' : 'No extensions available yet'}
-                />
-              ) : (
-                <div className="flex-1 bg-background" />
-              )}
-            </>
-          )}
-        </SidebarInset>
-      </div>
-      <Toaster theme={themeMode} />
-    </SidebarProvider>
+                {activeView === 'archive' ? (
+                  <ArchiveView locale={languageMode} />
+                ) : activeView === 'web-push' ? (
+                  <WebPushView
+                    locale={languageMode}
+                    onGotoArchive={() => setActiveView('archive')}
+                  />
+                ) : activeView === 'devices-emails' ? (
+                  <DeliverySettingsView locale={languageMode} />
+                ) : activeView === 'convert-settings' ? (
+                  <ConvertSettingsView locale={languageMode} />
+                ) : activeView === 'extensions' ? (
+                  <PageEmpty
+                    icon={Puzzle}
+                    label={languageMode === 'zh' ? '暂无可用扩展' : 'No extensions available yet'}
+                  />
+                ) : (
+                  <div className="flex-1 bg-background" />
+                )}
+              </>
+            )}
+          </SidebarInset>
+        </div>
+        <Toaster theme={themeMode} />
+      </SidebarProvider>
+    </FileNavContext.Provider>
   )
 }
 
@@ -327,6 +404,36 @@ type DirNode = Awaited<ReturnType<Window['api']['library']['listSubdirs']>>[numb
 type RawListing = Awaited<ReturnType<Window['api']['library']['listDirRaw']>>
 type RawFolder = RawListing['folders'][number]
 type RawVolume = RawListing['files'][number]
+
+// ============ 文件导航共享状态（边栏文件夹树 ↔ 内容网格）============
+// 树常驻边栏、网格在内容区，二者跨组件共享同一份状态，故提升到 App 并经 Context 下发。
+interface FileNavValue {
+  root: string | null
+  setRoot: (r: string | null) => void
+  /** null = 书架视图；非空 = 文件视图，展示该目录的网格 */
+  fileDir: string | null
+  /** 进入文件视图看某目录（并切到库视图） */
+  openFolder: (dir: string) => void
+  /** 回到书架视图 */
+  exitToShelf: () => void
+  expanded: Set<string>
+  toggleNode: (path: string) => void
+  kids: Map<string, DirNode[]>
+  /** 文件操作后自增，触发树与网格重载 */
+  version: number
+  bump: () => void
+  /** 拖拽中的源路径（跨边栏树/网格共享，存模块级 ref，避免 setState 抖动） */
+  getDragPaths: () => string[]
+  setDragPaths: (paths: string[]) => void
+  dropTarget: string | null
+  setDropTarget: (p: string | null) => void
+}
+const FileNavContext = React.createContext<FileNavValue | null>(null)
+const useFileNav = (): FileNavValue => {
+  const v = React.useContext(FileNavContext)
+  if (!v) throw new Error('FileNavContext missing')
+  return v
+}
 
 function CoverImage({
   src,
@@ -426,6 +533,55 @@ function FolderStackCard({
 
 const basenameOf = (p: string): string => p.split('/').filter(Boolean).pop() ?? p
 
+/** 文件整理错误码 → 本地化文案 */
+function fileopErrText(e: unknown, text: (typeof uiText)[LanguageMode]): string {
+  const m = `${e}`
+  if (m.includes('NAME_EXISTS')) return text.fileops.errNameExists
+  if (m.includes('INVALID_NAME')) return text.fileops.errInvalidName
+  if (m.includes('MOVE_INTO_SELF')) return text.fileops.errMoveIntoSelf
+  return text.fileops.errGeneric
+}
+
+/** 边栏常驻文件夹树：消费 FileNav 上下文，点文件夹即进文件视图；拖卡片到节点=移动 */
+function FileTree({ locale }: { locale: LanguageMode }): React.JSX.Element | null {
+  const fileNav = useFileNav()
+  const text = uiText[locale]
+  if (!fileNav.root) return null
+  const rootNode: DirNode = {
+    id: fileNav.root,
+    path: fileNav.root,
+    name: text.fileView.root,
+    hasSubfolders: true
+  }
+  const dropMove = async (dest: string): Promise<void> => {
+    const paths = fileNav.getDragPaths()
+    if (!paths.length) return
+    try {
+      await window.api.library.move(paths, dest)
+      toast.success(text.fileops.moved(paths.length))
+      fileNav.bump()
+    } catch (e) {
+      toast.error(fileopErrText(e, text))
+    }
+  }
+  return (
+    <div className="px-1 pb-1">
+      <FileTreeRow
+        node={rootNode}
+        depth={0}
+        currentDir={fileNav.fileDir ?? ''}
+        expanded={fileNav.expanded}
+        kids={fileNav.kids}
+        dropTarget={fileNav.dropTarget}
+        onToggle={fileNav.toggleNode}
+        onSelect={fileNav.openFolder}
+        onDropMove={(dest) => void dropMove(dest)}
+        setDropTarget={fileNav.setDropTarget}
+      />
+    </div>
+  )
+}
+
 const FILE_GRID =
   'grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'
 
@@ -523,103 +679,52 @@ function FileTreeRow({
 }
 
 function FileView({
-  root,
   locale,
   onOpenVolume
 }: {
-  root: string
   locale: LanguageMode
   onOpenVolume: (vol: RawVolume) => void
 }): React.JSX.Element {
   const text = uiText[locale]
-  const [currentDir, setCurrentDir] = useState(root)
+  const fileNav = useFileNav()
+  const root = fileNav.root ?? ''
+  const currentDir = fileNav.fileDir ?? root
   const [listing, setListing] = useState<RawListing | null>(null)
   const [loading, setLoading] = useState(false)
-  const [expanded, setExpanded] = useState<Set<string>>(new Set([root]))
-  const [kids, setKids] = useState<Map<string, DirNode[]>>(new Map())
   const [picked, setPicked] = useState<Set<string>>(new Set())
   const [dropTarget, setDropTarget] = useState<string | null>(null)
-  const dragPaths = React.useRef<string[]>([])
   const [renameReq, setRenameReq] = useState<{ path: string; name: string; busy: boolean } | null>(
     null
   )
   const [newFolderReq, setNewFolderReq] = useState<{ name: string; busy: boolean } | null>(null)
   const [deleteReq, setDeleteReq] = useState<{ paths: string[]; busy: boolean } | null>(null)
 
-  const fileopErr = (e: unknown): string => {
-    const m = `${e}`
-    if (m.includes('NAME_EXISTS')) return text.fileops.errNameExists
-    if (m.includes('INVALID_NAME')) return text.fileops.errInvalidName
-    if (m.includes('MOVE_INTO_SELF')) return text.fileops.errMoveIntoSelf
-    return text.fileops.errGeneric
-  }
+  const fileopErr = (e: unknown): string => fileopErrText(e, text)
 
-  const loadKids = React.useCallback(async (dir: string) => {
-    const list = await window.api.library.listSubdirs(dir)
-    setKids((prev) => new Map(prev).set(dir, list))
-  }, [])
-
-  const loadListing = React.useCallback(async (dir: string) => {
+  // 当前目录或文件操作版本变化 → 拉网格内容（树由 App 层据 version 同步）
+  useEffect(() => {
+    let active = true
+    setPicked(new Set())
     setLoading(true)
-    try {
-      setListing(await window.api.library.listDirRaw(dir))
-    } catch {
-      setListing({
-        folders: [],
-        files: [],
-        self: { readable: false, pageCount: 0, coverUrl: null }
-      })
-    } finally {
-      setLoading(false)
+    window.api.library
+      .listDirRaw(currentDir)
+      .then((l) => active && setListing(l))
+      .catch(
+        () =>
+          active &&
+          setListing({
+            folders: [],
+            files: [],
+            self: { readable: false, pageCount: 0, coverUrl: null }
+          })
+      )
+      .finally(() => active && setLoading(false))
+    return () => {
+      active = false
     }
-  }, [])
+  }, [currentDir, fileNav.version])
 
-  // 切库 → 回到根
-  useEffect(() => {
-    setCurrentDir(root)
-    setExpanded(new Set([root]))
-    setPicked(new Set())
-    void loadKids(root)
-  }, [root, loadKids])
-
-  // 当前目录变化 → 拉网格内容
-  useEffect(() => {
-    void loadListing(currentDir)
-  }, [currentDir, loadListing])
-
-  // 进入某目录：选中它、展开其祖先链、懒加载其子节点
-  const navigate = (dir: string): void => {
-    setPicked(new Set())
-    setCurrentDir(dir)
-    // 展开从 root 到 dir 的整条链，方便左树定位
-    const rel = dir.startsWith(root) ? dir.slice(root.length).split('/').filter(Boolean) : []
-    const chain = new Set([root])
-    let acc = root
-    for (const seg of rel) {
-      acc = `${acc}/${seg}`
-      chain.add(acc)
-    }
-    setExpanded((prev) => new Set([...prev, ...chain]))
-    if (!kids.has(dir)) void loadKids(dir)
-  }
-
-  const toggleNode = (path: string): void => {
-    setExpanded((prev) => {
-      const next = new Set(prev)
-      if (next.has(path)) next.delete(path)
-      else {
-        next.add(path)
-        if (!kids.has(path)) void loadKids(path)
-      }
-      return next
-    })
-  }
-
-  // 操作后刷新：当前网格 + 已展开各树节点
-  const reloadAll = React.useCallback(async () => {
-    await loadListing(currentDir)
-    await Promise.all([...expanded].map((p) => loadKids(p)))
-  }, [currentDir, expanded, loadListing, loadKids])
+  const navigate = (dir: string): void => fileNav.openFolder(dir)
 
   const doMove = async (paths: string[], dest: string): Promise<void> => {
     if (paths.length === 0) return
@@ -627,7 +732,7 @@ function FileView({
       await window.api.library.move(paths, dest)
       toast.success(text.fileops.moved(paths.length))
       setPicked(new Set())
-      await reloadAll()
+      fileNav.bump()
     } catch (e) {
       toast.error(fileopErr(e))
     }
@@ -640,7 +745,7 @@ function FileView({
       await window.api.library.rename(renameReq.path, renameReq.name)
       setRenameReq(null)
       toast.success(text.fileops.renamed)
-      await reloadAll()
+      fileNav.bump()
     } catch (e) {
       toast.error(fileopErr(e))
       setRenameReq((s) => (s ? { ...s, busy: false } : s))
@@ -654,7 +759,7 @@ function FileView({
       await window.api.library.createFolder(currentDir, newFolderReq.name)
       setNewFolderReq(null)
       toast.success(text.fileops.created)
-      await reloadAll()
+      fileNav.bump()
     } catch (e) {
       toast.error(fileopErr(e))
       setNewFolderReq((s) => (s ? { ...s, busy: false } : s))
@@ -669,7 +774,7 @@ function FileView({
       toast.success(text.fileops.deleted(deleteReq.paths.length))
       setDeleteReq(null)
       setPicked(new Set())
-      await reloadAll()
+      fileNav.bump()
     } catch (e) {
       toast.error(fileopErr(e))
       setDeleteReq((s) => (s ? { ...s, busy: false } : s))
@@ -695,7 +800,7 @@ function FileView({
     picked.has(path) && picked.size > 1 ? [...picked] : [path]
 
   const onCardDragStart = (path: string): void => {
-    dragPaths.current = picked.has(path) && picked.size > 1 ? [...picked] : [path]
+    fileNav.setDragPaths(picked.has(path) && picked.size > 1 ? [...picked] : [path])
   }
 
   // 面包屑：root → currentDir
@@ -711,7 +816,6 @@ function FileView({
     return out
   })()
 
-  const rootNode: DirNode = { id: root, path: root, name: text.fileView.root, hasSubfolders: true }
   const isEmpty =
     !loading &&
     listing !== null &&
@@ -721,23 +825,7 @@ function FileView({
 
   return (
     <div className="flex min-h-0 flex-1">
-      {/* 左：常驻文件夹树 */}
-      <div className="w-60 shrink-0 overflow-y-auto border-r p-2">
-        <FileTreeRow
-          node={rootNode}
-          depth={0}
-          currentDir={currentDir}
-          expanded={expanded}
-          kids={kids}
-          dropTarget={dropTarget}
-          onToggle={toggleNode}
-          onSelect={navigate}
-          onDropMove={(dest) => doMove(dragPaths.current, dest)}
-          setDropTarget={setDropTarget}
-        />
-      </div>
-
-      {/* 右：面包屑 + 网格 */}
+      {/* 面包屑 + 网格（文件夹树常驻左侧边栏，见 AppSidebar） */}
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex h-10 shrink-0 items-center gap-1 border-b px-3 text-sm">
           <Breadcrumb className="min-w-0 flex-1">
@@ -840,7 +928,7 @@ function FileView({
                   onClick={(e) => onCardClick(f.path, e)}
                   onOpen={() => navigate(f.path)}
                   onDragStart={() => onCardDragStart(f.path)}
-                  onDropMove={() => doMove(dragPaths.current, f.path)}
+                  onDropMove={() => doMove(fileNav.getDragPaths(), f.path)}
                   setDropTarget={(v) => setDropTarget(v ? f.path : null)}
                   onRename={() => setRenameReq({ path: f.path, name: f.name, busy: false })}
                   onDelete={() => setDeleteReq({ paths: targetsOf(f.path), busy: false })}
@@ -2065,7 +2153,10 @@ function LibraryView({
 }): React.JSX.Element {
   const text = uiText[locale]
   const { isMobile } = useSidebar()
-  const [root, setRoot] = useState<string | null>(null)
+  // 库根目录提升到 App 层（边栏文件夹树与内容区共享）；此处复用同一份
+  const fileNav = useFileNav()
+  const root = fileNav.root
+  const setRoot = fileNav.setRoot
   const [series, setSeries] = useState<LibraryEntry[]>([])
   const [selected, setSelected] = useState<LibrarySeries | null>(null)
   // 下钻路径栈（面包屑）：[根下的部, 子部, …]，selected 恒为栈顶（当前所在部）
@@ -2080,8 +2171,8 @@ function LibraryView({
   const [selectedSeriesPath, setSelectedSeriesPath] = useState<string | null>(null)
   // 书架视图模式（图标/列表）+ 列表视图里就地展开的部 + 各部卷册缓存
   const [viewMode, setViewMode] = useState<LibraryViewMode>(getInitialLibraryView)
-  // 文件视图（Eagle 式忠实磁盘整理器）：与书架视图互斥的顶层模式
-  const [fileMode, setFileMode] = useState(false)
+  // 文件视图（Eagle 式忠实磁盘整理器）：由边栏文件夹树驱动，fileNav.fileDir 非空即进入
+  const fileMode = fileNav.fileDir !== null
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [volCache, setVolCache] = useState<Map<string, LibraryDirEntry[]>>(new Map())
   // 框选（橡皮筋）：在空白处按下拖动进入多选
@@ -3447,30 +3538,6 @@ function LibraryView({
                       </TooltipContent>
                     </Tooltip>
                   ) : null}
-                  {/* 书架视图 ⇄ 文件视图（忠实磁盘整理器） */}
-                  {!showVolumes ? (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant={fileMode ? 'secondary' : 'ghost'}
-                          size="icon"
-                          onClick={() => setFileMode((v) => !v)}
-                        >
-                          {fileMode ? (
-                            <LayoutGrid className="size-4" />
-                          ) : (
-                            <FolderTree className="size-4" />
-                          )}
-                          <span className="sr-only">
-                            {fileMode ? text.library.viewShelf : text.library.viewFile}
-                          </span>
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        {fileMode ? text.library.viewShelf : text.library.viewFile}
-                      </TooltipContent>
-                    </Tooltip>
-                  ) : null}
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button variant="ghost" size="icon" onClick={openNewFolder}>
@@ -3528,11 +3595,7 @@ function LibraryView({
             </Empty>
           </div>
         ) : fileMode ? (
-          <FileView
-            root={root}
-            locale={locale}
-            onOpenVolume={(v) => void onVolumeOpen(v as LibraryVolume)}
-          />
+          <FileView locale={locale} onOpenVolume={(v) => void onVolumeOpen(v as LibraryVolume)} />
         ) : (
           // 用原生滚动容器而非 Radix ScrollArea：后者 Viewport 内层 display:table 使
           // min-h-full 失效、内容下方空白不在容器内（空白单击取消选择会失灵）。容器自身
@@ -4927,6 +4990,7 @@ function AppSidebar({
 }): React.JSX.Element {
   const text = uiText[locale]
   const { state, isMobile } = useSidebar()
+  const fileNav = useFileNav()
 
   return (
     <Sidebar collapsible="icon" variant="inset">
@@ -4960,11 +5024,18 @@ function AppSidebar({
                   <SidebarMenu>
                     {group.items.map((item, itemIdx) => {
                       const uniqueKey = `${group.titleKey}-${item.id}-${itemIdx}`
+                      // 「所有漫画」= 书架视图；点它回到书架（退出文件视图）
+                      const active =
+                        item.id === activeView &&
+                        !(item.id === 'library' && fileNav.fileDir !== null)
                       return (
                         <SidebarMenuItem key={uniqueKey}>
                           <SidebarMenuButton
-                            isActive={item.id === activeView}
-                            onClick={() => onSelect(item.id)}
+                            isActive={active}
+                            onClick={() => {
+                              if (item.id === 'library') fileNav.exitToShelf()
+                              onSelect(item.id)
+                            }}
                             tooltip={text.nav[item.id]}
                           >
                             <item.icon className="size-4 shrink-0" />
@@ -4975,6 +5046,10 @@ function AppSidebar({
                       )
                     })}
                   </SidebarMenu>
+                  {/* 「我的书库」下常驻文件夹树（仅展开态显示） */}
+                  {group.titleKey === 'groupMyLibrary' && state === 'expanded' ? (
+                    <FileTree locale={locale} />
+                  ) : null}
                 </SidebarGroupContent>
               </SidebarGroup>
             </React.Fragment>
