@@ -2098,7 +2098,7 @@ function LibraryView({
       setVolumes([])
       await loadSeries(picked)
     } catch (err) {
-      toast.error(`${err}`)
+      toast.error(`${err}`.includes('INVALID_LIBRARY') ? text.library.openInvalid : `${err}`)
     }
   }
 

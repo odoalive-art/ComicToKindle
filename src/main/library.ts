@@ -338,6 +338,21 @@ async function createLibrary(parentDir: string, nameRaw: string): Promise<string
   return root
 }
 
+/**
+ * 把开库面板选中的路径上溯到最近的 `.ctklib` 库包根——macOS openDirectory 面板里 `.ctklib`
+ * 是普通文件夹，双击会「进入」，用户常因此选中包内子目录（books/ 等），上溯即可纠正。
+ */
+function resolveManagedRoot(selected: string): string | null {
+  let cur = resolve(selected)
+  for (let i = 0; i < 12; i++) {
+    if (extname(cur).toLowerCase() === MANAGED_EXT) return cur
+    const parent = dirname(cur)
+    if (parent === cur) break
+    cur = parent
+  }
+  return null
+}
+
 async function openLibrary(packagePath: string): Promise<LibraryManifest> {
   const stat = await fs.stat(packagePath).catch(() => null)
   if (!stat?.isDirectory() || extname(packagePath).toLowerCase() !== MANAGED_EXT) {
@@ -1253,8 +1268,10 @@ export function setupLibrary(): void {
       ? await dialog.showOpenDialog(win, options)
       : await dialog.showOpenDialog(options)
     if (canceled || filePaths.length === 0) return null
-    await openLibrary(filePaths[0])
-    return filePaths[0]
+    const root = resolveManagedRoot(filePaths[0])
+    if (!root) throw new Error('INVALID_LIBRARY')
+    await openLibrary(root)
+    return root
   })
 
   ipcMain.handle('library:getSaved', async () => getSavedLibrary())
