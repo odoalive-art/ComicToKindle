@@ -394,14 +394,29 @@ export interface RawPlainFile {
 
 /** 文件视图：某目录下的完整直接内容（子文件夹卡 + 可读单文件 + 普通文件 + 自身是否可当一卷读） */
 export interface RawListing {
-  /** 直接子文件夹（忠实，含空目录），带封面/子项数供网格卡片展示 */
-  folders: Array<DirNode & { childCount: number; coverUrl: string | null }>
+  /**
+   * 直接子文件夹（忠实，含空目录），带封面/子项数供网格卡片展示，并叠加 seriesMeta
+   * 解析出的书名/作者（把该子文件夹当作「部」时用于「编辑书籍信息」与转换预填）。
+   */
+  folders: Array<
+    DirNode & { childCount: number; coverUrl: string | null; title: string; author: string | null }
+  >
   /** 直接放着的可读单文件（cbz/pdf/epub），各算一卷 */
   files: LibraryVolume[]
   /** 其他直接文件（含图片、分卷续卷和普通文档），用于文件整理 */
   plainFiles: RawPlainFile[]
-  /** 本文件夹自身是否直接铺着图片（可作为一卷阅读） */
-  self: { readable: boolean; pageCount: number; coverUrl: string | null }
+  /**
+   * 本文件夹自身：是否直接铺着图片（可作为一卷阅读），以及把它当作「部」时的
+   * 名称/书名/作者（转换其下单文件卷时作系列信息）。
+   */
+  self: {
+    readable: boolean
+    pageCount: number
+    coverUrl: string | null
+    name: string
+    title: string
+    author: string | null
+  }
 }
 
 const sortedChildDirs = (entries: import('fs').Dirent[]): string[] =>
@@ -453,6 +468,7 @@ async function listSubdirs(dir: string): Promise<DirNode[]> {
 async function listDirRaw(dir: string): Promise<RawListing> {
   assertWithinRoot(dir)
   const entries = await readDirSafe(dir)
+  const overrides = await readSeriesMeta()
 
   const folderNames = sortedChildDirs(entries)
   const folders = await Promise.all(
@@ -462,13 +478,16 @@ async function listDirRaw(dir: string): Promise<RawListing> {
       const childCount =
         sortedChildDirs(sub).length + sortedVolumeFiles(sub).length + sortedPlainFiles(sub).length
       const cover = await findFirstImage(path)
+      const { title, author } = resolveSeriesMeta(name, overrides[name])
       return {
         id: path,
         path,
         name,
         hasSubfolders: sub.some((e) => e.isDirectory() && !isHidden(e.name)),
         childCount,
-        coverUrl: cover ? toThumbUrl(cover) : null
+        coverUrl: cover ? toThumbUrl(cover) : null,
+        title,
+        author
       }
     })
   )
@@ -490,12 +509,21 @@ async function listDirRaw(dir: string): Promise<RawListing> {
     })
   )
 
-  // 自身直接含图片 → 可作为一卷读
+  // 自身直接含图片 → 可作为一卷读；并解析「把本目录当作部」时的书名/作者
+  const selfName = basename(dir)
+  const selfMeta = resolveSeriesMeta(selfName, overrides[selfName])
   const hasDirectImage = entries.some((e) => e.isFile() && !isHidden(e.name) && isImage(e.name))
-  let self: RawListing['self'] = { readable: false, pageCount: 0, coverUrl: null }
+  let self: RawListing['self'] = {
+    readable: false,
+    pageCount: 0,
+    coverUrl: null,
+    name: selfName,
+    title: selfMeta.title,
+    author: selfMeta.author
+  }
   if (hasDirectImage) {
     const [cover, pageCount] = await Promise.all([findFirstImage(dir), countImages(dir)])
-    self = { readable: true, pageCount, coverUrl: cover ? toThumbUrl(cover) : null }
+    self = { ...self, readable: true, pageCount, coverUrl: cover ? toThumbUrl(cover) : null }
   }
 
   return { folders, files, plainFiles, self }

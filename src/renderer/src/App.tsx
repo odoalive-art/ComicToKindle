@@ -417,7 +417,7 @@ interface FileNavValue {
   fileDir: string | null
   /** 进入某目录（并切到库视图） */
   openFolder: (dir: string) => void
-  /** 回到书架视图 */
+  /** 回到旧智能书架兜底视图 */
   exitToShelf: () => void
   expanded: Set<string>
   toggleNode: (path: string) => void
@@ -587,7 +587,7 @@ function LibraryNav({
             asChild
             isActive={active}
             tooltip={text.nav.library}
-            className={`group/tree-row ${isOver ? 'bg-sidebar-accent ring-1 ring-sidebar-ring' : ''}`}
+            className={`group/tree-row cursor-default select-none ${isOver ? 'bg-sidebar-accent ring-1 ring-sidebar-ring' : ''}`}
           >
             <div
               role="button"
@@ -703,7 +703,7 @@ function FileTreeNode({
         <SidebarMenuButton
           asChild
           isActive={active}
-          className={`group/tree-row ${dropCls}`}
+          className={`group/tree-row cursor-default select-none ${dropCls}`}
           {...dropProps}
         >
           <div
@@ -785,7 +785,7 @@ const READING_DIR_KEY = 'comic-to-kindle-reading-direction'
 const READING_MODE_KEY = 'comic-to-kindle-reading-mode'
 const READING_PROGRESS_KEY = 'comic-to-kindle-reading-progress'
 
-// 漫画库书架视图：icon=图标平铺 / list=Finder 列表（部可就地展开看卷）
+// 旧智能书架兜底视图：icon=图标平铺 / list=Finder 列表（部可就地展开看卷）
 type LibraryViewMode = 'icon' | 'list'
 const LIBRARY_VIEW_KEY = 'comic-to-kindle-library-view'
 function getInitialLibraryView(): LibraryViewMode {
@@ -1827,7 +1827,14 @@ function LibraryView({
           folders: [],
           files: [],
           plainFiles: [],
-          self: { readable: false, pageCount: 0, coverUrl: null }
+          self: {
+            readable: false,
+            pageCount: 0,
+            coverUrl: null,
+            name: '',
+            title: '',
+            author: null
+          }
         })
       })
       .finally(() => active && setRawLoading(false))
@@ -1961,6 +1968,16 @@ function LibraryView({
     })
   }
 
+  // 文件视图：把某个文件夹当作「部」编辑书名/作者覆盖（按文件夹名为键写 seriesMeta）
+  const openFolderMeta = (folder: { name: string; title: string; author: string | null }): void => {
+    setSeriesMetaReq({
+      name: folder.name,
+      title: folder.title,
+      author: folder.author ?? '',
+      busy: false
+    })
+  }
+
   const submitSeriesMeta = async (): Promise<void> => {
     if (!seriesMetaReq || seriesMetaReq.busy) return
     const { name, title, author } = seriesMetaReq
@@ -1973,6 +1990,7 @@ function LibraryView({
       prev.map((s) => (s.type === 'folder' && s.name === name ? { ...s, ...updated } : s))
     )
     setSelected((prev) => (prev && prev.name === name ? { ...prev, ...updated } : prev))
+    fileNav.bump() // 文件视图：重拉目录列表，叠加最新的书名/作者覆盖
     setSeriesMetaReq(null)
     toast.success(text.seriesMeta.saved)
   }
@@ -2129,18 +2147,11 @@ function LibraryView({
 
   const shouldUseSelectMode = (count: number): boolean => count >= 2
 
-  // 文件管理器式单击选中：普通点 = 只选这一项；Cmd/Ctrl 点或已在多选模式 = 累加/切换。
+  // 文件管理器式按下即选中：普通点 = 只选这一项；Cmd/Ctrl 点或已在多选模式 = 累加/切换。
   // 只有选中 2 个及以上才进入多选模式；单个选中只保留高亮反馈。
-  const onVolumeClick = (vol: LibraryVolume, e: React.MouseEvent): void => {
-    const additive = e.metaKey || e.ctrlKey || selectMode
-    const next = new Set(additive ? selectedVols : [])
-    if (additive && next.has(vol.path)) next.delete(vol.path)
-    else next.add(vol.path)
-    setSelectedVols(next)
-    setSelectMode(shouldUseSelectMode(next.size))
-  }
-
-  const onFileGridClick = (path: string, e: React.MouseEvent): void => {
+  const onSelectablePointerDown = (path: string, e: React.PointerEvent): void => {
+    if (e.button !== 0 || !e.isPrimary) return
+    if (!e.metaKey && !e.ctrlKey && selectedVols.size > 1 && selectedVols.has(path)) return
     const additive = e.metaKey || e.ctrlKey || selectMode
     const next = new Set(additive ? selectedVols : [])
     if (additive && next.has(path)) next.delete(path)
@@ -2148,6 +2159,9 @@ function LibraryView({
     setSelectedVols(next)
     setSelectMode(shouldUseSelectMode(next.size))
   }
+
+  const onVolumePointerDown = (vol: LibraryVolume, e: React.PointerEvent): void =>
+    onSelectablePointerDown(vol.path, e)
 
   const onFileGridContext = (path: string): void => {
     if (selectedVols.has(path)) return
@@ -2183,6 +2197,10 @@ function LibraryView({
 
   // 当前层里可选/可转换的「卷」(book)——子部不参与多选与批量转换
   const bookVolumes = volumes.filter((v): v is LibraryVolume => v.type === 'book')
+  // 顶栏「转换所选」的可转数：文件视图里只有可读单文件卷可转（文件夹/普通文件不算）
+  const selectedConvertCount = fileMode
+    ? (rawListing?.files ?? []).filter((f) => selectedVols.has(f.path)).length
+    : selectedVols.size
   const allSelected = fileMode
     ? rawSelectablePaths.length > 0 && selectedVols.size === rawSelectablePaths.length
     : bookVolumes.length > 0 && selectedVols.size === bookVolumes.length
@@ -2192,8 +2210,48 @@ function LibraryView({
     setSelectMode(!allSelected && shouldUseSelectMode(paths.length))
   }
 
+  // 文件视图转换：把若干「可读单文件卷」送去确认弹窗。
+  // 系列信息派生：在子目录里 → 以当前目录为「部」（self 元数据，已叠加 seriesMeta）；
+  // 直接躺在库根下的单文件 → 以书本身为系列（无「部」可归）。
+  // rawListing.files 是「瘦」RawVolume（无 type/author），但转换确认弹窗的 vol 字段用
+  // renderer 的「富」LibraryVolume；二者运行时同形（转换只读 path/sourceType/locked），沿用
+  // 既有 `as LibraryVolume` 强转即可。
+  const convertFileVols = (vols: RawVolume[]): void => {
+    if (vols.length === 0) return
+    const self = rawListing?.self
+    const atRoot = currentFileDir === root || !self
+    if (vols.length === 1) {
+      const vol = vols[0]
+      setConvertReq({
+        vol: vol as LibraryVolume,
+        seriesPathName: atRoot ? vol.title : self!.name,
+        seriesTitle: atRoot ? vol.title : self!.title,
+        author: atRoot ? '' : (self!.author ?? ''),
+        volumeTitle: vol.title
+      })
+      return
+    }
+    setBatchConvertReq({
+      seriesPathName: self?.name ?? '',
+      seriesTitle: self?.title ?? '',
+      author: self?.author ?? '',
+      vols: vols as LibraryVolume[],
+      busy: false
+    })
+  }
+
+  // 文件网格右键「转换」：命中已选多卷组则整组批量，否则只转这一卷（folders/普通文件不参与）
+  const convertFromFileGrid = (file: RawVolume): void => {
+    const targets = new Set(fileGridTargets(file.path))
+    convertFileVols((rawListing?.files ?? []).filter((v) => targets.has(v.path)))
+  }
+
   // 转换所选：单本走单本确认弹窗（含封面预览），多本走批量确认弹窗
   const convertSelected = (): void => {
+    if (fileMode) {
+      convertFileVols((rawListing?.files ?? []).filter((f) => selectedVols.has(f.path)))
+      return
+    }
     if (!selected || selectedVols.size === 0) return
     const picked = bookVolumes.filter((v) => selectedVols.has(v.path))
     if (picked.length === 1) {
@@ -3162,16 +3220,14 @@ function LibraryView({
                   <Button variant="ghost" size="sm" onClick={toggleAll}>
                     {allSelected ? text.activity.selectNone : text.activity.selectAll}
                   </Button>
-                  {!fileMode ? (
-                    <Button
-                      size="sm"
-                      disabled={selectedVols.size === 0}
-                      onClick={() => convertSelected()}
-                    >
-                      <BookUp className="size-4" />
-                      {text.activity.convertSelected(selectedVols.size)}
-                    </Button>
-                  ) : null}
+                  <Button
+                    size="sm"
+                    disabled={selectedConvertCount === 0}
+                    onClick={() => convertSelected()}
+                  >
+                    <BookUp className="size-4" />
+                    {text.activity.convertSelected(selectedConvertCount)}
+                  </Button>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button variant="ghost" size="icon" onClick={exitSelect}>
@@ -3320,7 +3376,7 @@ function LibraryView({
                             data-vol-card
                             data-vol-path={folder.path}
                             draggable
-                            onClick={(e) => onFileGridClick(folder.path, e)}
+                            onPointerDown={(e) => onSelectablePointerDown(folder.path, e)}
                             onContextMenu={() => onFileGridContext(folder.path)}
                             onDoubleClick={() => fileNav.openFolder(folder.path)}
                             onDragStart={(e) => {
@@ -3363,13 +3419,6 @@ function LibraryView({
                                 )}
                                 <div className="pointer-events-none absolute inset-0 rounded-lg border border-foreground/10" />
                               </AspectRatio>
-                              <Badge
-                                variant="secondary"
-                                className="absolute top-1.5 right-1.5 max-w-[calc(100%-0.75rem)] gap-1 truncate bg-background/85 backdrop-blur"
-                              >
-                                <Folder className="size-3" />
-                                {text.fileView.itemUnit(folder.childCount)}
-                              </Badge>
                             </div>
                             <div
                               className={`min-w-0 rounded-md px-1.5 py-0.5 ${
@@ -3386,6 +3435,11 @@ function LibraryView({
                           </div>
                         </ContextMenuTrigger>
                         <ContextMenuContent>
+                          <ContextMenuItem onSelect={() => deferOpen(() => openFolderMeta(folder))}>
+                            <BookText className="size-4" />
+                            {text.seriesMeta.edit}
+                          </ContextMenuItem>
+                          <ContextMenuSeparator />
                           <ContextMenuItem
                             onSelect={() =>
                               deferOpen(() =>
@@ -3425,7 +3479,7 @@ function LibraryView({
                             data-vol-card
                             data-vol-path={file.path}
                             draggable
-                            onClick={(e) => onFileGridClick(file.path, e)}
+                            onPointerDown={(e) => onSelectablePointerDown(file.path, e)}
                             onContextMenu={() => onFileGridContext(file.path)}
                             onDoubleClick={() => void onVolumeOpen(file as LibraryVolume)}
                             onDragStart={(e) => {
@@ -3477,6 +3531,13 @@ function LibraryView({
                         </ContextMenuTrigger>
                         <ContextMenuContent>
                           <ContextMenuItem
+                            onSelect={() => deferOpen(() => convertFromFileGrid(file))}
+                          >
+                            <BookUp className="size-4" />
+                            {text.convert.action}
+                          </ContextMenuItem>
+                          <ContextMenuSeparator />
+                          <ContextMenuItem
                             onSelect={() =>
                               deferOpen(() =>
                                 setRenameReq({ path: file.path, name: file.name, busy: false })
@@ -3512,7 +3573,7 @@ function LibraryView({
                             data-vol-card
                             data-vol-path={file.path}
                             draggable
-                            onClick={(e) => onFileGridClick(file.path, e)}
+                            onPointerDown={(e) => onSelectablePointerDown(file.path, e)}
                             onContextMenu={() => onFileGridContext(file.path)}
                             onDragStart={(e) => {
                               e.dataTransfer.effectAllowed = 'move'
@@ -3541,14 +3602,6 @@ function LibraryView({
                                 )}
                                 <div className="pointer-events-none absolute inset-0 rounded-lg border border-foreground/10" />
                               </AspectRatio>
-                              {file.ext ? (
-                                <Badge
-                                  variant="secondary"
-                                  className="absolute top-1.5 right-1.5 max-w-[calc(100%-0.75rem)] truncate bg-background/85 backdrop-blur"
-                                >
-                                  {file.ext}
-                                </Badge>
-                              ) : null}
                             </div>
                             <div
                               className={`min-w-0 rounded-md px-1.5 py-0.5 ${
@@ -3663,7 +3716,7 @@ function LibraryView({
                           <div
                             data-vol-card
                             data-vol-path={vol.path}
-                            onClick={(e) => onVolumeClick(vol, e)}
+                            onPointerDown={(e) => onVolumePointerDown(vol, e)}
                             onDoubleClick={() => void onVolumeOpen(vol)}
                             className="group flex cursor-default flex-col gap-2 text-left"
                           >

@@ -50,10 +50,19 @@ export interface RawPlainFile {
 }
 
 export interface RawListing {
-  folders: Array<DirNode & { childCount: number; coverUrl: string | null }>
+  folders: Array<
+    DirNode & { childCount: number; coverUrl: string | null; title: string; author: string | null }
+  >
   files: LibraryVolume[]
   plainFiles: RawPlainFile[]
-  self: { readable: boolean; pageCount: number; coverUrl: string | null }
+  self: {
+    readable: boolean
+    pageCount: number
+    coverUrl: string | null
+    name: string
+    title: string
+    author: string | null
+  }
 }
 
 export interface LibraryAPI {
