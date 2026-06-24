@@ -2037,47 +2037,31 @@ function LibraryView({
 
   const submitSeriesMeta = async (): Promise<void> => {
     if (!seriesMetaReq || seriesMetaReq.busy) return
-    if (managedLibrary) {
-      if (!seriesMetaReq.id) return
-      setSeriesMetaReq({ ...seriesMetaReq, busy: true })
-      try {
-        await window.api.library.renameSeries(
-          seriesMetaReq.id,
-          seriesMetaReq.title,
-          seriesMetaReq.author.trim() || null
-        )
-        setSelected((prev) =>
-          prev && prev.id === seriesMetaReq.id
-            ? {
-                ...prev,
-                name: seriesMetaReq.title,
-                title: seriesMetaReq.title,
-                author: seriesMetaReq.author.trim() || null
-              }
-            : prev
-        )
-        setSeriesMetaReq(null)
-        toast.success(text.seriesMeta.saved)
-        await refreshAfterFileop()
-      } catch (e) {
-        toast.error(fileopErr(e))
-        setSeriesMetaReq((s) => (s ? { ...s, busy: false } : s))
-      }
-      return
-    }
-    const { name, title, author } = seriesMetaReq
+    if (!seriesMetaReq.id) return
     setSeriesMetaReq({ ...seriesMetaReq, busy: true })
-    const updated = await window.api.library.setSeriesMeta(name, {
-      title,
-      author: author.trim() || null
-    })
-    setSeries((prev) =>
-      prev.map((s) => (s.type === 'folder' && s.name === name ? { ...s, ...updated } : s))
-    )
-    setSelected((prev) => (prev && prev.name === name ? { ...prev, ...updated } : prev))
-    fileNav.bump() // 文件视图：重拉目录列表，叠加最新的书名/作者覆盖
-    setSeriesMetaReq(null)
-    toast.success(text.seriesMeta.saved)
+    try {
+      await window.api.library.renameSeries(
+        seriesMetaReq.id,
+        seriesMetaReq.title,
+        seriesMetaReq.author.trim() || null
+      )
+      setSelected((prev) =>
+        prev && prev.id === seriesMetaReq.id
+          ? {
+              ...prev,
+              name: seriesMetaReq.title,
+              title: seriesMetaReq.title,
+              author: seriesMetaReq.author.trim() || null
+            }
+          : prev
+      )
+      setSeriesMetaReq(null)
+      toast.success(text.seriesMeta.saved)
+      await refreshAfterFileop()
+    } catch (e) {
+      toast.error(fileopErr(e))
+      setSeriesMetaReq((s) => (s ? { ...s, busy: false } : s))
+    }
   }
 
   // Radix 右键菜单关闭那一帧会派发 pointerup/focus 事件，刚打开的 Dialog/AlertDialog 会把它
@@ -2207,27 +2191,14 @@ function LibraryView({
 
   const submitRename = async (): Promise<void> => {
     if (!renameReq || renameReq.busy || !renameReq.name.trim()) return
-    if (managedLibrary) {
-      if (renameReq.kind !== 'book' || !renameReq.id) {
-        toast.info('托管库部信息请用“编辑信息”修改')
-        setRenameReq(null)
-        return
-      }
-      setRenameReq((s) => (s ? { ...s, busy: true } : s))
-      try {
-        await window.api.library.renameBook(renameReq.id, renameReq.name)
-        setRenameReq(null)
-        toast.success(text.fileops.renamed)
-        await refreshAfterFileop()
-      } catch (e) {
-        toast.error(fileopErr(e))
-        setRenameReq((s) => (s ? { ...s, busy: false } : s))
-      }
+    if (renameReq.kind !== 'book' || !renameReq.id) {
+      toast.info('部信息请用“编辑信息”修改')
+      setRenameReq(null)
       return
     }
     setRenameReq((s) => (s ? { ...s, busy: true } : s))
     try {
-      await window.api.library.rename(renameReq.path, renameReq.name)
+      await window.api.library.renameBook(renameReq.id, renameReq.name)
       setRenameReq(null)
       toast.success(text.fileops.renamed)
       await refreshAfterFileop()
@@ -2239,25 +2210,9 @@ function LibraryView({
 
   const submitMove = async (destDir: string): Promise<void> => {
     if (!moveReq || moveReq.busy) return
-    if (managedLibrary) {
-      setMoveReq((s) => (s ? { ...s, busy: true } : s))
-      try {
-        await window.api.library.assignBooks(moveReq.sources, destDir)
-        const n = moveReq.sources.length
-        setMoveReq(null)
-        setMoveNewFolderName(null)
-        exitSelect()
-        toast.success(text.fileops.moved(n))
-        await refreshAfterFileop()
-      } catch (e) {
-        toast.error(fileopErr(e))
-        setMoveReq((s) => (s ? { ...s, busy: false } : s))
-      }
-      return
-    }
     setMoveReq((s) => (s ? { ...s, busy: true } : s))
     try {
-      await window.api.library.move(moveReq.sources, destDir)
+      await window.api.library.assignBooks(moveReq.sources, destDir)
       const n = moveReq.sources.length
       setMoveReq(null)
       setMoveNewFolderName(null)
@@ -2279,26 +2234,9 @@ function LibraryView({
       !root
     )
       return
-    if (managedLibrary) {
-      setMoveReq((s) => (s ? { ...s, busy: true } : s))
-      try {
-        await window.api.library.createSeries(moveNewFolderName, null, moveReq.sources)
-        const n = moveReq.sources.length
-        setMoveReq(null)
-        setMoveNewFolderName(null)
-        exitSelect()
-        toast.success(text.fileops.moved(n))
-        await refreshAfterFileop()
-      } catch (e) {
-        toast.error(fileopErr(e))
-        setMoveReq((s) => (s ? { ...s, busy: false } : s))
-      }
-      return
-    }
     setMoveReq((s) => (s ? { ...s, busy: true } : s))
     try {
-      const newPath = await window.api.library.createFolder(root, moveNewFolderName)
-      await window.api.library.move(moveReq.sources, newPath)
+      await window.api.library.createSeries(moveNewFolderName, null, moveReq.sources)
       const n = moveReq.sources.length
       setMoveReq(null)
       setMoveNewFolderName(null)
@@ -2313,30 +2251,15 @@ function LibraryView({
 
   const submitDelete = async (): Promise<void> => {
     if (!deleteReq || deleteReq.busy) return
-    if (managedLibrary) {
-      setDeleteReq((s) => (s ? { ...s, busy: true } : s))
-      try {
-        if (deleteReq.kind === 'series') {
-          await Promise.all(deleteReq.paths.map((id) => window.api.library.deleteSeries(id)))
-        } else {
-          await window.api.library.trashBooks(deleteReq.paths)
-        }
-        setDeleteReq(null)
-        toast.success(text.fileops.deleted(deleteReq.paths.length))
-        await refreshAfterFileop()
-      } catch (e) {
-        toast.error(fileopErr(e))
-        setDeleteReq((s) => (s ? { ...s, busy: false } : s))
-      }
-      return
-    }
     setDeleteReq((s) => (s ? { ...s, busy: true } : s))
     try {
-      await window.api.library.trash(deleteReq.paths)
-      const n = deleteReq.paths.length
+      if (deleteReq.kind === 'series') {
+        await Promise.all(deleteReq.paths.map((id) => window.api.library.deleteSeries(id)))
+      } else {
+        await window.api.library.trashBooks(deleteReq.paths)
+      }
       setDeleteReq(null)
-      exitSelect()
-      toast.success(text.fileops.deleted(n))
+      toast.success(text.fileops.deleted(deleteReq.paths.length))
       await refreshAfterFileop()
     } catch (e) {
       toast.error(fileopErr(e))
@@ -2352,22 +2275,9 @@ function LibraryView({
 
   const submitNewFolder = async (): Promise<void> => {
     if (!newFolderReq || newFolderReq.busy || !newFolderReq.name.trim()) return
-    if (managedLibrary) {
-      setNewFolderReq((s) => (s ? { ...s, busy: true } : s))
-      try {
-        await window.api.library.createSeries(newFolderReq.name, null, [])
-        setNewFolderReq(null)
-        toast.success(text.fileops.created)
-        await refreshAfterFileop()
-      } catch (e) {
-        toast.error(fileopErr(e))
-        setNewFolderReq((s) => (s ? { ...s, busy: false } : s))
-      }
-      return
-    }
     setNewFolderReq((s) => (s ? { ...s, busy: true } : s))
     try {
-      await window.api.library.createFolder(newFolderReq.parent, newFolderReq.name)
+      await window.api.library.createSeries(newFolderReq.name, null, [])
       setNewFolderReq(null)
       toast.success(text.fileops.created)
       await refreshAfterFileop()
@@ -2432,12 +2342,8 @@ function LibraryView({
   const moveDraggedToFolder = async (dest: string): Promise<void> => {
     const paths = fileNav.getDragPaths()
     if (paths.length === 0) return
-    if (managedLibrary) {
-      toast.info('托管库分组会在阶段 2 通过 manifest 完成')
-      return
-    }
     try {
-      await window.api.library.move(paths, dest)
+      await window.api.library.assignBooks(paths, dest)
       toast.success(text.fileops.moved(paths.length))
       exitSelect()
       await refreshAfterFileop()
