@@ -263,13 +263,15 @@ async function buildFileVolume(path: string, name: string): Promise<LibraryVolum
  */
 async function classifyDir(dir: string, depth = 6): Promise<'volume' | 'part' | 'empty'> {
   const entries = await readDirSafe(dir)
-  const hasDirectVolume = entries.some(
-    (e) =>
-      e.isFile() &&
-      !isHidden(e.name) &&
-      (isImage(e.name) || (isVolumeFile(e.name) && !isSplitContinuation(e.name)))
+  // 直接铺着图片 → 文件夹本身就是一卷可读单元
+  if (entries.some((e) => e.isFile() && !isHidden(e.name) && isImage(e.name))) return 'volume'
+  // 直接放着 cbz/pdf/epub 单文件 → 文件夹是「部」，这些文件各自作为其下的一卷（由 listChildren 单列）
+  if (
+    entries.some(
+      (e) => e.isFile() && !isHidden(e.name) && isVolumeFile(e.name) && !isSplitContinuation(e.name)
+    )
   )
-  if (hasDirectVolume) return 'volume'
+    return 'part'
   if (depth <= 0) return 'empty'
   for (const e of entries) {
     if (e.isDirectory() && !isHidden(e.name)) {

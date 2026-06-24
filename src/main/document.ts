@@ -62,7 +62,11 @@ export async function getCachedDocumentImages(filePath: string): Promise<string[
 
 async function writeManifest(dir: string, images: string[]): Promise<string[]> {
   if (images.length === 0) throw new Error('NO_IMAGES')
-  await fs.writeFile(manifestPath(dir), JSON.stringify({ images } satisfies DocumentManifest), 'utf-8')
+  await fs.writeFile(
+    manifestPath(dir),
+    JSON.stringify({ images } satisfies DocumentManifest),
+    'utf-8'
+  )
   return images.map((rel) => join(dir, rel))
 }
 
@@ -118,7 +122,7 @@ async function inspectPdf(filePath: string): Promise<DocumentInfo> {
   } as never)
   const doc = await task.promise
   const pageCount = doc.numPages
-  await (doc as unknown as { destroy: () => Promise<void> }).destroy()
+  await task.destroy() // pdfjs v6：销毁在 loadingTask 上（doc 无 destroy），否则 finally 抛错吞掉结果
   return { pageCount }
 }
 
@@ -160,7 +164,7 @@ async function renderPdf(filePath: string, onProgress?: DocumentProgressCb): Pro
     await fs.rm(dir, { recursive: true, force: true }).catch(() => {})
     throw err
   } finally {
-    await (doc as unknown as { destroy: () => Promise<void> }).destroy()
+    await task.destroy() // pdfjs v6：销毁在 loadingTask 上（doc 无 destroy），否则 finally 抛错吞掉结果
   }
 
   return writeManifest(dir, relImages)
@@ -190,11 +194,7 @@ export async function getPdfCoverImage(filePath: string): Promise<string | null>
   }
 }
 
-async function renderPdfFirstPage(
-  filePath: string,
-  dir: string,
-  coverPath: string
-): Promise<void> {
+async function renderPdfFirstPage(filePath: string, dir: string, coverPath: string): Promise<void> {
   const pdfjs = await loadPdfJs()
   const data = new Uint8Array(await fs.readFile(filePath))
   const task = pdfjs.getDocument({
@@ -216,7 +216,7 @@ async function renderPdfFirstPage(
     await fs.mkdir(dir, { recursive: true })
     await fs.writeFile(coverPath, canvas.toBuffer('image/png'))
   } finally {
-    await (doc as unknown as { destroy: () => Promise<void> }).destroy()
+    await task.destroy() // pdfjs v6：销毁在 loadingTask 上（doc 无 destroy），否则 finally 抛错吞掉结果
   }
 }
 
@@ -224,7 +224,10 @@ function bin7za(): string {
   return sevenBin.path7za.replace('app.asar', 'app.asar.unpacked')
 }
 
-function run7za(args: string[], opts: { maxBuffer?: number; timeout?: number } = {}): Promise<string> {
+function run7za(
+  args: string[],
+  opts: { maxBuffer?: number; timeout?: number } = {}
+): Promise<string> {
   return new Promise((resolvePromise, reject) => {
     const child = execFile(
       bin7za(),
@@ -287,7 +290,10 @@ const xmlParser = new XMLParser({
 
 async function collectEpubImageFiles(root: string): Promise<string[]> {
   const containerPath = join(root, 'META-INF', 'container.xml')
-  const container = xmlParser.parse(await fs.readFile(containerPath, 'utf-8')) as Record<string, unknown>
+  const container = xmlParser.parse(await fs.readFile(containerPath, 'utf-8')) as Record<
+    string,
+    unknown
+  >
   const rootfile = firstArray(asObjectPath(container, ['container', 'rootfiles', 'rootfile']))[0]
   const opfRel = typeof rootfile?.['full-path'] === 'string' ? rootfile['full-path'] : null
   if (!opfRel) throw new Error('EPUB_CONTAINER_INVALID')
@@ -355,9 +361,9 @@ function extractImageHrefs(xhtml: string): string[] {
   const parsed = safeParseXml(xhtml)
   const fromTree: string[] = []
   collectImageHrefsFromNode(parsed, fromTree)
-  const fromRegex = [...xhtml.matchAll(/<(?:img|image)\b[^>]*(?:src|href|xlink:href)=["']([^"']+)["']/gi)].map(
-    (match) => match[1]
-  )
+  const fromRegex = [
+    ...xhtml.matchAll(/<(?:img|image)\b[^>]*(?:src|href|xlink:href)=["']([^"']+)["']/gi)
+  ].map((match) => match[1])
   return [...new Set([...fromTree, ...fromRegex])]
 }
 
