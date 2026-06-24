@@ -2,7 +2,7 @@
 
 ## 项目状态
 
-ComicToKindle 是一个桌面应用项目，用于本地漫画库管理、Kindle 转换流程和投递工具。核心闭环已打通：应用壳、真实本地漫画库浏览（左侧文件夹树导航 + 忠实磁盘目录网格，递归识别可读卷册用于阅读/转换）、卷册阅读器、卷册（图片目录 + CBZ/ZIP/CBR/RAR/7z 压缩包，含加密 zip 与多卷分卷；PDF 单文件；图片型 EPUB）转 Kindle 固定版式 EPUB（sharp + archiver，书名「漫画名+卷册」+ 作者元数据 + 转换确认弹窗）、转换队列持久化（`userData/queue.json`，关窗即退；重启后未完成任务标为 interrupted 等用户确认继续 + 孤儿 tmp 清扫）、产物归档、投递到 Kindle（SMTP 邮件 nodemailer + safeStorage 加密凭据 / Send to Kindle 网页通道 ≤200MB 二选一）。尚未实现：元数据存储/索引、纯文本/重排 EPUB、图像放大、转换后自动投递。数据层与压缩包/文档来源/转换/队列持久化/投递/网页推送层（comic:// 协议含封面缩略图、7zip-bin 解压、PDF.js 渲染、IPC、数据模型、存储键、产物清单、凭据安全、CDP 自动填文件）详见 `docs/architecture.md`。
+ComicToKindle 是一个桌面应用项目，用于本地漫画库管理、Kindle 转换流程和投递工具。核心闭环已打通：应用壳、卷册阅读器、卷册（图片目录 + CBZ/ZIP/CBR/RAR/7z 压缩包，含加密 zip 与多卷分卷；PDF 单文件；图片型 EPUB）转 Kindle 固定版式 EPUB（sharp + archiver，书名「漫画名+卷册」+ 作者元数据 + 转换确认弹窗）、转换队列持久化（`userData/queue.json`，关窗即退；重启后未完成任务标为 interrupted 等用户确认继续 + 孤儿 tmp 清扫）、产物归档、投递到 Kindle（SMTP 邮件 nodemailer + safeStorage 加密凭据 / Send to Kindle 网页通道 ≤200MB 二选一）。2026-06-24 开始按 Eagle 模型改造漫画库：已接入 App 独占 `.ctklib` 库包（`library.json` + `books/<bookId>/book.json` + `source.*`/`images/`）、新建/打开库包、扫描导入源、复制卷册入库、散卷展示、部 CRUD、卷册归属、卷册显示名、部名/作者编辑、右键上移/下移排序、导入预览、导入后删除源选项、卷册软删除到库内 `trash/`、库内回收站列表/还原/清空；阅读/转换复用现有桶路径取图。旧的左侧文件夹树 + 忠实磁盘目录网格代码仍作为过渡兼容层保留，后续阶段需删除。尚未实现：元数据索引、纯文本/重排 EPUB、图像放大、转换后自动投递。数据层与压缩包/文档来源/转换/队列持久化/投递/网页推送层（comic:// 协议含封面缩略图、7zip-bin 解压、PDF.js 渲染、IPC、数据模型、存储键、产物清单、凭据安全、CDP 自动填文件）详见 `docs/architecture.md`。
 
 当前仓库路径：
 

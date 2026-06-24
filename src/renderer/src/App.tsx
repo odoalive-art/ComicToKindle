@@ -2,8 +2,10 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import {
   Archive,
+  ArrowDown,
   ArrowLeft,
   ArrowLeftRight,
+  ArrowUp,
   BookOpen,
   BookOpenCheck,
   CheckCircle2,
@@ -228,12 +230,13 @@ function App(): React.JSX.Element {
     setNavKids((prev) => new Map(prev).set(dir, list))
   }, [])
 
-  // 切库 → 默认选中库根目录，预载根目录子文件夹
+  // 切库：旧目录库默认选中库根目录；.ctklib 托管库默认停在 manifest 书架，不暴露物理桶目录。
   useEffect(() => {
-    setFileDir(libRoot)
+    const managed = !!libRoot && libRoot.toLowerCase().endsWith('.ctklib')
+    setFileDir(managed ? null : libRoot)
     setNavKids(new Map())
-    setNavExpanded(libRoot ? new Set([libRoot]) : new Set())
-    if (libRoot) void ensureKids(libRoot)
+    setNavExpanded(libRoot && !managed ? new Set([libRoot]) : new Set())
+    if (libRoot && !managed) void ensureKids(libRoot)
   }, [libRoot, ensureKids])
 
   // 文件操作后：重载所有已展开节点的子文件夹（树同步增删/改名）
@@ -407,6 +410,8 @@ type Artifact = Awaited<ReturnType<Window['api']['artifacts']['list']>>[number]
 type DirNode = Awaited<ReturnType<Window['api']['library']['listSubdirs']>>[number]
 type RawListing = Awaited<ReturnType<Window['api']['library']['listDirRaw']>>
 type RawVolume = RawListing['files'][number]
+type ImportScanResult = Awaited<ReturnType<Window['api']['library']['scanImport']>>
+type TrashBookView = Awaited<ReturnType<Window['api']['library']['listTrash']>>[number]
 
 // ============ 文件导航共享状态（边栏文件夹树 ↔ 内容网格）============
 // 树常驻边栏、网格在内容区，二者跨组件共享同一份状态，故提升到 App 并经 Context 下发。
@@ -1685,6 +1690,7 @@ function LibraryView({
   const fileNav = useFileNav()
   const root = fileNav.root
   const setRoot = fileNav.setRoot
+  const managedLibrary = root?.toLowerCase().endsWith('.ctklib') ?? false
   const [series, setSeries] = useState<LibraryEntry[]>([])
   const [selected, setSelected] = useState<LibrarySeries | null>(null)
   // 下钻路径栈（面包屑）：[根下的部, 子部, …]，selected 恒为栈顶（当前所在部）
@@ -1769,6 +1775,7 @@ function LibraryView({
 
   // 编辑某部漫画的名称/作者（持久化覆盖，不改本地文件夹名）
   const [seriesMetaReq, setSeriesMetaReq] = useState<{
+    id?: string
     name: string
     title: string
     author: string
@@ -1776,12 +1783,29 @@ function LibraryView({
   } | null>(null)
 
   // ---- 文件整理（真·本地文件操作）----
-  const [renameReq, setRenameReq] = useState<{ path: string; name: string; busy: boolean } | null>(
-    null
-  )
+  const [renameReq, setRenameReq] = useState<{
+    path: string
+    id?: string
+    kind?: 'book' | 'series'
+    name: string
+    busy: boolean
+  } | null>(null)
   const [moveReq, setMoveReq] = useState<{ sources: string[]; busy: boolean } | null>(null)
   const [moveNewFolderName, setMoveNewFolderName] = useState<string | null>(null)
-  const [deleteReq, setDeleteReq] = useState<{ paths: string[]; busy: boolean } | null>(null)
+  const [deleteReq, setDeleteReq] = useState<{
+    paths: string[]
+    kind?: 'series' | 'books'
+    busy: boolean
+  } | null>(null)
+  const [importReq, setImportReq] = useState<{
+    scan: ImportScanResult
+    deleteSourceAfter: boolean
+    busy: boolean
+  } | null>(null)
+  const [trashReq, setTrashReq] = useState<{
+    items: TrashBookView[]
+    busy: boolean
+  } | null>(null)
   const [newFolderReq, setNewFolderReq] = useState<{
     parent: string
     name: string
@@ -1797,6 +1821,12 @@ function LibraryView({
           id: prepareToastRef.current
         })
       }
+    })
+  }, [text])
+
+  React.useEffect(() => {
+    return window.api.library.onImportProgress(({ done, total, name }) => {
+      toast.loading(text.library.importProgress(done, total, name), { id: 'library-import' })
     })
   }, [text])
 
@@ -1987,6 +2017,7 @@ function LibraryView({
   const openSeriesMeta = (item: LibrarySeries | null): void => {
     if (!item) return
     setSeriesMetaReq({
+      id: item.id,
       name: item.name,
       title: item.title,
       author: item.author ?? '',
@@ -2006,6 +2037,34 @@ function LibraryView({
 
   const submitSeriesMeta = async (): Promise<void> => {
     if (!seriesMetaReq || seriesMetaReq.busy) return
+    if (managedLibrary) {
+      if (!seriesMetaReq.id) return
+      setSeriesMetaReq({ ...seriesMetaReq, busy: true })
+      try {
+        await window.api.library.renameSeries(
+          seriesMetaReq.id,
+          seriesMetaReq.title,
+          seriesMetaReq.author.trim() || null
+        )
+        setSelected((prev) =>
+          prev && prev.id === seriesMetaReq.id
+            ? {
+                ...prev,
+                name: seriesMetaReq.title,
+                title: seriesMetaReq.title,
+                author: seriesMetaReq.author.trim() || null
+              }
+            : prev
+        )
+        setSeriesMetaReq(null)
+        toast.success(text.seriesMeta.saved)
+        await refreshAfterFileop()
+      } catch (e) {
+        toast.error(fileopErr(e))
+        setSeriesMetaReq((s) => (s ? { ...s, busy: false } : s))
+      }
+      return
+    }
     const { name, title, author } = seriesMetaReq
     setSeriesMetaReq({ ...seriesMetaReq, busy: true })
     const updated = await window.api.library.setSeriesMeta(name, {
@@ -2054,12 +2113,118 @@ function LibraryView({
     }
   }
 
+  const swapIdOrder = (ids: string[], id: string, delta: -1 | 1): string[] | null => {
+    const idx = ids.indexOf(id)
+    const nextIdx = idx + delta
+    if (idx < 0 || nextIdx < 0 || nextIdx >= ids.length) return null
+    const next = [...ids]
+    ;[next[idx], next[nextIdx]] = [next[nextIdx], next[idx]]
+    return next
+  }
+
+  const reorderTopSeries = async (id: string, delta: -1 | 1): Promise<void> => {
+    if (!managedLibrary || !root) return
+    const ids = series.filter((item) => item.type === 'folder').map((item) => item.id)
+    const ordered = swapIdOrder(ids, id, delta)
+    if (!ordered) return
+    try {
+      await window.api.library.reorderSeries(ordered)
+      await loadSeries(root)
+    } catch (err) {
+      toast.error(`${err}`)
+    }
+  }
+
+  const reorderUngroupedBook = async (id: string, delta: -1 | 1): Promise<void> => {
+    if (!managedLibrary || !root) return
+    const ids = series.filter((item) => item.type === 'book').map((item) => item.id)
+    const ordered = swapIdOrder(ids, id, delta)
+    if (!ordered) return
+    try {
+      await window.api.library.reorderBooks(null, ordered)
+      await loadSeries(root)
+    } catch (err) {
+      toast.error(`${err}`)
+    }
+  }
+
+  const reorderSeriesBook = async (
+    seriesId: string,
+    bookId: string,
+    ids: string[],
+    delta: -1 | 1
+  ): Promise<void> => {
+    if (!managedLibrary) return
+    const ordered = swapIdOrder(ids, bookId, delta)
+    if (!ordered) return
+    try {
+      await window.api.library.reorderBooks(seriesId, ordered)
+      if (selected?.id === seriesId) await refreshVolumes()
+      await loadFolderVolumes(seriesId)
+      if (root) await loadSeries(root)
+    } catch (err) {
+      toast.error(`${err}`)
+    }
+  }
+
+  const renderSortItems = (
+    ids: string[],
+    id: string,
+    onMove: (delta: -1 | 1) => Promise<void>
+  ): React.JSX.Element | null => {
+    if (!managedLibrary) return null
+    const idx = ids.indexOf(id)
+    return (
+      <>
+        <ContextMenuSeparator />
+        <ContextMenuItem disabled={idx <= 0} onSelect={() => void onMove(-1)}>
+          <ArrowUp className="size-4" />
+          {text.library.moveUp}
+        </ContextMenuItem>
+        <ContextMenuItem
+          disabled={idx < 0 || idx >= ids.length - 1}
+          onSelect={() => void onMove(1)}
+        >
+          <ArrowDown className="size-4" />
+          {text.library.moveDown}
+        </ContextMenuItem>
+      </>
+    )
+  }
+
   // 右键命中的卷：若它在多选集合内则对整组操作，否则只对它
-  const volTargets = (vol: LibraryVolume): string[] =>
-    selectedVols.has(vol.path) && selectedVols.size > 1 ? [...selectedVols] : [vol.path]
+  const volTargets = (vol: LibraryVolume): string[] => {
+    if (!managedLibrary) {
+      return selectedVols.has(vol.path) && selectedVols.size > 1 ? [...selectedVols] : [vol.path]
+    }
+    if (selectedVols.has(vol.path) && selectedVols.size > 1) {
+      return volumes
+        .filter((v): v is LibraryVolume => v.type === 'book' && selectedVols.has(v.path))
+        .map((v) => v.id)
+    }
+    return [vol.id]
+  }
 
   const submitRename = async (): Promise<void> => {
     if (!renameReq || renameReq.busy || !renameReq.name.trim()) return
+    if (managedLibrary) {
+      if (renameReq.kind !== 'book' || !renameReq.id) {
+        toast.info('托管库部信息请用“编辑信息”修改')
+        setRenameReq(null)
+        return
+      }
+      setRenameReq((s) => (s ? { ...s, busy: true } : s))
+      try {
+        await window.api.library.renameBook(renameReq.id, renameReq.name)
+        setRenameReq(null)
+        toast.success(text.fileops.renamed)
+        await refreshAfterFileop()
+      } catch (e) {
+        toast.error(fileopErr(e))
+        setRenameReq((s) => (s ? { ...s, busy: false } : s))
+      }
+      return
+    }
     setRenameReq((s) => (s ? { ...s, busy: true } : s))
     try {
       await window.api.library.rename(renameReq.path, renameReq.name)
@@ -2074,6 +2239,22 @@ function LibraryView({
 
   const submitMove = async (destDir: string): Promise<void> => {
     if (!moveReq || moveReq.busy) return
+    if (managedLibrary) {
+      setMoveReq((s) => (s ? { ...s, busy: true } : s))
+      try {
+        await window.api.library.assignBooks(moveReq.sources, destDir)
+        const n = moveReq.sources.length
+        setMoveReq(null)
+        setMoveNewFolderName(null)
+        exitSelect()
+        toast.success(text.fileops.moved(n))
+        await refreshAfterFileop()
+      } catch (e) {
+        toast.error(fileopErr(e))
+        setMoveReq((s) => (s ? { ...s, busy: false } : s))
+      }
+      return
+    }
     setMoveReq((s) => (s ? { ...s, busy: true } : s))
     try {
       await window.api.library.move(moveReq.sources, destDir)
@@ -2098,6 +2279,22 @@ function LibraryView({
       !root
     )
       return
+    if (managedLibrary) {
+      setMoveReq((s) => (s ? { ...s, busy: true } : s))
+      try {
+        await window.api.library.createSeries(moveNewFolderName, null, moveReq.sources)
+        const n = moveReq.sources.length
+        setMoveReq(null)
+        setMoveNewFolderName(null)
+        exitSelect()
+        toast.success(text.fileops.moved(n))
+        await refreshAfterFileop()
+      } catch (e) {
+        toast.error(fileopErr(e))
+        setMoveReq((s) => (s ? { ...s, busy: false } : s))
+      }
+      return
+    }
     setMoveReq((s) => (s ? { ...s, busy: true } : s))
     try {
       const newPath = await window.api.library.createFolder(root, moveNewFolderName)
@@ -2116,6 +2313,23 @@ function LibraryView({
 
   const submitDelete = async (): Promise<void> => {
     if (!deleteReq || deleteReq.busy) return
+    if (managedLibrary) {
+      setDeleteReq((s) => (s ? { ...s, busy: true } : s))
+      try {
+        if (deleteReq.kind === 'series') {
+          await Promise.all(deleteReq.paths.map((id) => window.api.library.deleteSeries(id)))
+        } else {
+          await window.api.library.trashBooks(deleteReq.paths)
+        }
+        setDeleteReq(null)
+        toast.success(text.fileops.deleted(deleteReq.paths.length))
+        await refreshAfterFileop()
+      } catch (e) {
+        toast.error(fileopErr(e))
+        setDeleteReq((s) => (s ? { ...s, busy: false } : s))
+      }
+      return
+    }
     setDeleteReq((s) => (s ? { ...s, busy: true } : s))
     try {
       await window.api.library.trash(deleteReq.paths)
@@ -2138,6 +2352,19 @@ function LibraryView({
 
   const submitNewFolder = async (): Promise<void> => {
     if (!newFolderReq || newFolderReq.busy || !newFolderReq.name.trim()) return
+    if (managedLibrary) {
+      setNewFolderReq((s) => (s ? { ...s, busy: true } : s))
+      try {
+        await window.api.library.createSeries(newFolderReq.name, null, [])
+        setNewFolderReq(null)
+        toast.success(text.fileops.created)
+        await refreshAfterFileop()
+      } catch (e) {
+        toast.error(fileopErr(e))
+        setNewFolderReq((s) => (s ? { ...s, busy: false } : s))
+      }
+      return
+    }
     setNewFolderReq((s) => (s ? { ...s, busy: true } : s))
     try {
       await window.api.library.createFolder(newFolderReq.parent, newFolderReq.name)
@@ -2205,6 +2432,10 @@ function LibraryView({
   const moveDraggedToFolder = async (dest: string): Promise<void> => {
     const paths = fileNav.getDragPaths()
     if (paths.length === 0) return
+    if (managedLibrary) {
+      toast.info('托管库分组会在阶段 2 通过 manifest 完成')
+      return
+    }
     try {
       await window.api.library.move(paths, dest)
       toast.success(text.fileops.moved(paths.length))
@@ -2243,6 +2474,9 @@ function LibraryView({
 
   // 当前层里可选/可转换的「卷」(book)——子部不参与多选与批量转换
   const bookVolumes = volumes.filter((v): v is LibraryVolume => v.type === 'book')
+  const topSeriesIds = series.filter((item) => item.type === 'folder').map((item) => item.id)
+  const topBookIds = series.filter((item) => item.type === 'book').map((item) => item.id)
+  const currentVolumeIds = bookVolumes.map((item) => item.id)
   // 顶栏「转换所选」的可转数：文件视图里只有可读单文件卷可转（文件夹/普通文件不算）
   const selectedConvertCount = fileMode
     ? (rawListing?.files ?? []).filter((f) => selectedVols.has(f.path)).length
@@ -2440,7 +2674,7 @@ function LibraryView({
   // 初始化：读取已保存的库根目录并扫描
   useEffect(() => {
     let active = true
-    window.api?.library?.getSavedRoot().then((saved) => {
+    window.api?.library?.getSaved().then((saved) => {
       if (!active || !saved) return
       setRoot(saved)
       loadSeries(saved)
@@ -2450,13 +2684,13 @@ function LibraryView({
     }
   }, [loadSeries])
 
-  const chooseFolder = async (): Promise<void> => {
+  const openManagedLibrary = async (): Promise<void> => {
     if (!window.api?.library) {
       toast.error('漫画库接口未就绪，请重启 npm run dev')
       return
     }
     try {
-      const picked = await window.api.library.pickFolder()
+      const picked = await window.api.library.open()
       if (!picked) return
       setRoot(picked)
       setSelected(null)
@@ -2465,6 +2699,98 @@ function LibraryView({
       await loadSeries(picked)
     } catch (err) {
       toast.error(`${err}`)
+    }
+  }
+
+  const createManagedLibrary = async (): Promise<void> => {
+    const name = window.prompt(text.library.createLibrary, 'ComicToKindle')
+    if (!name?.trim()) return
+    try {
+      const created = await window.api.library.create(name.trim())
+      if (!created) return
+      setRoot(created)
+      setSelected(null)
+      setTrail([])
+      setVolumes([])
+      await loadSeries(created)
+    } catch (err) {
+      toast.error(`${err}`)
+    }
+  }
+
+  const importIntoLibrary = async (): Promise<void> => {
+    if (!root) return
+    try {
+      const scan = await window.api.library.scanImport()
+      if (scan.candidates.length === 0) {
+        toast.info(text.library.importEmpty)
+        return
+      }
+      setImportReq({ scan, deleteSourceAfter: false, busy: false })
+    } catch (err) {
+      toast.error(`${err}`, { id: 'library-import' })
+    }
+  }
+
+  const submitImport = async (): Promise<void> => {
+    if (!root || !importReq || importReq.busy) return
+    setImportReq((s) => (s ? { ...s, busy: true } : s))
+    try {
+      toast.loading(text.library.importPreparing(importReq.scan.candidates.length), {
+        id: 'library-import'
+      })
+      await window.api.library.importBooks(importReq.scan.candidates, {
+        deleteSourceAfter: importReq.deleteSourceAfter
+      })
+      toast.success(text.library.importDone(importReq.scan.candidates.length), {
+        id: 'library-import'
+      })
+      setImportReq(null)
+      await loadSeries(root)
+      fileNav.bump()
+    } catch (err) {
+      toast.error(`${err}`, { id: 'library-import' })
+      setImportReq((s) => (s ? { ...s, busy: false } : s))
+    }
+  }
+
+  const openTrash = async (): Promise<void> => {
+    try {
+      const items = await window.api.library.listTrash()
+      setTrashReq({ items, busy: false })
+    } catch (err) {
+      toast.error(`${err}`)
+    }
+  }
+
+  const restoreTrashItem = async (trashId: string): Promise<void> => {
+    if (!root || !trashReq || trashReq.busy) return
+    setTrashReq((s) => (s ? { ...s, busy: true } : s))
+    try {
+      await window.api.library.restoreTrashBooks([trashId])
+      const items = await window.api.library.listTrash()
+      setTrashReq({ items, busy: false })
+      toast.success(text.library.trashRestored)
+      await loadSeries(root)
+      fileNav.bump()
+    } catch (err) {
+      toast.error(`${err}`)
+      setTrashReq((s) => (s ? { ...s, busy: false } : s))
+    }
+  }
+
+  const emptyLibraryTrash = async (): Promise<void> => {
+    if (!trashReq || trashReq.busy || trashReq.items.length === 0) return
+    const ok = window.confirm(text.library.emptyTrashConfirm)
+    if (!ok) return
+    setTrashReq((s) => (s ? { ...s, busy: true } : s))
+    try {
+      await window.api.library.emptyTrash()
+      setTrashReq({ items: [], busy: false })
+      toast.success(text.library.trashEmptied)
+    } catch (err) {
+      toast.error(`${err}`)
+      setTrashReq((s) => (s ? { ...s, busy: false } : s))
     }
   }
 
@@ -3127,9 +3453,17 @@ function LibraryView({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{text.fileops.deleteTitle}</AlertDialogTitle>
+            <AlertDialogTitle>
+              {managedLibrary && deleteReq?.kind === 'books'
+                ? text.library.trashBooksTitle
+                : text.fileops.deleteTitle}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              {deleteReq ? text.fileops.deleteDesc(deleteReq.paths.length) : ''}
+              {deleteReq
+                ? managedLibrary && deleteReq.kind === 'books'
+                  ? text.library.trashBooksDesc(deleteReq.paths.length)
+                  : text.fileops.deleteDesc(deleteReq.paths.length)
+                : ''}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -3146,6 +3480,149 @@ function LibraryView({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <Dialog
+        open={importReq !== null}
+        onOpenChange={(o) => (!o && !importReq?.busy ? setImportReq(null) : undefined)}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{text.library.importBooks}</DialogTitle>
+            <DialogDescription>
+              {importReq
+                ? text.library.importConfirm(
+                    importReq.scan.candidates.length,
+                    importReq.scan.skipped.length
+                  )
+                : ''}
+            </DialogDescription>
+          </DialogHeader>
+          {importReq ? (
+            <div className="space-y-3">
+              <ScrollArea className="max-h-56 rounded-md border">
+                <div className="divide-y">
+                  {importReq.scan.candidates.map((item) => (
+                    <div key={item.sourcePath} className="flex items-center gap-2 px-3 py-2">
+                      <BookText className="size-4 shrink-0 text-muted-foreground" />
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-medium" title={item.displayName}>
+                          {item.displayName}
+                        </div>
+                        <div className="truncate text-xs text-muted-foreground">
+                          {item.sourceType.toUpperCase()}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+              <label className="flex items-start gap-2 rounded-md border border-destructive/25 bg-destructive/5 p-3 text-sm">
+                <Checkbox
+                  checked={importReq.deleteSourceAfter}
+                  disabled={importReq.busy}
+                  onCheckedChange={(checked) =>
+                    setImportReq((s) =>
+                      s ? { ...s, deleteSourceAfter: checked === true } : s
+                    )
+                  }
+                />
+                <span className="leading-5 text-muted-foreground">
+                  {text.library.deleteSourceAfterImport}
+                </span>
+              </label>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  disabled={importReq.busy}
+                  onClick={() => setImportReq(null)}
+                >
+                  {text.fileops.cancel}
+                </Button>
+                <Button
+                  type="button"
+                  disabled={importReq.busy}
+                  onClick={() => void submitImport()}
+                >
+                  {importReq.busy ? (
+                    <>
+                      <Loader2 className="size-4 animate-spin" />
+                      {text.library.importBooks}
+                    </>
+                  ) : (
+                    text.library.importBooks
+                  )}
+                </Button>
+              </DialogFooter>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={trashReq !== null}
+        onOpenChange={(o) => (!o && !trashReq?.busy ? setTrashReq(null) : undefined)}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{text.library.trashTitle}</DialogTitle>
+            <DialogDescription>{text.library.trashDesc}</DialogDescription>
+          </DialogHeader>
+          {trashReq ? (
+            <div className="space-y-3">
+              {trashReq.items.length === 0 ? (
+                <p className="rounded-md border border-dashed py-8 text-center text-sm text-muted-foreground">
+                  {text.library.trashEmpty}
+                </p>
+              ) : (
+                <ScrollArea className="max-h-72 rounded-md border">
+                  <div className="divide-y">
+                    {trashReq.items.map((item) => (
+                      <div key={item.trashId} className="flex items-center gap-2 px-3 py-2">
+                        <BookText className="size-4 shrink-0 text-muted-foreground" />
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-sm font-medium" title={item.displayName}>
+                            {item.displayName}
+                          </div>
+                          <div className="truncate text-xs text-muted-foreground">
+                            {item.seriesTitleHint ?? text.library.ungrouped}
+                          </div>
+                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={trashReq.busy}
+                          onClick={() => void restoreTrashItem(item.trashId)}
+                        >
+                          <RotateCcw className="size-3.5" />
+                          {text.library.restore}
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              )}
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  disabled={trashReq.busy || trashReq.items.length === 0}
+                  onClick={() => void emptyLibraryTrash()}
+                >
+                  {text.library.emptyTrash}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  disabled={trashReq.busy}
+                  onClick={() => setTrashReq(null)}
+                >
+                  {text.fileops.cancel}
+                </Button>
+              </DialogFooter>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
       <div className="flex min-h-0 flex-1 flex-col bg-background">
         {/* 合并后的顶栏：侧栏开关 + 标题/面包屑 + 操作 */}
         <header
@@ -3325,15 +3802,47 @@ function LibraryView({
                       </TooltipContent>
                     </Tooltip>
                   ) : null}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" onClick={openNewFolder}>
-                        <FolderPlus className="size-4" />
-                        <span className="sr-only">{text.fileops.newFolder}</span>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>{text.fileops.newFolder}</TooltipContent>
-                  </Tooltip>
+                  {managedLibrary ? (
+                    <>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" onClick={openNewFolder}>
+                            <FolderPlus className="size-4" />
+                            <span className="sr-only">{text.fileops.newFolder}</span>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>{text.fileops.newFolder}</TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" onClick={importIntoLibrary}>
+                            <FileDown className="size-4" />
+                            <span className="sr-only">{text.library.importBooks}</span>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>{text.library.importBooks}</TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" onClick={openTrash}>
+                            <Trash2 className="size-4" />
+                            <span className="sr-only">{text.library.trashTitle}</span>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>{text.library.trashTitle}</TooltipContent>
+                      </Tooltip>
+                    </>
+                  ) : (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" onClick={openNewFolder}>
+                          <FolderPlus className="size-4" />
+                          <span className="sr-only">{text.fileops.newFolder}</span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>{text.fileops.newFolder}</TooltipContent>
+                    </Tooltip>
+                  )}
                   <ConvertActivityPopover
                     activity={activity}
                     locale={locale}
@@ -3350,7 +3859,7 @@ function LibraryView({
                   </Tooltip>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" onClick={chooseFolder}>
+                      <Button variant="ghost" size="icon" onClick={openManagedLibrary}>
                         <FolderOpen className="size-4" />
                         <span className="sr-only">{text.library.changeFolder}</span>
                       </Button>
@@ -3374,10 +3883,16 @@ function LibraryView({
                 <EmptyDescription>{text.library.emptyDescription}</EmptyDescription>
               </EmptyHeader>
               <EmptyContent>
-                <Button onClick={chooseFolder}>
-                  <FolderOpen className="size-4" />
-                  {text.library.chooseFolder}
-                </Button>
+                <div className="flex flex-wrap justify-center gap-2">
+                  <Button onClick={createManagedLibrary}>
+                    <FolderPlus className="size-4" />
+                    {text.library.createLibrary}
+                  </Button>
+                  <Button variant="outline" onClick={openManagedLibrary}>
+                    <FolderOpen className="size-4" />
+                    {text.library.openLibrary}
+                  </Button>
+                </div>
               </EmptyContent>
             </Empty>
           </div>
@@ -3742,7 +4257,13 @@ function LibraryView({
                             <ContextMenuItem
                               onSelect={() =>
                                 deferOpen(() =>
-                                  setRenameReq({ path: vol.path, name: vol.name, busy: false })
+                                  setRenameReq({
+                                    path: vol.path,
+                                    id: vol.id,
+                                    kind: 'series',
+                                    name: vol.name,
+                                    busy: false
+                                  })
                                 )
                               }
                             >
@@ -3753,7 +4274,13 @@ function LibraryView({
                             <ContextMenuItem
                               variant="destructive"
                               onSelect={() =>
-                                deferOpen(() => setDeleteReq({ paths: [vol.path], busy: false }))
+                                deferOpen(() =>
+                                  setDeleteReq({
+                                    paths: [managedLibrary ? vol.id : vol.path],
+                                    kind: managedLibrary ? 'series' : undefined,
+                                    busy: false
+                                  })
+                                )
                               }
                             >
                               <Trash2 className="size-4" />
@@ -3889,7 +4416,13 @@ function LibraryView({
                           <ContextMenuItem
                             onSelect={() =>
                               deferOpen(() =>
-                                setRenameReq({ path: vol.path, name: vol.name, busy: false })
+                                setRenameReq({
+                                  path: vol.path,
+                                  id: vol.id,
+                                  kind: 'book',
+                                  name: vol.name,
+                                  busy: false
+                                })
                               )
                             }
                           >
@@ -3897,7 +4430,7 @@ function LibraryView({
                             {text.fileops.rename}
                           </ContextMenuItem>
                           <ContextMenuItem
-                            disabled={moveTargets().length === 0}
+                            disabled={!managedLibrary && moveTargets().length === 0}
                             onSelect={() =>
                               deferOpen(() => setMoveReq({ sources: volTargets(vol), busy: false }))
                             }
@@ -3905,11 +4438,20 @@ function LibraryView({
                             <FolderInput className="size-4" />
                             {text.fileops.move}
                           </ContextMenuItem>
+                          {renderSortItems(currentVolumeIds, vol.id, (delta) =>
+                            reorderSeriesBook(selected.id, vol.id, currentVolumeIds, delta)
+                          )}
                           <ContextMenuSeparator />
                           <ContextMenuItem
                             variant="destructive"
                             onSelect={() =>
-                              deferOpen(() => setDeleteReq({ paths: volTargets(vol), busy: false }))
+                              deferOpen(() =>
+                                setDeleteReq({
+                                  paths: volTargets(vol),
+                                  kind: managedLibrary ? 'books' : undefined,
+                                  busy: false
+                                })
+                              )
                             }
                           >
                             <Trash2 className="size-4" />
@@ -3974,7 +4516,13 @@ function LibraryView({
                           <ContextMenuItem
                             onSelect={() =>
                               deferOpen(() =>
-                                setRenameReq({ path: item.path, name: item.name, busy: false })
+                                setRenameReq({
+                                  path: item.path,
+                                  id: item.id,
+                                  kind: 'book',
+                                  name: item.name,
+                                  busy: false
+                                })
                               )
                             }
                           >
@@ -3982,19 +4530,33 @@ function LibraryView({
                             {text.fileops.rename}
                           </ContextMenuItem>
                           <ContextMenuItem
-                            disabled={moveTargets().length === 0}
+                            disabled={!managedLibrary && moveTargets().length === 0}
                             onSelect={() =>
-                              deferOpen(() => setMoveReq({ sources: [item.path], busy: false }))
+                              deferOpen(() =>
+                                setMoveReq({
+                                  sources: [managedLibrary ? item.id : item.path],
+                                  busy: false
+                                })
+                              )
                             }
                           >
                             <FolderInput className="size-4" />
                             {text.fileops.move}
                           </ContextMenuItem>
+                          {renderSortItems(topBookIds, item.id, (delta) =>
+                            reorderUngroupedBook(item.id, delta)
+                          )}
                           <ContextMenuSeparator />
                           <ContextMenuItem
                             variant="destructive"
                             onSelect={() =>
-                              deferOpen(() => setDeleteReq({ paths: [item.path], busy: false }))
+                              deferOpen(() =>
+                                setDeleteReq({
+                                  paths: [managedLibrary ? item.id : item.path],
+                                  kind: managedLibrary ? 'books' : undefined,
+                                  busy: false
+                                })
+                              )
                             }
                           >
                             <Trash2 className="size-4" />
@@ -4055,18 +4617,33 @@ function LibraryView({
                           <ContextMenuItem
                             onSelect={() =>
                               deferOpen(() =>
-                                setRenameReq({ path: item.path, name: item.name, busy: false })
+                                setRenameReq({
+                                  path: item.path,
+                                  id: item.id,
+                                  kind: 'series',
+                                  name: item.name,
+                                  busy: false
+                                })
                               )
                             }
                           >
                             <FolderInput className="size-4" />
                             {text.fileops.rename}
                           </ContextMenuItem>
+                          {renderSortItems(topSeriesIds, item.id, (delta) =>
+                            reorderTopSeries(item.id, delta)
+                          )}
                           <ContextMenuSeparator />
                           <ContextMenuItem
                             variant="destructive"
                             onSelect={() =>
-                              deferOpen(() => setDeleteReq({ paths: [item.path], busy: false }))
+                              deferOpen(() =>
+                                setDeleteReq({
+                                  paths: [managedLibrary ? item.id : item.path],
+                                  kind: managedLibrary ? 'series' : undefined,
+                                  busy: false
+                                })
+                              )
                             }
                           >
                             <Trash2 className="size-4" />
@@ -4103,6 +4680,9 @@ function LibraryView({
                               const vConverted = convertedPaths.has(v.path)
                               const vjob = jobByPath.get(v.path)
                               const vprog = getProgress(v.path)
+                              const siblingVolumeIds = vols
+                                .filter((entry): entry is LibraryVolume => entry.type === 'book')
+                                .map((entry) => entry.id)
                               return (
                                 <ContextMenu key={v.id}>
                                   <ContextMenuTrigger asChild>
@@ -4203,7 +4783,13 @@ function LibraryView({
                                     <ContextMenuItem
                                       onSelect={() =>
                                         deferOpen(() =>
-                                          setRenameReq({ path: v.path, name: v.name, busy: false })
+                                          setRenameReq({
+                                            path: v.path,
+                                            id: v.id,
+                                            kind: 'book',
+                                            name: v.name,
+                                            busy: false
+                                          })
                                         )
                                       }
                                     >
@@ -4211,22 +4797,32 @@ function LibraryView({
                                       {text.fileops.rename}
                                     </ContextMenuItem>
                                     <ContextMenuItem
-                                      disabled={moveTargets().length === 0}
+                                      disabled={!managedLibrary && moveTargets().length === 0}
                                       onSelect={() =>
                                         deferOpen(() =>
-                                          setMoveReq({ sources: [v.path], busy: false })
+                                          setMoveReq({
+                                            sources: [managedLibrary ? v.id : v.path],
+                                            busy: false
+                                          })
                                         )
                                       }
                                     >
                                       <FolderInput className="size-4" />
                                       {text.fileops.move}
                                     </ContextMenuItem>
+                                    {renderSortItems(siblingVolumeIds, v.id, (delta) =>
+                                      reorderSeriesBook(item.id, v.id, siblingVolumeIds, delta)
+                                    )}
                                     <ContextMenuSeparator />
                                     <ContextMenuItem
                                       variant="destructive"
                                       onSelect={() =>
                                         deferOpen(() =>
-                                          setDeleteReq({ paths: [v.path], busy: false })
+                                          setDeleteReq({
+                                            paths: [managedLibrary ? v.id : v.path],
+                                            kind: managedLibrary ? 'books' : undefined,
+                                            busy: false
+                                          })
                                         )
                                       }
                                     >
@@ -4363,7 +4959,13 @@ function LibraryView({
                           <ContextMenuItem
                             onSelect={() =>
                               deferOpen(() =>
-                                setRenameReq({ path: item.path, name: item.name, busy: false })
+                                setRenameReq({
+                                  path: item.path,
+                                  id: item.id,
+                                  kind: 'book',
+                                  name: item.name,
+                                  busy: false
+                                })
                               )
                             }
                           >
@@ -4371,19 +4973,33 @@ function LibraryView({
                             {text.fileops.rename}
                           </ContextMenuItem>
                           <ContextMenuItem
-                            disabled={moveTargets().length === 0}
+                            disabled={!managedLibrary && moveTargets().length === 0}
                             onSelect={() =>
-                              deferOpen(() => setMoveReq({ sources: [item.path], busy: false }))
+                              deferOpen(() =>
+                                setMoveReq({
+                                  sources: [managedLibrary ? item.id : item.path],
+                                  busy: false
+                                })
+                              )
                             }
                           >
                             <FolderInput className="size-4" />
                             {text.fileops.move}
                           </ContextMenuItem>
+                          {renderSortItems(topBookIds, item.id, (delta) =>
+                            reorderUngroupedBook(item.id, delta)
+                          )}
                           <ContextMenuSeparator />
                           <ContextMenuItem
                             variant="destructive"
                             onSelect={() =>
-                              deferOpen(() => setDeleteReq({ paths: [item.path], busy: false }))
+                              deferOpen(() =>
+                                setDeleteReq({
+                                  paths: [managedLibrary ? item.id : item.path],
+                                  kind: managedLibrary ? 'books' : undefined,
+                                  busy: false
+                                })
+                              )
                             }
                           >
                             <Trash2 className="size-4" />
@@ -4452,18 +5068,33 @@ function LibraryView({
                         <ContextMenuItem
                           onSelect={() =>
                             deferOpen(() =>
-                              setRenameReq({ path: item.path, name: item.name, busy: false })
+                              setRenameReq({
+                                path: item.path,
+                                id: item.id,
+                                kind: 'series',
+                                name: item.name,
+                                busy: false
+                              })
                             )
                           }
                         >
                           <FolderInput className="size-4" />
                           {text.fileops.rename}
                         </ContextMenuItem>
+                        {renderSortItems(topSeriesIds, item.id, (delta) =>
+                          reorderTopSeries(item.id, delta)
+                        )}
                         <ContextMenuSeparator />
                         <ContextMenuItem
                           variant="destructive"
                           onSelect={() =>
-                            deferOpen(() => setDeleteReq({ paths: [item.path], busy: false }))
+                            deferOpen(() =>
+                              setDeleteReq({
+                                paths: [managedLibrary ? item.id : item.path],
+                                kind: managedLibrary ? 'series' : undefined,
+                                busy: false
+                              })
+                            )
                           }
                         >
                           <Trash2 className="size-4" />
@@ -5102,13 +5733,18 @@ function AppSidebar({
                       const uniqueKey = `${group.titleKey}-${item.id}-${itemIdx}`
                       // 「所有漫画」即文件夹树根：单击选中库根目录，双击展开/收起
                       if (item.id === 'library') {
+                        const managed = !!fileNav.root && fileNav.root.toLowerCase().endsWith('.ctklib')
                         return (
                           <LibraryNav
                             key={uniqueKey}
                             locale={locale}
-                            active={activeView === 'library' && fileNav.fileDir === fileNav.root}
+                            active={
+                              activeView === 'library' &&
+                              (managed ? fileNav.fileDir === null : fileNav.fileDir === fileNav.root)
+                            }
                             onShelf={() => {
-                              if (fileNav.root) fileNav.openFolder(fileNav.root)
+                              if (managed) fileNav.exitToShelf()
+                              else if (fileNav.root) fileNav.openFolder(fileNav.root)
                               onSelect('library')
                             }}
                           />

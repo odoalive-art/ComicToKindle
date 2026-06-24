@@ -31,6 +31,57 @@ export type LibraryEntry =
   | (LibrarySeries & { type: 'folder' })
   | (LibraryVolume & { type: 'book'; author: string | null })
 
+export interface SeriesNode {
+  id: string
+  title: string
+  author: string | null
+  bookIds: string[]
+  createdAt: string
+}
+
+export interface BookView {
+  id: string
+  sourceType: 'archive' | 'pdf' | 'epub' | 'folder'
+  displayName: string
+  pageCount: number
+  coverUrl: string | null
+  locked: boolean
+  sourceVolumePath: string
+}
+
+export interface TrashBookView {
+  trashId: string
+  bookId: string
+  displayName: string
+  originalName: string
+  sourceType: 'archive' | 'pdf' | 'epub' | 'folder'
+  seriesTitleHint: string | null
+  seriesAuthorHint: string | null
+  pageCount: number
+}
+
+export interface LibraryView {
+  series: Array<SeriesNode & { coverUrl: string | null; volumeCount: number }>
+  ungrouped: BookView[]
+}
+
+export interface ImportCandidate {
+  sourcePath: string
+  sourceType: 'archive' | 'pdf' | 'epub' | 'folder'
+  displayName: string
+}
+
+export interface ImportScanResult {
+  candidates: ImportCandidate[]
+  skipped: Array<{ path: string; reason: string }>
+}
+
+export interface ImportProgress {
+  done: number
+  total: number
+  name: string
+}
+
 /** 文件视图树节点：某目录的一个直接子文件夹（忠实磁盘） */
 export interface DirNode {
   id: string
@@ -73,6 +124,37 @@ export interface RawListing {
 }
 
 export interface LibraryAPI {
+  create: (name: string) => Promise<string | null>
+  open: () => Promise<string | null>
+  getSaved: () => Promise<string | null>
+  view: () => Promise<LibraryView>
+  seriesBooks: (seriesId: string) => Promise<BookView[]>
+  inspectBook: (id: string) => Promise<{
+    pageCount: number
+    locked: boolean
+    coverUrl: string | null
+  }>
+  scanImport: (srcRoot?: string) => Promise<ImportScanResult>
+  importBooks: (
+    candidates: ImportCandidate[],
+    opts: { deleteSourceAfter?: boolean }
+  ) => Promise<string[]>
+  createSeries: (
+    title: string,
+    author: string | null,
+    bookIds: string[]
+  ) => Promise<SeriesNode>
+  renameSeries: (seriesId: string, title: string, author: string | null) => Promise<void>
+  deleteSeries: (seriesId: string) => Promise<void>
+  assignBooks: (bookIds: string[], targetSeriesId: string | null) => Promise<void>
+  reorderSeries: (orderedSeriesIds: string[]) => Promise<void>
+  reorderBooks: (seriesId: string | null, orderedBookIds: string[]) => Promise<void>
+  renameBook: (id: string, displayName: string) => Promise<void>
+  trashBooks: (ids: string[]) => Promise<void>
+  listTrash: () => Promise<TrashBookView[]>
+  restoreTrashBooks: (trashIds: string[]) => Promise<void>
+  emptyTrash: () => Promise<void>
+  onImportProgress: (cb: (payload: ImportProgress) => void) => () => void
   pickFolder: () => Promise<string | null>
   getSavedRoot: () => Promise<string | null>
   scan: (root: string) => Promise<LibraryEntry[]>

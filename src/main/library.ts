@@ -1,7 +1,7 @@
 import { app, dialog, ipcMain, protocol, BrowserWindow, shell } from 'electron'
 import { join, extname, resolve, dirname, basename, sep } from 'path'
 import { promises as fs } from 'fs'
-import { createHash } from 'crypto'
+import { createHash, randomUUID } from 'crypto'
 import sharp from 'sharp'
 import {
   getCachedImages,
@@ -9,7 +9,8 @@ import {
   inspectArchive,
   extractedRoot,
   isArchiveFile,
-  isSplitContinuation
+  isSplitContinuation,
+  splitSiblings
 } from './archive'
 import {
   documentType,
@@ -85,6 +86,78 @@ const isHidden = (name: string): boolean => name.startsWith('.')
 // 当前库根目录，用于 comic:// 协议的越权访问校验
 let currentRoot: string | null = null
 
+export interface LibraryManifest {
+  version: 1
+  libraryId: string
+  name: string
+  createdAt: string
+  updatedAt: string
+  series: SeriesNode[]
+  ungrouped: string[]
+}
+
+export interface SeriesNode {
+  id: string
+  title: string
+  author: string | null
+  bookIds: string[]
+  createdAt: string
+}
+
+export interface BookRecord {
+  id: string
+  sourceType: 'archive' | 'pdf' | 'epub' | 'folder'
+  sourceFile: string | null
+  displayName: string
+  originalName: string
+  importedFrom: string
+  pageCount: number
+  addedAt: string
+  seriesTitleHint: string | null
+  seriesAuthorHint: string | null
+}
+
+export interface ImportCandidate {
+  sourcePath: string
+  sourceType: BookRecord['sourceType']
+  displayName: string
+}
+
+export interface ImportScanResult {
+  candidates: ImportCandidate[]
+  skipped: Array<{ path: string; reason: string }>
+}
+
+export interface ImportOptions {
+  deleteSourceAfter?: boolean
+}
+
+export interface BookView {
+  id: string
+  sourceType: BookRecord['sourceType']
+  displayName: string
+  pageCount: number
+  coverUrl: string | null
+  locked: boolean
+  sourceVolumePath: string
+}
+
+export interface TrashBookView {
+  trashId: string
+  bookId: string
+  displayName: string
+  originalName: string
+  sourceType: BookRecord['sourceType']
+  seriesTitleHint: string | null
+  seriesAuthorHint: string | null
+  pageCount: number
+}
+
+export interface LibraryView {
+  series: Array<SeriesNode & { coverUrl: string | null; volumeCount: number }>
+  ungrouped: BookView[]
+}
+
 // ---------- 设置持久化 ----------
 const settingsFile = (): string => join(app.getPath('userData'), 'settings.json')
 
@@ -99,6 +172,199 @@ async function readSettings(): Promise<Record<string, unknown>> {
 async function patchSettings(patch: Record<string, unknown>): Promise<void> {
   const current = await readSettings()
   await fs.writeFile(settingsFile(), JSON.stringify({ ...current, ...patch }, null, 2), 'utf-8')
+}
+
+// ---------- App 独占 .ctklib 库包 ----------
+const MANAGED_EXT = '.ctklib'
+
+function isManagedLibraryPath(root: string | null): boolean {
+  return !!root && extname(root).toLowerCase() === MANAGED_EXT
+}
+
+function libraryRoot(): string | null {
+  return currentRoot
+}
+
+function booksDir(): string {
+  const root = libraryRoot()
+  if (!root) throw new Error('NO_ROOT')
+  return join(root, 'books')
+}
+
+function bucketDir(id: string): string {
+  return join(booksDir(), id)
+}
+
+function trashDir(): string {
+  const root = libraryRoot()
+  if (!root) throw new Error('NO_ROOT')
+  return join(root, 'trash')
+}
+
+function bucketSourcePath(rec: BookRecord): string {
+  const dir = bucketDir(rec.id)
+  return rec.sourceType === 'folder' ? join(dir, 'images') : join(dir, rec.sourceFile ?? 'source')
+}
+
+async function atomicWriteJson(path: string, data: unknown): Promise<void> {
+  const tmp = `${path}.tmp`
+  await fs.writeFile(tmp, JSON.stringify(data, null, 2), 'utf-8')
+  await fs.rename(tmp, path)
+}
+
+function shortId(): string {
+  return randomUUID().replace(/-/g, '').slice(0, 12)
+}
+
+function manifestFile(root = libraryRoot()): string {
+  if (!root) throw new Error('NO_ROOT')
+  return join(root, 'library.json')
+}
+
+function bookRecordFile(id: string): string {
+  return join(bucketDir(id), 'book.json')
+}
+
+async function writeLibraryManifest(m: LibraryManifest): Promise<void> {
+  m.updatedAt = new Date().toISOString()
+  await atomicWriteJson(manifestFile(), m)
+}
+
+async function readBookRecord(id: string): Promise<BookRecord> {
+  const rec = JSON.parse(await fs.readFile(bookRecordFile(id), 'utf-8')) as BookRecord
+  if (!rec || rec.id !== id) throw new Error('INVALID_BOOK')
+  return rec
+}
+
+async function writeBookRecord(rec: BookRecord): Promise<void> {
+  await atomicWriteJson(bookRecordFile(rec.id), rec)
+}
+
+async function readAllBookRecords(): Promise<BookRecord[]> {
+  const root = booksDir()
+  const entries = await readDirSafe(root)
+  const records: BookRecord[] = []
+  for (const entry of entries) {
+    if (!entry.isDirectory() || entry.name.endsWith('.tmp')) continue
+    try {
+      records.push(await readBookRecord(entry.name))
+    } catch {
+      /* 损坏桶跳过，避免单本坏记录拖垮整库 */
+    }
+  }
+  return records.sort((a, b) => naturalSort(a.displayName, b.displayName))
+}
+
+async function rebuildManifestFromBooks(root: string): Promise<LibraryManifest> {
+  currentRoot = root
+  const now = new Date().toISOString()
+  const records = await readAllBookRecords()
+  const byTitle = new Map<string, SeriesNode>()
+  const ungrouped: string[] = []
+  for (const rec of records) {
+    const title = rec.seriesTitleHint?.trim()
+    if (!title) {
+      ungrouped.push(rec.id)
+      continue
+    }
+    let series = byTitle.get(title)
+    if (!series) {
+      series = {
+        id: shortId(),
+        title,
+        author: rec.seriesAuthorHint ?? null,
+        bookIds: [],
+        createdAt: rec.addedAt || now
+      }
+      byTitle.set(title, series)
+    }
+    series.bookIds.push(rec.id)
+  }
+  const manifest: LibraryManifest = {
+    version: 1,
+    libraryId: randomUUID(),
+    name: basename(root, MANAGED_EXT),
+    createdAt: now,
+    updatedAt: now,
+    series: [...byTitle.values()],
+    ungrouped
+  }
+  await writeLibraryManifest(manifest)
+  return manifest
+}
+
+async function readLibraryManifest(): Promise<LibraryManifest> {
+  const root = libraryRoot()
+  if (!root) throw new Error('NO_ROOT')
+  try {
+    const data = JSON.parse(await fs.readFile(manifestFile(root), 'utf-8')) as LibraryManifest
+    if (data?.version === 1 && Array.isArray(data.series) && Array.isArray(data.ungrouped)) {
+      return data
+    }
+  } catch {
+    /* 缺失或损坏时从桶自描述重建 */
+  }
+  return rebuildManifestFromBooks(root)
+}
+
+async function cleanupTmpBuckets(): Promise<void> {
+  const entries = await readDirSafe(booksDir())
+  await Promise.all(
+    entries
+      .filter((e) => e.isDirectory() && e.name.endsWith('.tmp'))
+      .map((e) => fs.rm(join(booksDir(), e.name), { recursive: true, force: true }))
+  )
+  await fs.rm(join(libraryRoot() ?? '', 'library.json.tmp'), { force: true }).catch(() => {})
+}
+
+async function createLibrary(parentDir: string, nameRaw: string): Promise<string> {
+  const sanitized = sanitizeName(nameRaw)
+  const safeName = sanitized.toLowerCase().endsWith(MANAGED_EXT)
+    ? sanitized.slice(0, -MANAGED_EXT.length)
+    : sanitized
+  const root = join(parentDir, `${safeName}${MANAGED_EXT}`)
+  if (await pathExists(root)) throw new Error('NAME_EXISTS')
+  await fs.mkdir(join(root, 'books'), { recursive: true })
+  await fs.mkdir(join(root, 'trash'), { recursive: true })
+  currentRoot = root
+  const now = new Date().toISOString()
+  await writeLibraryManifest({
+    version: 1,
+    libraryId: randomUUID(),
+    name: safeName,
+    createdAt: now,
+    updatedAt: now,
+    series: [],
+    ungrouped: []
+  })
+  await patchSettings({ libraryPackagePath: root, libraryRoot: undefined })
+  return root
+}
+
+async function openLibrary(packagePath: string): Promise<LibraryManifest> {
+  const stat = await fs.stat(packagePath).catch(() => null)
+  if (!stat?.isDirectory() || extname(packagePath).toLowerCase() !== MANAGED_EXT) {
+    throw new Error('INVALID_LIBRARY')
+  }
+  currentRoot = packagePath
+  await fs.mkdir(booksDir(), { recursive: true })
+  await fs.mkdir(join(packagePath, 'trash'), { recursive: true })
+  await cleanupTmpBuckets()
+  const manifest = await readLibraryManifest()
+  await patchSettings({ libraryPackagePath: packagePath })
+  return manifest
+}
+
+async function getSavedLibrary(): Promise<string | null> {
+  const settings = await readSettings()
+  const root = typeof settings.libraryPackagePath === 'string' ? settings.libraryPackagePath : null
+  if (!root) return null
+  try {
+    await openLibrary(root)
+    return root
+  } catch {
+    return null
+  }
 }
 
 // ---------- 扫描辅助 ----------
@@ -142,6 +408,193 @@ async function countImages(dir: string, depth = 4): Promise<number> {
     }
   }
   return total
+}
+
+async function scanImportPath(srcPath: string, result: ImportScanResult): Promise<void> {
+  const stat = await fs.stat(srcPath).catch(() => null)
+  if (!stat) {
+    result.skipped.push({ path: srcPath, reason: 'NOT_FOUND' })
+    return
+  }
+  const name = basename(srcPath)
+  if (isHidden(name)) return
+
+  if (stat.isFile()) {
+    if (isVolumeFile(name) && !isSplitContinuation(name)) {
+      result.candidates.push({
+        sourcePath: srcPath,
+        sourceType: (isArchiveFile(name) ? 'archive' : documentType(srcPath)) as ImportCandidate['sourceType'],
+        displayName: name.replace(/\.[^.]+$/, '')
+      })
+    } else {
+      result.skipped.push({ path: srcPath, reason: 'UNSUPPORTED_FILE' })
+    }
+    return
+  }
+
+  if (!stat.isDirectory()) {
+    result.skipped.push({ path: srcPath, reason: 'UNSUPPORTED_ENTRY' })
+    return
+  }
+
+  const entries = await readDirSafe(srcPath)
+  const directImages = entries.some((e) => e.isFile() && !isHidden(e.name) && isImage(e.name))
+  if (directImages) {
+    result.candidates.push({
+      sourcePath: srcPath,
+      sourceType: 'folder',
+      displayName: name
+    })
+    return
+  }
+
+  let foundChildCandidate = false
+  const before = result.candidates.length
+  for (const entry of entries.sort((a, b) => naturalSort(a.name, b.name))) {
+    if (isHidden(entry.name)) continue
+    await scanImportPath(join(srcPath, entry.name), result)
+  }
+  foundChildCandidate = result.candidates.length > before
+  if (!foundChildCandidate) result.skipped.push({ path: srcPath, reason: 'NO_IMAGES' })
+}
+
+async function scanImportSource(srcRoot: string): Promise<ImportScanResult> {
+  const result: ImportScanResult = { candidates: [], skipped: [] }
+  await scanImportPath(srcRoot, result)
+  const seen = new Set<string>()
+  result.candidates = result.candidates.filter((candidate) => {
+    const key = resolve(candidate.sourcePath)
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+  return result
+}
+
+async function copyImageTree(srcDir: string, destDir: string): Promise<void> {
+  await fs.mkdir(destDir, { recursive: true })
+  const entries = await readDirSafe(srcDir)
+  for (const entry of entries) {
+    if (isHidden(entry.name)) continue
+    const src = join(srcDir, entry.name)
+    const dest = join(destDir, entry.name)
+    if (entry.isDirectory()) {
+      await copyImageTree(src, dest)
+    } else if (entry.isFile() && isImage(entry.name)) {
+      await fs.mkdir(dirname(dest), { recursive: true })
+      await fs.copyFile(src, dest)
+    }
+  }
+}
+
+async function writeCover(firstImage: string | null, out: string): Promise<string | null> {
+  if (!firstImage) return null
+  try {
+    await sharp(firstImage, { failOn: 'none' })
+      .rotate()
+      .resize({ width: THUMB_WIDTH, withoutEnlargement: true })
+      .webp({ quality: 72 })
+      .toFile(out)
+    return out
+  } catch {
+    return null
+  }
+}
+
+function managedSourceName(originalName: string): string {
+  const numbered = originalName.match(/^(.*)(\.(?:7z|zip|cbz|rar|cbr)\.\d{2,})$/i)
+  if (numbered) return `source${numbered[2].toLowerCase()}`
+  const partRar = originalName.match(/^(.*)(\.part\d+\.rar)$/i)
+  if (partRar) return `source${partRar[2].toLowerCase()}`
+  const oldRar = originalName.match(/^(.*)(\.(?:rar|r\d{2}))$/i)
+  if (oldRar) return `source${oldRar[2].toLowerCase()}`
+  return `source${extname(originalName).toLowerCase()}`
+}
+
+async function importBooks(
+  candidates: ImportCandidate[],
+  opts: ImportOptions,
+  onProgress: (done: number, total: number, name: string) => void
+): Promise<string[]> {
+  if (!isManagedLibraryPath(currentRoot)) throw new Error('NO_LIBRARY')
+  const manifest = await readLibraryManifest()
+  const imported: string[] = []
+  await fs.mkdir(booksDir(), { recursive: true })
+
+  for (const candidate of candidates) {
+    const id = shortId()
+    const finalDir = bucketDir(id)
+    const tmpDir = `${finalDir}.tmp`
+    await fs.rm(tmpDir, { recursive: true, force: true })
+    await fs.mkdir(tmpDir, { recursive: true })
+    const addedAt = new Date().toISOString()
+    let sourceFile: string | null = null
+    let pageCount = 0
+    let firstImage: string | null = null
+
+    try {
+      if (candidate.sourceType === 'folder') {
+        const imagesDir = join(tmpDir, 'images')
+        await copyImageTree(candidate.sourcePath, imagesDir)
+        pageCount = await countImages(imagesDir)
+        firstImage = await findFirstImage(imagesDir)
+      } else {
+        sourceFile = managedSourceName(basename(candidate.sourcePath))
+        const dest = join(tmpDir, sourceFile)
+        if (candidate.sourceType === 'archive') {
+          const parts = await splitSiblings(candidate.sourcePath)
+          for (const part of parts) {
+            await fs.copyFile(part, join(tmpDir, managedSourceName(basename(part))))
+          }
+        } else {
+          await fs.copyFile(candidate.sourcePath, dest)
+        }
+        const info = await inspectFileVolume(dest, sourceFile).catch(() => null)
+        pageCount = info?.pageCount ?? 0
+        if (candidate.sourceType === 'archive') {
+          const prepared = await prepareArchive(dest).catch(() => null)
+          if (prepared?.status === 'ready') {
+            const cached = await getCachedImages(dest)
+            firstImage = cached?.[0] ?? null
+            pageCount = cached?.length ?? pageCount
+          }
+        } else if (candidate.sourceType === 'pdf') {
+          firstImage = await getPdfCoverImage(dest).catch(() => null)
+        } else {
+          const pages = await prepareDocument(dest).catch(() => null)
+          firstImage = pages?.[0] ?? null
+          pageCount = pages?.length ?? pageCount
+        }
+      }
+
+      const rec: BookRecord = {
+        id,
+        sourceType: candidate.sourceType,
+        sourceFile,
+        displayName: candidate.displayName,
+        originalName: basename(candidate.sourcePath),
+        importedFrom: candidate.sourcePath,
+        pageCount,
+        addedAt,
+        seriesTitleHint: null,
+        seriesAuthorHint: null
+      }
+      await atomicWriteJson(join(tmpDir, 'book.json'), rec)
+      await writeCover(firstImage, join(tmpDir, 'cover.webp'))
+      await fs.rename(tmpDir, finalDir)
+      manifest.ungrouped.push(id)
+      await writeLibraryManifest(manifest)
+      imported.push(id)
+      if (opts.deleteSourceAfter) {
+        await fs.rm(candidate.sourcePath, { recursive: true, force: true }).catch(() => {})
+      }
+      onProgress(imported.length, candidates.length, candidate.displayName)
+    } catch (error) {
+      await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {})
+      throw error
+    }
+  }
+  return imported
 }
 
 const toComicUrl = (absPath: string): string => `comic://img/?p=${encodeURIComponent(absPath)}`
@@ -362,6 +815,332 @@ async function buildFileVolume(path: string, name: string, eager = true): Promis
   return { ...base, pageCount: 0, coverUrl: null, locked: false }
 }
 
+async function coverUrlForBook(id: string): Promise<string | null> {
+  const cover = join(bucketDir(id), 'cover.webp')
+  return (await pathExists(cover)) ? toComicUrl(cover) : null
+}
+
+async function bookRecordToView(rec: BookRecord): Promise<BookView> {
+  const sourcePath = bucketSourcePath(rec)
+  let locked = false
+  let pageCount = rec.pageCount
+  if (rec.sourceType !== 'folder') {
+    const info = await inspectFileVolume(sourcePath, basename(sourcePath)).catch(() => null)
+    locked = info?.locked ?? false
+    pageCount = pageCount || info?.pageCount || 0
+  }
+  return {
+    id: rec.id,
+    sourceType: rec.sourceType,
+    displayName: rec.displayName,
+    pageCount,
+    coverUrl: await coverUrlForBook(rec.id),
+    locked,
+    sourceVolumePath: sourcePath
+  }
+}
+
+async function getLibraryView(): Promise<LibraryView> {
+  const manifest = await readLibraryManifest()
+  const records = new Map((await readAllBookRecords()).map((rec) => [rec.id, rec]))
+  const series = await Promise.all(
+    manifest.series.map(async (node) => {
+      const first = node.bookIds.map((id) => records.get(id)).find(Boolean)
+      return {
+        ...node,
+        volumeCount: node.bookIds.length,
+        coverUrl: first ? await coverUrlForBook(first.id) : null
+      }
+    })
+  )
+  const ungrouped = await Promise.all(
+    manifest.ungrouped
+      .map((id) => records.get(id))
+      .filter((rec): rec is BookRecord => !!rec)
+      .map((rec) => bookRecordToView(rec))
+  )
+  return { series, ungrouped }
+}
+
+async function getSeriesBooks(seriesId: string): Promise<BookView[]> {
+  const manifest = await readLibraryManifest()
+  const node = manifest.series.find((s) => s.id === seriesId)
+  if (!node) return []
+  const records = new Map((await readAllBookRecords()).map((rec) => [rec.id, rec]))
+  return Promise.all(
+    node.bookIds
+      .map((id) => records.get(id))
+      .filter((rec): rec is BookRecord => !!rec)
+      .map((rec) => bookRecordToView(rec))
+  )
+}
+
+function managedBookToEntry(book: BookView, author: string | null): LibraryEntry {
+  return {
+    type: 'book',
+    id: book.id,
+    path: book.sourceVolumePath,
+    name: book.displayName,
+    title: book.displayName,
+    author,
+    kind: book.sourceType === 'folder' ? 'folder' : 'file',
+    sourceType: book.sourceType,
+    pageCount: book.pageCount,
+    coverUrl: book.coverUrl,
+    locked: book.locked
+  }
+}
+
+async function managedScanLibrary(root: string): Promise<LibraryEntry[]> {
+  await openLibrary(root)
+  const view = await getLibraryView()
+  const groups: LibraryEntry[] = view.series.map((node) => ({
+    type: 'folder',
+    id: node.id,
+    path: node.id,
+    name: node.title,
+    title: node.title,
+    author: node.author,
+    volumeCount: node.volumeCount,
+    coverUrl: node.coverUrl
+  }))
+  const loose = view.ungrouped.map((book) => managedBookToEntry(book, null))
+  return [...groups, ...loose]
+}
+
+async function managedListVolumes(seriesId: string): Promise<LibraryEntry[]> {
+  const manifest = await readLibraryManifest()
+  const node = manifest.series.find((s) => s.id === seriesId)
+  if (!node) return []
+  return (await getSeriesBooks(seriesId)).map((book) => managedBookToEntry(book, node.author))
+}
+
+function removeBookIdsFromManifest(manifest: LibraryManifest, ids: Set<string>): void {
+  manifest.ungrouped = manifest.ungrouped.filter((id) => !ids.has(id))
+  for (const series of manifest.series) {
+    series.bookIds = series.bookIds.filter((id) => !ids.has(id))
+  }
+}
+
+async function updateBookHints(
+  ids: string[],
+  title: string | null,
+  author: string | null
+): Promise<void> {
+  await Promise.all(
+    ids.map(async (id) => {
+      const rec = await readBookRecord(id)
+      rec.seriesTitleHint = title
+      rec.seriesAuthorHint = author
+      await writeBookRecord(rec)
+    })
+  )
+}
+
+async function createSeries(
+  titleRaw: string,
+  authorRaw: string | null,
+  bookIds: string[]
+): Promise<SeriesNode> {
+  if (!isManagedLibraryPath(currentRoot)) throw new Error('NO_LIBRARY')
+  const title = titleRaw.trim()
+  if (!title) throw new Error('INVALID_NAME')
+  const author = authorRaw?.trim() || null
+  const manifest = await readLibraryManifest()
+  const ids = [...new Set(bookIds)]
+  const idSet = new Set(ids)
+  removeBookIdsFromManifest(manifest, idSet)
+  const node: SeriesNode = {
+    id: shortId(),
+    title,
+    author,
+    bookIds: ids,
+    createdAt: new Date().toISOString()
+  }
+  manifest.series.push(node)
+  await writeLibraryManifest(manifest)
+  await updateBookHints(ids, title, author)
+  return node
+}
+
+async function renameSeries(seriesId: string, titleRaw: string, authorRaw: string | null): Promise<void> {
+  const title = titleRaw.trim()
+  if (!title) throw new Error('INVALID_NAME')
+  const author = authorRaw?.trim() || null
+  const manifest = await readLibraryManifest()
+  const node = manifest.series.find((s) => s.id === seriesId)
+  if (!node) throw new Error('NOT_FOUND')
+  node.title = title
+  node.author = author
+  await writeLibraryManifest(manifest)
+  await updateBookHints(node.bookIds, title, author)
+}
+
+async function deleteSeries(seriesId: string): Promise<void> {
+  const manifest = await readLibraryManifest()
+  const node = manifest.series.find((s) => s.id === seriesId)
+  if (!node) throw new Error('NOT_FOUND')
+  manifest.series = manifest.series.filter((s) => s.id !== seriesId)
+  manifest.ungrouped.push(...node.bookIds)
+  await writeLibraryManifest(manifest)
+  await updateBookHints(node.bookIds, null, null)
+}
+
+async function assignBooks(bookIds: string[], targetSeriesId: string | null): Promise<void> {
+  const ids = [...new Set(bookIds)]
+  if (ids.length === 0) return
+  const idSet = new Set(ids)
+  const manifest = await readLibraryManifest()
+  removeBookIdsFromManifest(manifest, idSet)
+  if (targetSeriesId === null) {
+    manifest.ungrouped.push(...ids)
+    await writeLibraryManifest(manifest)
+    await updateBookHints(ids, null, null)
+    return
+  }
+  const node = manifest.series.find((s) => s.id === targetSeriesId)
+  if (!node) throw new Error('NOT_FOUND')
+  node.bookIds.push(...ids)
+  await writeLibraryManifest(manifest)
+  await updateBookHints(ids, node.title, node.author)
+}
+
+async function reorderSeries(orderedSeriesIds: string[]): Promise<void> {
+  const manifest = await readLibraryManifest()
+  const order = new Map(orderedSeriesIds.map((id, i) => [id, i]))
+  manifest.series.sort((a, b) => (order.get(a.id) ?? 999999) - (order.get(b.id) ?? 999999))
+  await writeLibraryManifest(manifest)
+}
+
+async function reorderBooks(seriesId: string | null, orderedBookIds: string[]): Promise<void> {
+  const manifest = await readLibraryManifest()
+  const order = new Map(orderedBookIds.map((id, i) => [id, i]))
+  if (seriesId === null) {
+    manifest.ungrouped.sort((a, b) => (order.get(a) ?? 999999) - (order.get(b) ?? 999999))
+  } else {
+    const node = manifest.series.find((s) => s.id === seriesId)
+    if (!node) throw new Error('NOT_FOUND')
+    node.bookIds.sort((a, b) => (order.get(a) ?? 999999) - (order.get(b) ?? 999999))
+  }
+  await writeLibraryManifest(manifest)
+}
+
+async function renameBook(id: string, displayNameRaw: string): Promise<void> {
+  const displayName = displayNameRaw.trim()
+  if (!displayName) throw new Error('INVALID_NAME')
+  const rec = await readBookRecord(id)
+  rec.displayName = displayName
+  await writeBookRecord(rec)
+}
+
+async function trashBooks(idsRaw: string[]): Promise<void> {
+  const root = libraryRoot()
+  if (!root || !isManagedLibraryPath(root)) throw new Error('NO_LIBRARY')
+  const ids = [...new Set(idsRaw)]
+  if (ids.length === 0) return
+  const manifest = await readLibraryManifest()
+  const idSet = new Set(ids)
+  const trashRoot = join(root, 'trash')
+  await fs.mkdir(trashRoot, { recursive: true })
+
+  for (const id of ids) {
+    const src = bucketDir(id)
+    const stat = await fs.stat(src).catch(() => null)
+    if (!stat?.isDirectory()) throw new Error('NOT_FOUND')
+    let dest = join(trashRoot, id)
+    if (await pathExists(dest)) dest = join(trashRoot, `${id}-${Date.now()}`)
+    await fs.rename(src, dest)
+  }
+
+  removeBookIdsFromManifest(manifest, idSet)
+  await writeLibraryManifest(manifest)
+}
+
+async function readTrashRecord(trashId: string): Promise<BookRecord> {
+  const root = trashDir()
+  const dir = resolve(join(root, trashId))
+  if (!isWithinPath(dir, root)) throw new Error('OUT_OF_ROOT')
+  const rec = JSON.parse(await fs.readFile(join(dir, 'book.json'), 'utf-8')) as BookRecord
+  if (!rec?.id) throw new Error('INVALID_BOOK')
+  return rec
+}
+
+async function listTrashBooks(): Promise<TrashBookView[]> {
+  const root = libraryRoot()
+  if (!root || !isManagedLibraryPath(root)) throw new Error('NO_LIBRARY')
+  await fs.mkdir(trashDir(), { recursive: true })
+  const entries = await readDirSafe(trashDir())
+  const books: TrashBookView[] = []
+  for (const entry of entries.sort((a, b) => naturalSort(a.name, b.name))) {
+    if (!entry.isDirectory() || entry.name.endsWith('.tmp')) continue
+    try {
+      const rec = await readTrashRecord(entry.name)
+      books.push({
+        trashId: entry.name,
+        bookId: rec.id,
+        displayName: rec.displayName,
+        originalName: rec.originalName,
+        sourceType: rec.sourceType,
+        seriesTitleHint: rec.seriesTitleHint,
+        seriesAuthorHint: rec.seriesAuthorHint,
+        pageCount: rec.pageCount
+      })
+    } catch {
+      /* 单个 trash 桶损坏时跳过 */
+    }
+  }
+  return books
+}
+
+function restoreBookIntoManifest(manifest: LibraryManifest, rec: BookRecord): void {
+  removeBookIdsFromManifest(manifest, new Set([rec.id]))
+  const title = rec.seriesTitleHint?.trim() || null
+  if (!title) {
+    manifest.ungrouped.push(rec.id)
+    return
+  }
+  const author = rec.seriesAuthorHint ?? null
+  let node = manifest.series.find((s) => s.title === title && (s.author ?? null) === author)
+  if (!node) {
+    node = {
+      id: shortId(),
+      title,
+      author,
+      bookIds: [],
+      createdAt: new Date().toISOString()
+    }
+    manifest.series.push(node)
+  }
+  node.bookIds.push(rec.id)
+}
+
+async function restoreTrashBooks(trashIdsRaw: string[]): Promise<void> {
+  const root = libraryRoot()
+  if (!root || !isManagedLibraryPath(root)) throw new Error('NO_LIBRARY')
+  const trashIds = [...new Set(trashIdsRaw)]
+  if (trashIds.length === 0) return
+  const manifest = await readLibraryManifest()
+
+  for (const trashId of trashIds) {
+    const src = resolve(join(trashDir(), trashId))
+    if (!isWithinPath(src, trashDir())) throw new Error('OUT_OF_ROOT')
+    const rec = await readTrashRecord(trashId)
+    const dest = bucketDir(rec.id)
+    if (await pathExists(dest)) throw new Error('NAME_EXISTS')
+    await fs.rename(src, dest)
+    restoreBookIntoManifest(manifest, rec)
+  }
+
+  await writeLibraryManifest(manifest)
+}
+
+async function emptyTrash(): Promise<void> {
+  const root = libraryRoot()
+  if (!root || !isManagedLibraryPath(root)) throw new Error('NO_LIBRARY')
+  await fs.rm(trashDir(), { recursive: true, force: true })
+  await fs.mkdir(trashDir(), { recursive: true })
+}
+
 /**
  * 判定一个目录在库里的角色（递归，深度受限），替代旧的「固定层级 + 命名约定」扫描：
  *   - 'volume'：目录**直接**含图片，或直接放着 cbz/pdf/epub 单文件 → 可读的「卷」；
@@ -470,12 +1249,14 @@ async function listChildren(dir: string): Promise<LibraryEntry[]> {
  * 扫描库根，返回顶层「书/卷 或 部」清单。
  */
 async function scanLibrary(root: string): Promise<LibraryEntry[]> {
+  if (isManagedLibraryPath(root)) return managedScanLibrary(root)
   currentRoot = root
   return listChildren(root)
 }
 
 /** 列出某「部」目录下的条目（可能含可继续下钻的子部），与顶层书架同构。 */
 async function listVolumes(seriesPath: string): Promise<LibraryEntry[]> {
+  if (isManagedLibraryPath(currentRoot)) return managedListVolumes(seriesPath)
   return listChildren(seriesPath)
 }
 
@@ -570,6 +1351,7 @@ async function hasSubfolders(dir: string): Promise<boolean> {
 
 /** 文件视图树：列某目录的直接子文件夹（忠实，含空目录），轻量不算封面 */
 async function listSubdirs(dir: string): Promise<DirNode[]> {
+  if (isManagedLibraryPath(currentRoot)) return []
   assertWithinRoot(dir)
   const entries = await readDirSafe(dir)
   const names = sortedChildDirs(entries)
@@ -583,6 +1365,22 @@ async function listSubdirs(dir: string): Promise<DirNode[]> {
 
 /** 文件视图网格：列某目录的完整直接内容（忠实磁盘） */
 async function listDirRaw(dir: string): Promise<RawListing> {
+  if (isManagedLibraryPath(currentRoot)) {
+    const root = currentRoot ?? ''
+    return {
+      folders: [],
+      files: [],
+      plainFiles: [],
+      self: {
+        readable: false,
+        pageCount: 0,
+        coverUrl: null,
+        name: basename(root),
+        title: basename(root, MANAGED_EXT),
+        author: null
+      }
+    }
+  }
   assertWithinRoot(dir)
   const entries = await readDirSafe(dir)
   const overrides = await readSeriesMeta()
@@ -845,10 +1643,16 @@ function handleComicProtocol(): void {
     const params = new URL(request.url).searchParams
     const filePath = params.get('p')
     const wantThumb = params.get('thumb') === '1'
-    // 安全校验：必须是图片或 PDF、且位于当前库根目录或来源缓存目录内
+    // 安全校验：必须是图片或 PDF。托管库只放行 books/ 桶目录；旧目录库放行当前库根。
     const norm = filePath ? resolve(filePath) : null
     const isPdfFile = !!(norm && extname(norm).toLowerCase() === '.pdf')
-    const inRoot = !!(norm && currentRoot && isWithinPath(norm, currentRoot))
+    const inRoot = !!(
+      norm &&
+      currentRoot &&
+      (isManagedLibraryPath(currentRoot)
+        ? isWithinPath(norm, join(currentRoot, 'books'))
+        : isWithinPath(norm, currentRoot))
+    )
     const inCache = !!(norm && isWithinPath(norm, extractedRoot()))
     const inDocumentCache = !!(norm && isWithinPath(norm, documentsRoot()))
     if (
@@ -890,35 +1694,159 @@ function handleComicProtocol(): void {
 export function setupLibrary(): void {
   handleComicProtocol()
 
+  ipcMain.handle('library:create', async (event, name: string) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    const options: Electron.OpenDialogOptions = {
+      properties: ['openDirectory', 'createDirectory'],
+      title: '选择新库包保存位置'
+    }
+    const { canceled, filePaths } = win
+      ? await dialog.showOpenDialog(win, options)
+      : await dialog.showOpenDialog(options)
+    if (canceled || filePaths.length === 0) return null
+    return createLibrary(filePaths[0], name)
+  })
+
+  ipcMain.handle('library:open', async (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    const options: Electron.OpenDialogOptions = {
+      properties: ['openDirectory'],
+      title: '打开 ComicToKindle 库包'
+    }
+    const { canceled, filePaths } = win
+      ? await dialog.showOpenDialog(win, options)
+      : await dialog.showOpenDialog(options)
+    if (canceled || filePaths.length === 0) return null
+    await openLibrary(filePaths[0])
+    return filePaths[0]
+  })
+
+  ipcMain.handle('library:getSaved', async () => getSavedLibrary())
+
+  ipcMain.handle('library:view', async (): Promise<LibraryView> => {
+    if (!isManagedLibraryPath(currentRoot)) throw new Error('NO_LIBRARY')
+    return getLibraryView()
+  })
+
+  ipcMain.handle('library:seriesBooks', async (_event, seriesId: string): Promise<BookView[]> => {
+    if (!isManagedLibraryPath(currentRoot)) throw new Error('NO_LIBRARY')
+    return getSeriesBooks(seriesId)
+  })
+
+  ipcMain.handle('library:inspectBook', async (_event, id: string): Promise<VolumeInspect> => {
+    if (!isManagedLibraryPath(currentRoot)) throw new Error('NO_LIBRARY')
+    const rec = await readBookRecord(id)
+    if (rec.sourceType === 'folder') {
+      const first = await findFirstImage(bucketSourcePath(rec))
+      const pageCount = await countImages(bucketSourcePath(rec))
+      return { pageCount, locked: false, coverUrl: first ? toThumbUrl(first) : null }
+    }
+    return inspectFileVolume(bucketSourcePath(rec), basename(bucketSourcePath(rec)))
+  })
+
+  ipcMain.handle('library:scanImport', async (event, srcRoot?: string): Promise<ImportScanResult> => {
+    let target = srcRoot
+    if (!target) {
+      const win = BrowserWindow.fromWebContents(event.sender)
+      const options: Electron.OpenDialogOptions = {
+        properties: ['openFile', 'openDirectory', 'multiSelections'],
+        title: '选择要导入的漫画文件或文件夹'
+      }
+      const { canceled, filePaths } = win
+        ? await dialog.showOpenDialog(win, options)
+        : await dialog.showOpenDialog(options)
+      if (canceled || filePaths.length === 0) return { candidates: [], skipped: [] }
+      const combined: ImportScanResult = { candidates: [], skipped: [] }
+      for (const filePath of filePaths) {
+        const next = await scanImportSource(filePath)
+        combined.candidates.push(...next.candidates)
+        combined.skipped.push(...next.skipped)
+      }
+      return combined
+    }
+    return scanImportSource(target)
+  })
+
+  ipcMain.handle(
+    'library:import',
+    async (
+      event,
+      candidates: ImportCandidate[],
+      opts: ImportOptions = {}
+    ): Promise<string[]> => {
+      if (!isManagedLibraryPath(currentRoot)) throw new Error('NO_LIBRARY')
+      return importBooks(candidates, opts, (done, total, name) => {
+        event.sender.send('library:importProgress', { done, total, name })
+      })
+    }
+  )
+
+  ipcMain.handle(
+    'library:createSeries',
+    async (_event, title: string, author: string | null, bookIds: string[]): Promise<SeriesNode> =>
+      createSeries(title, author, bookIds)
+  )
+
+  ipcMain.handle(
+    'library:renameSeries',
+    async (_event, seriesId: string, title: string, author: string | null): Promise<void> =>
+      renameSeries(seriesId, title, author)
+  )
+
+  ipcMain.handle('library:deleteSeries', async (_event, seriesId: string): Promise<void> =>
+    deleteSeries(seriesId)
+  )
+
+  ipcMain.handle(
+    'library:assignBooks',
+    async (_event, bookIds: string[], targetSeriesId: string | null): Promise<void> =>
+      assignBooks(bookIds, targetSeriesId)
+  )
+
+  ipcMain.handle(
+    'library:reorderSeries',
+    async (_event, orderedSeriesIds: string[]): Promise<void> => reorderSeries(orderedSeriesIds)
+  )
+
+  ipcMain.handle(
+    'library:reorderBooks',
+    async (_event, seriesId: string | null, orderedBookIds: string[]): Promise<void> =>
+      reorderBooks(seriesId, orderedBookIds)
+  )
+
+  ipcMain.handle('library:renameBook', async (_event, id: string, displayName: string): Promise<void> =>
+    renameBook(id, displayName)
+  )
+
+  ipcMain.handle('library:trashBooks', async (_event, ids: string[]): Promise<void> =>
+    trashBooks(ids)
+  )
+
+  ipcMain.handle('library:listTrash', async (): Promise<TrashBookView[]> => listTrashBooks())
+
+  ipcMain.handle('library:restoreTrashBooks', async (_event, trashIds: string[]): Promise<void> =>
+    restoreTrashBooks(trashIds)
+  )
+
+  ipcMain.handle('library:emptyTrash', async (): Promise<void> => emptyTrash())
+
   ipcMain.handle('library:pickFolder', async (event) => {
     const win = BrowserWindow.fromWebContents(event.sender)
     const options: Electron.OpenDialogOptions = {
       properties: ['openDirectory'],
-      title: '选择漫画库文件夹'
+      title: '打开 ComicToKindle 库包'
     }
     const { canceled, filePaths } = win
       ? await dialog.showOpenDialog(win, options)
       : await dialog.showOpenDialog(options)
     if (canceled || filePaths.length === 0) return null
     const root = filePaths[0]
-    await patchSettings({ libraryRoot: root })
-    currentRoot = root
+    await openLibrary(root)
     return root
   })
 
   ipcMain.handle('library:getSavedRoot', async () => {
-    const settings = await readSettings()
-    const root = typeof settings.libraryRoot === 'string' ? settings.libraryRoot : null
-    if (root) {
-      try {
-        await fs.access(root)
-        currentRoot = root
-        return root
-      } catch {
-        return null
-      }
-    }
-    return null
+    return getSavedLibrary()
   })
 
   ipcMain.handle('library:scan', async (_event, root: string) => scanLibrary(root))

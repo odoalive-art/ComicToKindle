@@ -15,7 +15,7 @@ ComicToKindle 目前是一个桌面应用工作台，已打通核心闭环:**本
 - shadcn/ui 组件体系
 - 构建和打包脚本
 - `src/renderer/src/App.tsx` 中的侧边栏工作台壳
-- **真实漫画库浏览**：左侧文件夹树 + 忠实磁盘目录网格；`所有漫画` 直接显示库根目录，递归识别逻辑用于可读卷册、封面和转换元信息（详见「漫画库数据层」）
+- **漫画库浏览阶段 1 改造**：已接入 App 独占 `.ctklib` 库包（`library.json` + `books/<bookId>/book.json` + `source.*`/`images/`），支持新建/打开库包、扫描导入源、把卷册复制进库包并在 manifest 中作为散卷展示；阅读器与转换仍复用原有取图链路（详见「漫画库数据层」）。旧左侧文件夹树 + 忠实磁盘目录网格代码仍保留为过渡兼容层，后续阶段会移除。
 - **压缩包来源**：CBZ/ZIP/CBR/RAR/7z 卷册（含加密 zip、多卷分卷，共享密码池，解压进度）解出图片供阅读 + 转换（详见「压缩包来源层」）
 - **文档来源**：PDF 单文件卷册渲染为页面图片；图片型 EPUB 按 OPF spine / XHTML 图片引用抽成页面（详见「文档来源层」）
 - **卷册阅读器**：单页 / 双页、左右阅读方向、记住每卷续读进度；网格封面走缩略图缓存
@@ -51,9 +51,9 @@ Electron main process
   同时注册 set-background-color IPC 供 renderer 在用户切换主题时同步。
 
   src/main/library.ts
-  漫画库数据层：comic:// 协议（含封面缩略图通道）、目录扫描、库根目录持久化、每部名称/作者覆盖、
-  应用内文件整理（rename/move/createFolder/trash，统一 assertWithinRoot 越权校验 + sanitizeName 名称清洗）。
-  导出 collectVolumeImagePaths() 供转换流水线按阅读顺序取图（支持嵌套单话子文件夹）。
+  漫画库数据层：comic:// 协议（含封面缩略图通道）、`.ctklib` 托管库包生命周期、
+  导入扫描与复制、library.json/book.json manifest 读写、散卷库视图，以及过渡期保留的旧目录扫描/文件整理兼容代码。
+  导出 collectVolumeImagePaths() 供转换流水线按阅读顺序取图（支持桶内 source.* / images/ 与旧目录卷）。
 
   src/main/archive.ts
   压缩包来源层：内置 7-Zip（7zip-bin）解 CBZ/ZIP/CBR/RAR/7z（含加密 zip、多卷分卷）到
@@ -100,6 +100,42 @@ Renderer process
 ## 漫画库数据层
 
 漫画库的文件系统访问全部在 main 进程，renderer 通过 preload 暴露的 `window.api.library.*` 调用，不直接用 Node API。
+
+**托管库包阶段 1（2026-06-24 接入）**：
+
+- 库包目录为 `<库名>.ctklib/`，包含根 manifest `library.json`、卷册桶 `books/<bookId>/` 和库内回收站 `trash/`。
+- 单文件卷册（CBZ/ZIP/CBR/RAR/7z/PDF/图片型 EPUB）导入为 `books/<bookId>/source.<ext>`；散图文件夹导入为 `books/<bookId>/images/`。分卷压缩包会把入口卷和续卷一起复制进同一桶。
+- `books/<bookId>/book.json` 记录源类型、显示名、原始来源、页数和可重建 hints。`library.json` 目前维护 `series` 与 `ungrouped` 有序数组；阶段 1 导入全部进入 `ungrouped`。
+- `library.json`、`book.json` 均采用 `*.tmp` 写入后 rename 的原子写；导入桶先复制到 `books/<id>.tmp/`，完成后 rename 成 `books/<id>/`。
+- 启动/打开库包时会清理残留 `.tmp` 桶；`library.json` 缺失或损坏时会遍历 `book.json` 重建。
+- renderer 当前用兼容层调用旧 `scan/listVolumes`：`.ctklib` 下 `scan` 返回 manifest 投影的部与散卷，卷册 `path` 是桶内 `source.*` 或 `images/`，因此阅读器、`archive:prepare` 和 `convert:volume` 无需改转换引擎。
+- `comic://` 托管库白名单只放行库包内 `books/`、解压缓存 `userData/extracted/` 和文档缓存 `userData/documents/`，不再放行整个库包根。
+
+**托管库 IPC**：
+
+```txt
+library:create           选择父目录 + 名称 → 新建 .ctklib
+library:open             选择 .ctklib 打开
+library:getSaved         读取 settings.json 的 libraryPackagePath
+library:view             读取 manifest 视图（阶段 1 renderer 暂以 scan 兼容层为主）
+library:seriesBooks      读取某部卷册
+library:inspectBook      懒补单个桶卷册信息
+library:scanImport       选择或传入导入源 → 只识别候选，不复制
+library:import           复制候选进桶，进度事件 library:importProgress
+library:createSeries     新建部，并可同时把若干 bookId 归入该部
+library:renameSeries     改部名/作者，并同步桶 book.json hints
+library:deleteSeries     解散部，卷册回到 ungrouped，不删桶
+library:assignBooks      把卷册移入某部，或 targetSeriesId=null 回到散卷
+library:reorderSeries    更新部顺序（IPC 已有，UI 拖拽排序待做）
+library:reorderBooks     更新散卷或部内卷册顺序（IPC 已有，UI 拖拽排序待做）
+library:renameBook       改卷册显示名，只写 book.json
+library:trashBooks       把卷册桶移动到库内 trash/，并从 manifest 摘除
+library:listTrash        列出库内 trash/ 中可还原的卷册桶
+library:restoreTrashBooks  把 trash/ 中的卷册桶还原回 books/，并按 book.json hints 尽量回原部
+library:emptyTrash       永久清空库内 trash/
+```
+
+**当前 UI 接入状态**：现有库视图已能新建部、编辑部名/作者、改卷册显示名、把卷册移入已有部或“新建部并移入”、解散部（卷册回散卷）、删除卷册到库内 `trash/`，并通过顶栏打开库内回收站来还原或清空。导入流程已有预览弹窗，可勾选“导入完成后删除源文件或源文件夹”。排序通过右键菜单的“上移 / 下移”完成，分别调用 `reorderSeries` 或 `reorderBooks` 写 manifest；移除旧文件视图与本地文件整理 IPC 仍待后续阶段。
 
 **扫描模型**（`classifyDir` / `listChildren`，递归判定，不预设固定层级）：
 

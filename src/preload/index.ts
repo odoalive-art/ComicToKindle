@@ -4,6 +4,38 @@ import { electronAPI } from '@electron-toolkit/preload'
 // Custom APIs for renderer
 const api = {
   library: {
+    create: (name: string): Promise<string | null> => ipcRenderer.invoke('library:create', name),
+    open: (): Promise<string | null> => ipcRenderer.invoke('library:open'),
+    getSaved: (): Promise<string | null> => ipcRenderer.invoke('library:getSaved'),
+    view: () => ipcRenderer.invoke('library:view'),
+    seriesBooks: (seriesId: string) => ipcRenderer.invoke('library:seriesBooks', seriesId),
+    inspectBook: (id: string) => ipcRenderer.invoke('library:inspectBook', id),
+    scanImport: (srcRoot?: string) => ipcRenderer.invoke('library:scanImport', srcRoot),
+    importBooks: (candidates: unknown, opts: unknown) =>
+      ipcRenderer.invoke('library:import', candidates, opts),
+    createSeries: (title: string, author: string | null, bookIds: string[]) =>
+      ipcRenderer.invoke('library:createSeries', title, author, bookIds),
+    renameSeries: (seriesId: string, title: string, author: string | null) =>
+      ipcRenderer.invoke('library:renameSeries', seriesId, title, author),
+    deleteSeries: (seriesId: string) => ipcRenderer.invoke('library:deleteSeries', seriesId),
+    assignBooks: (bookIds: string[], targetSeriesId: string | null) =>
+      ipcRenderer.invoke('library:assignBooks', bookIds, targetSeriesId),
+    reorderSeries: (orderedSeriesIds: string[]) =>
+      ipcRenderer.invoke('library:reorderSeries', orderedSeriesIds),
+    reorderBooks: (seriesId: string | null, orderedBookIds: string[]) =>
+      ipcRenderer.invoke('library:reorderBooks', seriesId, orderedBookIds),
+    renameBook: (id: string, displayName: string) =>
+      ipcRenderer.invoke('library:renameBook', id, displayName),
+    trashBooks: (ids: string[]) => ipcRenderer.invoke('library:trashBooks', ids),
+    listTrash: () => ipcRenderer.invoke('library:listTrash'),
+    restoreTrashBooks: (trashIds: string[]) =>
+      ipcRenderer.invoke('library:restoreTrashBooks', trashIds),
+    emptyTrash: () => ipcRenderer.invoke('library:emptyTrash'),
+    onImportProgress: (cb: (payload: unknown) => void): (() => void) => {
+      const listener = (_e: unknown, payload: unknown): void => cb(payload)
+      ipcRenderer.on('library:importProgress', listener)
+      return () => ipcRenderer.removeListener('library:importProgress', listener)
+    },
     pickFolder: (): Promise<string | null> => ipcRenderer.invoke('library:pickFolder'),
     getSavedRoot: (): Promise<string | null> => ipcRenderer.invoke('library:getSavedRoot'),
     scan: (root: string) => ipcRenderer.invoke('library:scan', root),

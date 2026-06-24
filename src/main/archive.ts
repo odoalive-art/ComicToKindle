@@ -93,7 +93,7 @@ export const isSplitContinuation = (name: string): boolean => {
 }
 
 /** 列出某入口卷在同目录下的全部分卷（含自身，自然排序）；单档归档返回自身 */
-async function splitSiblings(filePath: string): Promise<string[]> {
+export async function splitSiblings(filePath: string): Promise<string[]> {
   const dir = dirname(filePath)
   const name = basename(filePath)
   const lower = name.toLowerCase()
