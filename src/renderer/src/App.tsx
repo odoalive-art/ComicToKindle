@@ -41,7 +41,9 @@ import {
   FolderInput,
   Puzzle,
   List,
-  LayoutGrid
+  LayoutGrid,
+  Folder,
+  FolderTree
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -320,6 +322,11 @@ type LibraryBook = Extract<LibraryEntry, { type: 'book' }>
 type LibraryDirEntry = Awaited<ReturnType<Window['api']['library']['listVolumes']>>[number]
 type LibraryVolume = Extract<LibraryDirEntry, { type: 'book' }>
 type Artifact = Awaited<ReturnType<Window['api']['artifacts']['list']>>[number]
+// 文件视图（忠实磁盘）：树节点 + 某目录的完整直接内容
+type DirNode = Awaited<ReturnType<Window['api']['library']['listSubdirs']>>[number]
+type RawListing = Awaited<ReturnType<Window['api']['library']['listDirRaw']>>
+type RawFolder = RawListing['folders'][number]
+type RawVolume = RawListing['files'][number]
 
 function CoverImage({
   src,
@@ -411,6 +418,721 @@ function FolderStackCard({
       </div>
     </button>
   )
+}
+
+// ============ 文件视图（Eagle 式：左常驻文件夹树 + 右混合网格，拖到树节点=移动）============
+// 与书架视图相反：1:1 忠实磁盘，不隐藏空目录、不折叠单话、不强分部/卷，专供整理。
+
+const basenameOf = (p: string): string => p.split('/').filter(Boolean).pop() ?? p
+
+const FILE_GRID =
+  'grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'
+
+/** 左侧文件夹树的一行（含懒加载子节点、拖放目标高亮） */
+function FileTreeRow({
+  node,
+  depth,
+  currentDir,
+  expanded,
+  kids,
+  dropTarget,
+  onToggle,
+  onSelect,
+  onDropMove,
+  setDropTarget
+}: {
+  node: DirNode
+  depth: number
+  currentDir: string
+  expanded: Set<string>
+  kids: Map<string, DirNode[]>
+  dropTarget: string | null
+  onToggle: (path: string) => void
+  onSelect: (path: string) => void
+  onDropMove: (dest: string) => void
+  setDropTarget: (path: string | null) => void
+}): React.JSX.Element {
+  const isOpen = expanded.has(node.path)
+  const selected = currentDir === node.path
+  const children = kids.get(node.path)
+  return (
+    <div>
+      <div
+        onClick={() => onSelect(node.path)}
+        onDragOver={(e) => {
+          e.preventDefault()
+          setDropTarget(node.path)
+        }}
+        onDragLeave={() => setDropTarget(null)}
+        onDrop={(e) => {
+          e.preventDefault()
+          setDropTarget(null)
+          onDropMove(node.path)
+        }}
+        style={{ paddingLeft: depth * 14 + 8 }}
+        className={`flex h-7 cursor-default items-center gap-1 rounded-md pr-2 text-sm ${
+          dropTarget === node.path
+            ? 'bg-primary/20 ring-1 ring-primary'
+            : selected
+              ? 'bg-accent text-accent-foreground'
+              : 'hover:bg-accent/50'
+        }`}
+      >
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            if (node.hasSubfolders) onToggle(node.path)
+          }}
+          className={`flex size-4 shrink-0 items-center justify-center rounded text-muted-foreground ${
+            node.hasSubfolders ? 'hover:bg-foreground/10' : 'invisible'
+          }`}
+        >
+          {isOpen ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
+        </button>
+        {isOpen ? (
+          <FolderOpen className="size-4 shrink-0 text-muted-foreground" />
+        ) : (
+          <Folder className="size-4 shrink-0 text-muted-foreground" />
+        )}
+        <span className="min-w-0 flex-1 truncate" title={node.name}>
+          {node.name}
+        </span>
+      </div>
+      {isOpen && children
+        ? children.map((c) => (
+            <FileTreeRow
+              key={c.path}
+              node={c}
+              depth={depth + 1}
+              currentDir={currentDir}
+              expanded={expanded}
+              kids={kids}
+              dropTarget={dropTarget}
+              onToggle={onToggle}
+              onSelect={onSelect}
+              onDropMove={onDropMove}
+              setDropTarget={setDropTarget}
+            />
+          ))
+        : null}
+    </div>
+  )
+}
+
+function FileView({
+  root,
+  locale,
+  onOpenVolume
+}: {
+  root: string
+  locale: LanguageMode
+  onOpenVolume: (vol: RawVolume) => void
+}): React.JSX.Element {
+  const text = uiText[locale]
+  const [currentDir, setCurrentDir] = useState(root)
+  const [listing, setListing] = useState<RawListing | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [expanded, setExpanded] = useState<Set<string>>(new Set([root]))
+  const [kids, setKids] = useState<Map<string, DirNode[]>>(new Map())
+  const [picked, setPicked] = useState<Set<string>>(new Set())
+  const [dropTarget, setDropTarget] = useState<string | null>(null)
+  const dragPaths = React.useRef<string[]>([])
+  const [renameReq, setRenameReq] = useState<{ path: string; name: string; busy: boolean } | null>(
+    null
+  )
+  const [newFolderReq, setNewFolderReq] = useState<{ name: string; busy: boolean } | null>(null)
+  const [deleteReq, setDeleteReq] = useState<{ paths: string[]; busy: boolean } | null>(null)
+
+  const fileopErr = (e: unknown): string => {
+    const m = `${e}`
+    if (m.includes('NAME_EXISTS')) return text.fileops.errNameExists
+    if (m.includes('INVALID_NAME')) return text.fileops.errInvalidName
+    if (m.includes('MOVE_INTO_SELF')) return text.fileops.errMoveIntoSelf
+    return text.fileops.errGeneric
+  }
+
+  const loadKids = React.useCallback(async (dir: string) => {
+    const list = await window.api.library.listSubdirs(dir)
+    setKids((prev) => new Map(prev).set(dir, list))
+  }, [])
+
+  const loadListing = React.useCallback(async (dir: string) => {
+    setLoading(true)
+    try {
+      setListing(await window.api.library.listDirRaw(dir))
+    } catch {
+      setListing({
+        folders: [],
+        files: [],
+        self: { readable: false, pageCount: 0, coverUrl: null }
+      })
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  // 切库 → 回到根
+  useEffect(() => {
+    setCurrentDir(root)
+    setExpanded(new Set([root]))
+    setPicked(new Set())
+    void loadKids(root)
+  }, [root, loadKids])
+
+  // 当前目录变化 → 拉网格内容
+  useEffect(() => {
+    void loadListing(currentDir)
+  }, [currentDir, loadListing])
+
+  // 进入某目录：选中它、展开其祖先链、懒加载其子节点
+  const navigate = (dir: string): void => {
+    setPicked(new Set())
+    setCurrentDir(dir)
+    // 展开从 root 到 dir 的整条链，方便左树定位
+    const rel = dir.startsWith(root) ? dir.slice(root.length).split('/').filter(Boolean) : []
+    const chain = new Set([root])
+    let acc = root
+    for (const seg of rel) {
+      acc = `${acc}/${seg}`
+      chain.add(acc)
+    }
+    setExpanded((prev) => new Set([...prev, ...chain]))
+    if (!kids.has(dir)) void loadKids(dir)
+  }
+
+  const toggleNode = (path: string): void => {
+    setExpanded((prev) => {
+      const next = new Set(prev)
+      if (next.has(path)) next.delete(path)
+      else {
+        next.add(path)
+        if (!kids.has(path)) void loadKids(path)
+      }
+      return next
+    })
+  }
+
+  // 操作后刷新：当前网格 + 已展开各树节点
+  const reloadAll = React.useCallback(async () => {
+    await loadListing(currentDir)
+    await Promise.all([...expanded].map((p) => loadKids(p)))
+  }, [currentDir, expanded, loadListing, loadKids])
+
+  const doMove = async (paths: string[], dest: string): Promise<void> => {
+    if (paths.length === 0) return
+    try {
+      await window.api.library.move(paths, dest)
+      toast.success(text.fileops.moved(paths.length))
+      setPicked(new Set())
+      await reloadAll()
+    } catch (e) {
+      toast.error(fileopErr(e))
+    }
+  }
+
+  const submitRename = async (): Promise<void> => {
+    if (!renameReq || renameReq.busy || !renameReq.name.trim()) return
+    setRenameReq((s) => (s ? { ...s, busy: true } : s))
+    try {
+      await window.api.library.rename(renameReq.path, renameReq.name)
+      setRenameReq(null)
+      toast.success(text.fileops.renamed)
+      await reloadAll()
+    } catch (e) {
+      toast.error(fileopErr(e))
+      setRenameReq((s) => (s ? { ...s, busy: false } : s))
+    }
+  }
+
+  const submitNewFolder = async (): Promise<void> => {
+    if (!newFolderReq || newFolderReq.busy || !newFolderReq.name.trim()) return
+    setNewFolderReq((s) => (s ? { ...s, busy: true } : s))
+    try {
+      await window.api.library.createFolder(currentDir, newFolderReq.name)
+      setNewFolderReq(null)
+      toast.success(text.fileops.created)
+      await reloadAll()
+    } catch (e) {
+      toast.error(fileopErr(e))
+      setNewFolderReq((s) => (s ? { ...s, busy: false } : s))
+    }
+  }
+
+  const submitDelete = async (): Promise<void> => {
+    if (!deleteReq || deleteReq.busy) return
+    setDeleteReq((s) => (s ? { ...s, busy: true } : s))
+    try {
+      await window.api.library.trash(deleteReq.paths)
+      toast.success(text.fileops.deleted(deleteReq.paths.length))
+      setDeleteReq(null)
+      setPicked(new Set())
+      await reloadAll()
+    } catch (e) {
+      toast.error(fileopErr(e))
+      setDeleteReq((s) => (s ? { ...s, busy: false } : s))
+    }
+  }
+
+  // 点击卡片：普通点=单选，⌘/Ctrl 点=切换多选
+  const onCardClick = (path: string, e: React.MouseEvent): void => {
+    if (e.metaKey || e.ctrlKey) {
+      setPicked((prev) => {
+        const next = new Set(prev)
+        if (next.has(path)) next.delete(path)
+        else next.add(path)
+        return next
+      })
+    } else {
+      setPicked(new Set([path]))
+    }
+  }
+
+  // 右键命中：在选区内则对整组，否则只对它
+  const targetsOf = (path: string): string[] =>
+    picked.has(path) && picked.size > 1 ? [...picked] : [path]
+
+  const onCardDragStart = (path: string): void => {
+    dragPaths.current = picked.has(path) && picked.size > 1 ? [...picked] : [path]
+  }
+
+  // 面包屑：root → currentDir
+  const crumbs: Array<{ name: string; path: string }> = (() => {
+    const out: Array<{ name: string; path: string }> = [{ name: text.fileView.root, path: root }]
+    if (currentDir.startsWith(root)) {
+      let acc = root
+      for (const seg of currentDir.slice(root.length).split('/').filter(Boolean)) {
+        acc = `${acc}/${seg}`
+        out.push({ name: seg, path: acc })
+      }
+    }
+    return out
+  })()
+
+  const rootNode: DirNode = { id: root, path: root, name: text.fileView.root, hasSubfolders: true }
+  const isEmpty =
+    !loading &&
+    listing !== null &&
+    listing.folders.length === 0 &&
+    listing.files.length === 0 &&
+    !listing.self.readable
+
+  return (
+    <div className="flex min-h-0 flex-1">
+      {/* 左：常驻文件夹树 */}
+      <div className="w-60 shrink-0 overflow-y-auto border-r p-2">
+        <FileTreeRow
+          node={rootNode}
+          depth={0}
+          currentDir={currentDir}
+          expanded={expanded}
+          kids={kids}
+          dropTarget={dropTarget}
+          onToggle={toggleNode}
+          onSelect={navigate}
+          onDropMove={(dest) => doMove(dragPaths.current, dest)}
+          setDropTarget={setDropTarget}
+        />
+      </div>
+
+      {/* 右：面包屑 + 网格 */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex h-10 shrink-0 items-center gap-1 border-b px-3 text-sm">
+          <Breadcrumb className="min-w-0 flex-1">
+            <BreadcrumbList className="flex-nowrap">
+              {crumbs.map((c, i) => {
+                const last = i === crumbs.length - 1
+                return (
+                  <React.Fragment key={c.path}>
+                    {i > 0 ? <BreadcrumbSeparator className="shrink-0" /> : null}
+                    <BreadcrumbItem className="min-w-0">
+                      {last ? (
+                        <BreadcrumbPage className="truncate font-medium">{c.name}</BreadcrumbPage>
+                      ) : (
+                        <BreadcrumbLink asChild>
+                          <button
+                            type="button"
+                            className="truncate"
+                            onClick={() => navigate(c.path)}
+                          >
+                            {c.name}
+                          </button>
+                        </BreadcrumbLink>
+                      )}
+                    </BreadcrumbItem>
+                  </React.Fragment>
+                )
+              })}
+            </BreadcrumbList>
+          </Breadcrumb>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-7 shrink-0"
+                onClick={() => setNewFolderReq({ name: '', busy: false })}
+              >
+                <FolderPlus className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{text.fileops.newFolder}</TooltipContent>
+          </Tooltip>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto p-3">
+          {loading ? (
+            <div className="flex h-full items-center justify-center text-muted-foreground">
+              <Loader2 className="size-5 animate-spin" />
+            </div>
+          ) : isEmpty ? (
+            <p className="py-16 text-center text-sm text-muted-foreground">
+              {text.fileView.emptyFolder}
+            </p>
+          ) : (
+            <div className={FILE_GRID}>
+              {/* 本文件夹自身可读（直接铺着图片）→ 阅读入口 */}
+              {listing?.self.readable ? (
+                <button
+                  type="button"
+                  onDoubleClick={() =>
+                    onOpenVolume({
+                      id: currentDir,
+                      path: currentDir,
+                      name: basenameOf(currentDir),
+                      title: basenameOf(currentDir),
+                      kind: 'folder',
+                      sourceType: 'folder',
+                      pageCount: listing.self.pageCount,
+                      coverUrl: listing.self.coverUrl
+                    } as RawVolume)
+                  }
+                  className="group flex cursor-default flex-col gap-1.5 text-left"
+                >
+                  <AspectRatio
+                    ratio={3 / 4}
+                    className="relative overflow-hidden rounded-md bg-muted ring-1 ring-primary/40"
+                  >
+                    <CoverImage src={listing.self.coverUrl} alt="" />
+                    <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 bg-primary/85 py-1 text-xs font-medium text-primary-foreground">
+                      <BookOpen className="size-3.5" />
+                      {text.fileView.readFolder}
+                    </div>
+                  </AspectRatio>
+                  <div className="truncate text-xs text-muted-foreground">
+                    {text.library.pageUnit(listing.self.pageCount)}
+                  </div>
+                </button>
+              ) : null}
+
+              {/* 子文件夹卡（可下钻 / 可作为移动目标） */}
+              {listing?.folders.map((f) => (
+                <FileFolderCard
+                  key={f.path}
+                  folder={f}
+                  picked={picked.has(f.path)}
+                  dropTarget={dropTarget === f.path}
+                  itemLabel={text.fileView.itemUnit(f.childCount)}
+                  renameLabel={text.fileops.rename}
+                  deleteLabel={text.fileops.delete}
+                  onClick={(e) => onCardClick(f.path, e)}
+                  onOpen={() => navigate(f.path)}
+                  onDragStart={() => onCardDragStart(f.path)}
+                  onDropMove={() => doMove(dragPaths.current, f.path)}
+                  setDropTarget={(v) => setDropTarget(v ? f.path : null)}
+                  onRename={() => setRenameReq({ path: f.path, name: f.name, busy: false })}
+                  onDelete={() => setDeleteReq({ paths: targetsOf(f.path), busy: false })}
+                />
+              ))}
+
+              {/* 可读单文件（cbz/pdf/epub） */}
+              {listing?.files.map((v) => (
+                <FileVolumeCard
+                  key={v.path}
+                  vol={v}
+                  picked={picked.has(v.path)}
+                  typeLabel={fileVolumeTypeLabel(v, text)}
+                  renameLabel={text.fileops.rename}
+                  deleteLabel={text.fileops.delete}
+                  onClick={(e) => onCardClick(v.path, e)}
+                  onOpen={() => onOpenVolume(v)}
+                  onDragStart={() => onCardDragStart(v.path)}
+                  onRename={() => setRenameReq({ path: v.path, name: v.name, busy: false })}
+                  onDelete={() => setDeleteReq({ paths: targetsOf(v.path), busy: false })}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 重命名 */}
+      <Dialog
+        open={renameReq !== null}
+        onOpenChange={(o) => (!o && !renameReq?.busy ? setRenameReq(null) : undefined)}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{text.fileops.renameTitle}</DialogTitle>
+            <DialogDescription>{text.fileops.renameDesc}</DialogDescription>
+          </DialogHeader>
+          <Input
+            autoFocus
+            value={renameReq?.name ?? ''}
+            placeholder={text.fileops.namePlaceholder}
+            onChange={(e) => setRenameReq((s) => (s ? { ...s, name: e.target.value } : s))}
+            onKeyDown={(e) => e.key === 'Enter' && void submitRename()}
+          />
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setRenameReq(null)}>
+              {text.fileops.cancel}
+            </Button>
+            <Button onClick={() => void submitRename()} disabled={renameReq?.busy}>
+              {text.fileops.confirm}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 新建文件夹 */}
+      <Dialog
+        open={newFolderReq !== null}
+        onOpenChange={(o) => (!o && !newFolderReq?.busy ? setNewFolderReq(null) : undefined)}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{text.fileops.newFolderTitle}</DialogTitle>
+            <DialogDescription>{text.fileops.newFolderDesc}</DialogDescription>
+          </DialogHeader>
+          <Input
+            autoFocus
+            value={newFolderReq?.name ?? ''}
+            placeholder={text.fileops.newFolderPlaceholder}
+            onChange={(e) => setNewFolderReq((s) => (s ? { ...s, name: e.target.value } : s))}
+            onKeyDown={(e) => e.key === 'Enter' && void submitNewFolder()}
+          />
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setNewFolderReq(null)}>
+              {text.fileops.cancel}
+            </Button>
+            <Button onClick={() => void submitNewFolder()} disabled={newFolderReq?.busy}>
+              {text.fileops.confirm}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 删除确认 */}
+      <AlertDialog
+        open={deleteReq !== null}
+        onOpenChange={(o) => (!o && !deleteReq?.busy ? setDeleteReq(null) : undefined)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{text.fileops.deleteTitle}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {text.fileops.deleteDesc(deleteReq?.paths.length ?? 0)}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteReq?.busy}>{text.fileops.cancel}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault()
+                void submitDelete()
+              }}
+            >
+              {text.fileops.delete}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  )
+}
+
+/** 文件视图：子文件夹卡（可下钻、可拖入移动） */
+function FileFolderCard({
+  folder,
+  picked,
+  dropTarget,
+  itemLabel,
+  renameLabel,
+  deleteLabel,
+  onClick,
+  onOpen,
+  onDragStart,
+  onDropMove,
+  setDropTarget,
+  onRename,
+  onDelete
+}: {
+  folder: RawFolder
+  picked: boolean
+  dropTarget: boolean
+  itemLabel: string
+  renameLabel: string
+  deleteLabel: string
+  onClick: (e: React.MouseEvent) => void
+  onOpen: () => void
+  onDragStart: () => void
+  onDropMove: () => void
+  setDropTarget: (v: boolean) => void
+  onRename: () => void
+  onDelete: () => void
+}): React.JSX.Element {
+  return (
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
+        <div
+          draggable
+          onDragStart={onDragStart}
+          onClick={onClick}
+          onDoubleClick={onOpen}
+          onDragOver={(e) => {
+            e.preventDefault()
+            setDropTarget(true)
+          }}
+          onDragLeave={() => setDropTarget(false)}
+          onDrop={(e) => {
+            e.preventDefault()
+            setDropTarget(false)
+            onDropMove()
+          }}
+          className="group flex cursor-default flex-col gap-1.5 text-left"
+        >
+          <AspectRatio
+            ratio={3 / 4}
+            className={`relative overflow-hidden rounded-md bg-muted transition-all ${
+              dropTarget
+                ? 'ring-2 ring-primary'
+                : picked
+                  ? 'ring-2 ring-primary ring-offset-2 ring-offset-background'
+                  : ''
+            }`}
+          >
+            {folder.coverUrl ? (
+              <CoverImage src={folder.coverUrl} alt={folder.name} />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                <Folder className="size-10" />
+              </div>
+            )}
+            <Badge
+              variant="secondary"
+              className="absolute top-1 right-1 gap-1 bg-background/85 px-1.5 text-[10px] backdrop-blur"
+            >
+              <Folder className="size-3" />
+              {itemLabel}
+            </Badge>
+          </AspectRatio>
+          <div
+            className={`truncate rounded px-1 text-xs font-medium ${picked ? 'bg-accent' : ''}`}
+            title={folder.name}
+          >
+            {folder.name}
+          </div>
+        </div>
+      </ContextMenuTrigger>
+      <ContextMenuContent>
+        <ContextMenuItem onSelect={() => setTimeout(onRename, 0)}>
+          <Pencil className="size-4" />
+          {renameLabel}
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem variant="destructive" onSelect={() => setTimeout(onDelete, 0)}>
+          <Trash2 className="size-4" />
+          {deleteLabel}
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
+  )
+}
+
+/** 文件视图：可读单文件卡（cbz/pdf/epub） */
+function FileVolumeCard({
+  vol,
+  picked,
+  typeLabel,
+  renameLabel,
+  deleteLabel,
+  onClick,
+  onOpen,
+  onDragStart,
+  onRename,
+  onDelete
+}: {
+  vol: RawVolume
+  picked: boolean
+  typeLabel: string
+  renameLabel: string
+  deleteLabel: string
+  onClick: (e: React.MouseEvent) => void
+  onOpen: () => void
+  onDragStart: () => void
+  onRename: () => void
+  onDelete: () => void
+}): React.JSX.Element {
+  return (
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
+        <div
+          draggable
+          onDragStart={onDragStart}
+          onClick={onClick}
+          onDoubleClick={onOpen}
+          className="group flex cursor-default flex-col gap-1.5 text-left"
+        >
+          <AspectRatio
+            ratio={3 / 4}
+            className={`relative overflow-hidden rounded-md bg-muted transition-all ${
+              picked ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''
+            }`}
+          >
+            <CoverImage src={vol.coverUrl} alt={vol.title} quiet />
+            {!vol.coverUrl ? (
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-muted-foreground">
+                {vol.locked ? (
+                  <Lock className="size-8" />
+                ) : vol.sourceType === 'archive' ? (
+                  <FileArchive className="size-8" />
+                ) : (
+                  <FileText className="size-8" />
+                )}
+              </div>
+            ) : null}
+          </AspectRatio>
+          <div className="min-w-0">
+            <div
+              className={`truncate rounded px-1 text-xs font-medium ${picked ? 'bg-accent' : ''}`}
+              title={vol.title}
+            >
+              {vol.title}
+            </div>
+            <div className="truncate px-1 text-[11px] text-muted-foreground">{typeLabel}</div>
+          </div>
+        </div>
+      </ContextMenuTrigger>
+      <ContextMenuContent>
+        <ContextMenuItem onSelect={() => setTimeout(onRename, 0)}>
+          <Pencil className="size-4" />
+          {renameLabel}
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem variant="destructive" onSelect={() => setTimeout(onDelete, 0)}>
+          <Trash2 className="size-4" />
+          {deleteLabel}
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
+  )
+}
+
+function fileVolumeTypeLabel(v: RawVolume, text: (typeof uiText)[LanguageMode]): string {
+  if (v.sourceType === 'pdf') return text.library.pdfVolume
+  if (v.sourceType === 'epub') return text.library.epubVolume
+  if (v.sourceType === 'archive') return text.library.fileVolume
+  return text.library.pageUnit(v.pageCount)
 }
 
 const LIBRARY_GRID =
@@ -1347,6 +2069,8 @@ function LibraryView({
   const [selectedSeriesPath, setSelectedSeriesPath] = useState<string | null>(null)
   // 书架视图模式（图标/列表）+ 列表视图里就地展开的部 + 各部卷册缓存
   const [viewMode, setViewMode] = useState<LibraryViewMode>(getInitialLibraryView)
+  // 文件视图（Eagle 式忠实磁盘整理器）：与书架视图互斥的顶层模式
+  const [fileMode, setFileMode] = useState(false)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [volCache, setVolCache] = useState<Map<string, LibraryDirEntry[]>>(new Map())
   // 框选（橡皮筋）：在空白处按下拖动进入多选
@@ -2689,7 +3413,7 @@ function LibraryView({
                       <TooltipContent>{text.seriesMeta.edit}</TooltipContent>
                     </Tooltip>
                   ) : null}
-                  {!showVolumes ? (
+                  {!showVolumes && !fileMode ? (
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button
@@ -2709,6 +3433,30 @@ function LibraryView({
                       </TooltipTrigger>
                       <TooltipContent>
                         {viewMode === 'icon' ? text.library.viewList : text.library.viewIcon}
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : null}
+                  {/* 书架视图 ⇄ 文件视图（忠实磁盘整理器） */}
+                  {!showVolumes ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant={fileMode ? 'secondary' : 'ghost'}
+                          size="icon"
+                          onClick={() => setFileMode((v) => !v)}
+                        >
+                          {fileMode ? (
+                            <LayoutGrid className="size-4" />
+                          ) : (
+                            <FolderTree className="size-4" />
+                          )}
+                          <span className="sr-only">
+                            {fileMode ? text.library.viewShelf : text.library.viewFile}
+                          </span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {fileMode ? text.library.viewShelf : text.library.viewFile}
                       </TooltipContent>
                     </Tooltip>
                   ) : null}
@@ -2768,6 +3516,12 @@ function LibraryView({
               </EmptyContent>
             </Empty>
           </div>
+        ) : fileMode ? (
+          <FileView
+            root={root}
+            locale={locale}
+            onOpenVolume={(v) => void onVolumeOpen(v as LibraryVolume)}
+          />
         ) : (
           // 用原生滚动容器而非 Radix ScrollArea：后者 Viewport 内层 display:table 使
           // min-h-full 失效、内容下方空白不在容器内（空白单击取消选择会失灵）。容器自身

@@ -46,8 +46,18 @@ export const uiText = {
       epubVolume: 'EPUB',
       viewList: '列表视图',
       viewIcon: '图标视图',
+      viewFile: '文件视图',
+      viewShelf: '书架视图',
       volumeUnit: (n: number) => `${n} 卷`,
       pageUnit: (n: number) => `${n} 页`
+    },
+    fileView: {
+      root: '漫画库',
+      readFolder: '阅读本文件夹',
+      emptyFolder: '这个文件夹是空的',
+      itemUnit: (n: number) => `${n} 项`,
+      dragHint: '拖到左侧文件夹 = 移动到那里',
+      moveInto: (name: string) => `移动到「${name}」`
     },
     archive: {
       locked: '已加密',
@@ -377,8 +387,18 @@ export const uiText = {
       epubVolume: 'EPUB',
       viewList: 'List view',
       viewIcon: 'Icon view',
+      viewFile: 'File view',
+      viewShelf: 'Shelf view',
       volumeUnit: (n: number) => `${n} vol${n === 1 ? '' : 's'}`,
       pageUnit: (n: number) => `${n} page${n === 1 ? '' : 's'}`
+    },
+    fileView: {
+      root: 'Library',
+      readFolder: 'Read this folder',
+      emptyFolder: 'This folder is empty',
+      itemUnit: (n: number) => `${n} item${n === 1 ? '' : 's'}`,
+      dragHint: 'Drag onto a folder on the left to move it there',
+      moveInto: (name: string) => `Move into “${name}”`
     },
     archive: {
       locked: 'Encrypted',
@@ -519,7 +539,8 @@ export const uiText = {
         'not-found': 'Artifact not found.',
         'no-outputs': 'No file to push.',
         'too-large': 'File exceeds the 200MB web-push limit.',
-        'not-signed-in': 'Sign in to Amazon in the popped-up window first, then click Web push again.',
+        'not-signed-in':
+          'Sign in to Amazon in the popped-up window first, then click Web push again.',
         'inject-failed':
           "Couldn't auto-fill the file; revealed it in Finder — drag it onto the page manually.",
         unknown: 'Web push failed'
@@ -530,8 +551,10 @@ export const uiText = {
       description:
         "Push converted files through Amazon's Send to Kindle web channel — up to 200MB per file, ideal for larger manga volumes (email attachments usually cap ~50MB).",
       howTitle: 'How it works',
-      step1: 'Open the page below and sign in to your Amazon account once (the session is remembered).',
-      step2: 'Back in Archive, click "Web push" on a volume — the app auto-fills the file on the page.',
+      step1:
+        'Open the page below and sign in to your Amazon account once (the session is remembered).',
+      step2:
+        'Back in Archive, click "Web push" on a volume — the app auto-fills the file on the page.',
       step3: 'Click Send in the popped-up web window to finish.',
       openLogin: 'Open Send to Kindle (sign in / manage)',
       urlLabel: 'Send to Kindle page URL',
