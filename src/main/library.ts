@@ -259,25 +259,40 @@ async function statKey(path: string): Promise<string | null> {
 
 // ---------- 扫描实现 ----------
 
-/** 构造一个「单文件卷册」(压缩包 / pdf / epub) 的展示信息（封面/页数/加密态，缓存优先）。 */
-async function buildFileVolume(path: string, name: string): Promise<LibraryVolume> {
-  const docType = documentType(path)
-  const base = {
+/** 单文件卷的即时基础信息（无重 IO）：id/path/name/title/kind/sourceType。 */
+function fileVolumeBase(
+  path: string,
+  name: string
+): Pick<LibraryVolume, 'id' | 'path' | 'name' | 'title' | 'kind' | 'sourceType'> {
+  return {
     id: path,
     path,
     name,
     title: name.replace(/\.[^.]+$/, ''),
     kind: 'file' as const,
-    sourceType: (isArchiveFile(name) ? 'archive' : docType) as 'archive' | 'pdf' | 'epub'
+    sourceType: (isArchiveFile(name) ? 'archive' : documentType(path)) as 'archive' | 'pdf' | 'epub'
   }
+}
+
+export interface VolumeInspect {
+  pageCount: number
+  locked: boolean
+  coverUrl: string | null
+}
+
+/**
+ * 单文件卷的「重活」展示信息：页数 / 加密态 / 封面。压缩包起 7z 列举、PDF 跑 pdfjs 渲首页，
+ * 都不便宜——优先吃解压缓存 / inspect 缓存，缺才真算并写缓存。供懒加载 IPC 与 eager 构建复用。
+ */
+async function inspectFileVolume(path: string, name: string): Promise<VolumeInspect> {
   // 已解出缓存 → 用缓存首图作封面、缓存页数
-  const cached = isArchiveFile(name)
+  const extracted = isArchiveFile(name)
     ? await getCachedImages(path)
     : isDocumentFile(name)
       ? await getCachedDocumentImages(path)
       : null
-  if (cached && cached.length > 0) {
-    return { ...base, pageCount: cached.length, coverUrl: toThumbUrl(cached[0]) }
+  if (extracted && extracted.length > 0) {
+    return { pageCount: extracted.length, locked: false, coverUrl: toThumbUrl(extracted[0]) }
   }
   const cache = await loadInspectCache()
   const key = await statKey(path)
@@ -292,12 +307,7 @@ async function buildFileVolume(path: string, name: string): Promise<LibraryVolum
         scheduleInspectFlush()
       }
     }
-    return {
-      ...base,
-      pageCount: entry.imageCount ?? 0,
-      coverUrl: null,
-      locked: entry.encrypted ?? false
-    }
+    return { pageCount: entry.imageCount ?? 0, locked: entry.encrypted ?? false, coverUrl: null }
   }
   // PDF 未准备 → 只渲染首页作封面（带缓存）；EPUB 封面解包较重，仍待首次打开后出现
   let entry = key ? cache[key] : undefined
@@ -310,11 +320,46 @@ async function buildFileVolume(path: string, name: string): Promise<LibraryVolum
     }
   }
   let coverUrl: string | null = null
-  if (docType === 'pdf') {
+  if (documentType(path) === 'pdf') {
     const cover = await getPdfCoverImage(path).catch(() => null)
     coverUrl = cover ? toThumbUrl(cover) : null
   }
-  return { ...base, pageCount: entry.pageCount ?? 0, coverUrl }
+  return { pageCount: entry.pageCount ?? 0, locked: false, coverUrl }
+}
+
+/**
+ * 构造一个「单文件卷册」(压缩包 / pdf / epub) 的展示信息。
+ * eager=true（书架扫描）：同步取齐页数/加密/封面。
+ * eager=false（文件视图）：只读已就绪缓存，缺则占位（pageCount 0 / 通用图标），
+ * 由 renderer 拿到列表后再后台逐个 inspectVolume 补齐——避免列目录时被一堆 7z/pdfjs 阻塞。
+ */
+async function buildFileVolume(path: string, name: string, eager = true): Promise<LibraryVolume> {
+  const base = fileVolumeBase(path, name)
+  if (eager) {
+    const info = await inspectFileVolume(path, name)
+    return { ...base, pageCount: info.pageCount, coverUrl: info.coverUrl, locked: info.locked }
+  }
+  // 懒加载：只吃现成缓存，不起 7z / 不跑 pdfjs / 不渲 PDF 封面
+  const extracted = isArchiveFile(name)
+    ? await getCachedImages(path)
+    : isDocumentFile(name)
+      ? await getCachedDocumentImages(path)
+      : null
+  if (extracted && extracted.length > 0) {
+    return { ...base, pageCount: extracted.length, coverUrl: toThumbUrl(extracted[0]) }
+  }
+  const cache = await loadInspectCache()
+  const key = await statKey(path)
+  const entry = key ? cache[key] : undefined
+  if (entry) {
+    return {
+      ...base,
+      pageCount: (isArchiveFile(name) ? entry.imageCount : entry.pageCount) ?? 0,
+      coverUrl: null,
+      locked: entry.encrypted ?? false
+    }
+  }
+  return { ...base, pageCount: 0, coverUrl: null, locked: false }
 }
 
 /**
@@ -569,7 +614,10 @@ async function listDirRaw(dir: string): Promise<RawListing> {
   )
 
   const fileNames = sortedVolumeFiles(entries)
-  const files = await Promise.all(fileNames.map((name) => buildFileVolume(join(dir, name), name)))
+  // 文件视图：单文件卷只出占位（页数/封面/锁由 renderer 后台 inspectVolume 懒补），列目录瞬开
+  const files = await Promise.all(
+    fileNames.map((name) => buildFileVolume(join(dir, name), name, false))
+  )
   const plainFiles = await Promise.all(
     sortedPlainFiles(entries).map(async (name) => {
       const path = join(dir, name)
@@ -882,6 +930,12 @@ export function setupLibrary(): void {
   // 文件视图：忠实列磁盘
   ipcMain.handle('library:listSubdirs', async (_event, dir: string) => listSubdirs(dir))
   ipcMain.handle('library:listDirRaw', async (_event, dir: string) => listDirRaw(dir))
+
+  // 懒加载单文件卷的页数/加密态/封面（文件视图列目录后由 renderer 后台逐个调用补齐）
+  ipcMain.handle('library:inspectVolume', async (_event, volumePath: string): Promise<VolumeInspect> => {
+    assertWithinRoot(volumePath)
+    return inspectFileVolume(volumePath, basename(volumePath))
+  })
 
   ipcMain.handle('library:listPages', async (_event, volumePath: string) => listPages(volumePath))
 

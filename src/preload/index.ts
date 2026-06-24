@@ -10,6 +10,7 @@ const api = {
     listVolumes: (seriesPath: string) => ipcRenderer.invoke('library:listVolumes', seriesPath),
     listSubdirs: (dir: string) => ipcRenderer.invoke('library:listSubdirs', dir),
     listDirRaw: (dir: string) => ipcRenderer.invoke('library:listDirRaw', dir),
+    inspectVolume: (volumePath: string) => ipcRenderer.invoke('library:inspectVolume', volumePath),
     listPages: (volumePath: string) => ipcRenderer.invoke('library:listPages', volumePath),
     setSeriesMeta: (name: string, meta: { title: string; author: string | null }) =>
       ipcRenderer.invoke('library:setSeriesMeta', name, meta),

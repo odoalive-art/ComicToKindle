@@ -1703,6 +1703,10 @@ function LibraryView({
   const fileMode = fileNav.fileDir !== null
   const currentFileDir = fileNav.fileDir
   const [rawListing, setRawListing] = useState<RawListing | null>(null)
+  // 文件视图单文件卷的懒加载 inspect 结果（页数/加密/封面），列目录后后台逐个补齐
+  const [volInspect, setVolInspect] = useState<
+    Map<string, { pageCount: number; locked: boolean; coverUrl: string | null }>
+  >(new Map())
   const [rawLoading, setRawLoading] = useState(false)
   const [rawDropTarget, setRawDropTarget] = useState<string | null>(null)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
@@ -1842,6 +1846,28 @@ function LibraryView({
       active = false
     }
   }, [currentFileDir, fileNav.version])
+
+  // 列目录瞬开后，后台逐个补齐单文件卷的页数/加密态/封面（缓存命中即秒回，缺则真算）
+  useEffect(() => {
+    setVolInspect(new Map())
+    const files = rawListing?.files ?? []
+    if (files.length === 0) return
+    let active = true
+    void (async () => {
+      for (const f of files) {
+        try {
+          const info = await window.api.library.inspectVolume(f.path)
+          if (!active) return
+          setVolInspect((prev) => new Map(prev).set(f.path, info))
+        } catch {
+          /* 单卷补齐失败：保持占位 */
+        }
+      }
+    })()
+    return () => {
+      active = false
+    }
+  }, [rawListing])
 
   const requestUnlock = (vol: LibraryVolume): Promise<boolean> =>
     new Promise((resolve) => {
@@ -3490,7 +3516,17 @@ function LibraryView({
                     )
                   })}
 
-                  {rawListing?.files.map((file) => {
+                  {rawListing?.files.map((rawFile) => {
+                    // 懒加载补齐：有 inspect 结果就覆盖占位的页数/封面/加密态
+                    const ins = volInspect.get(rawFile.path)
+                    const file = ins
+                      ? {
+                          ...rawFile,
+                          pageCount: ins.pageCount,
+                          coverUrl: ins.coverUrl,
+                          locked: ins.locked
+                        }
+                      : rawFile
                     const picked = selectedVols.has(file.path)
                     return (
                       <ContextMenu key={file.path}>

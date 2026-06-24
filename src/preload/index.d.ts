@@ -82,6 +82,12 @@ export interface LibraryAPI {
   listSubdirs: (dir: string) => Promise<DirNode[]>
   /** 文件视图网格：某目录的完整直接内容（忠实磁盘） */
   listDirRaw: (dir: string) => Promise<RawListing>
+  /** 懒加载单文件卷的页数/加密态/封面（列目录瞬开后由 renderer 后台补齐） */
+  inspectVolume: (volumePath: string) => Promise<{
+    pageCount: number
+    locked: boolean
+    coverUrl: string | null
+  }>
   listPages: (volumePath: string) => Promise<string[]>
   /** 保存某部漫画的名称/作者覆盖（按部文件夹名为键），返回叠加后的结果 */
   setSeriesMeta: (
