@@ -2195,6 +2195,26 @@ function LibraryView({
     await openVolume(vol)
   }
 
+  // 文件视图：双击一个文件夹——本身直接铺着图片(readable)则当作一卷直接阅读，否则下钻进入
+  const onRawFolderOpen = (folder: RawListing['folders'][number]): void => {
+    if (folder.readable) {
+      void onVolumeOpen({
+        type: 'book',
+        id: folder.path,
+        path: folder.path,
+        name: folder.name,
+        title: folder.title,
+        author: folder.author,
+        kind: 'folder',
+        sourceType: 'folder',
+        pageCount: folder.pageCount,
+        coverUrl: folder.coverUrl
+      })
+    } else {
+      fileNav.openFolder(folder.path)
+    }
+  }
+
   // 当前层里可选/可转换的「卷」(book)——子部不参与多选与批量转换
   const bookVolumes = volumes.filter((v): v is LibraryVolume => v.type === 'book')
   // 顶栏「转换所选」的可转数：文件视图里只有可读单文件卷可转（文件夹/普通文件不算）
@@ -2543,19 +2563,6 @@ function LibraryView({
     return () => window.removeEventListener('keydown', onKey)
   }, [fileMode, rawSelectablePaths, selected, volumes])
 
-  // 阅读某一卷：接管整个内容区
-  if (readingVolume) {
-    // PDF 来源走 Chromium 内置查看器（秒开，不预渲染整本）；其余走统一图片阅读器
-    if (readingVolume.sourceType === 'pdf') {
-      return (
-        <PdfReader volume={readingVolume} locale={locale} onClose={() => setReadingVolume(null)} />
-      )
-    }
-    return (
-      <VolumeReader volume={readingVolume} locale={locale} onClose={() => setReadingVolume(null)} />
-    )
-  }
-
   const fileCrumbs = useMemo(() => {
     if (!root || !currentFileDir || !currentFileDir.startsWith(root)) {
       return [{ name: text.nav.library, path: root ?? '' }]
@@ -2578,6 +2585,19 @@ function LibraryView({
     rawListing.plainFiles.length === 0
 
   const showVolumes = !fileMode && selected !== null
+
+  // 阅读某一卷：接管整个内容区（须排在所有 hooks 之后，否则提前 return 会少调用 hook）
+  if (readingVolume) {
+    // PDF 来源走 Chromium 内置查看器（秒开，不预渲染整本）；其余走统一图片阅读器
+    if (readingVolume.sourceType === 'pdf') {
+      return (
+        <PdfReader volume={readingVolume} locale={locale} onClose={() => setReadingVolume(null)} />
+      )
+    }
+    return (
+      <VolumeReader volume={readingVolume} locale={locale} onClose={() => setReadingVolume(null)} />
+    )
+  }
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -3378,7 +3398,7 @@ function LibraryView({
                             draggable
                             onPointerDown={(e) => onSelectablePointerDown(folder.path, e)}
                             onContextMenu={() => onFileGridContext(folder.path)}
-                            onDoubleClick={() => fileNav.openFolder(folder.path)}
+                            onDoubleClick={() => onRawFolderOpen(folder)}
                             onDragStart={(e) => {
                               e.dataTransfer.effectAllowed = 'move'
                               e.dataTransfer.setData('text/plain', 'move')

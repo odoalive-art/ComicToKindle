@@ -51,7 +51,14 @@ export interface RawPlainFile {
 
 export interface RawListing {
   folders: Array<
-    DirNode & { childCount: number; coverUrl: string | null; title: string; author: string | null }
+    DirNode & {
+      childCount: number
+      coverUrl: string | null
+      title: string
+      author: string | null
+      readable: boolean
+      pageCount: number
+    }
   >
   files: LibraryVolume[]
   plainFiles: RawPlainFile[]

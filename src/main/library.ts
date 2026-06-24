@@ -399,7 +399,16 @@ export interface RawListing {
    * 解析出的书名/作者（把该子文件夹当作「部」时用于「编辑书籍信息」与转换预填）。
    */
   folders: Array<
-    DirNode & { childCount: number; coverUrl: string | null; title: string; author: string | null }
+    DirNode & {
+      childCount: number
+      coverUrl: string | null
+      title: string
+      author: string | null
+      /** 该文件夹自身直接铺着图片 → 可当作一卷直接阅读（classifyDir==='volume'） */
+      readable: boolean
+      /** readable 时的直接图片页数（粗略，供卡片展示；阅读器仍递归收全） */
+      pageCount: number
+    }
   >
   /** 直接放着的可读单文件（cbz/pdf/epub），各算一卷 */
   files: LibraryVolume[]
@@ -477,6 +486,8 @@ async function listDirRaw(dir: string): Promise<RawListing> {
       const sub = await readDirSafe(path)
       const childCount =
         sortedChildDirs(sub).length + sortedVolumeFiles(sub).length + sortedPlainFiles(sub).length
+      // 直接铺着图片 = 本身就是一卷可读单元（与 classifyDir==='volume' 同义），双击应进阅读器而非下钻
+      const directImages = sub.filter((e) => e.isFile() && !isHidden(e.name) && isImage(e.name))
       const cover = await findFirstImage(path)
       const { title, author } = resolveSeriesMeta(name, overrides[name])
       return {
@@ -487,7 +498,9 @@ async function listDirRaw(dir: string): Promise<RawListing> {
         childCount,
         coverUrl: cover ? toThumbUrl(cover) : null,
         title,
-        author
+        author,
+        readable: directImages.length > 0,
+        pageCount: directImages.length
       }
     })
   )
