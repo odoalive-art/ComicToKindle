@@ -31,12 +31,31 @@ export type LibraryEntry =
   | (LibrarySeries & { type: 'folder' })
   | (LibraryVolume & { type: 'book'; author: string | null })
 
+/** 文件视图树节点：某目录的一个直接子文件夹（忠实磁盘） */
+export interface DirNode {
+  id: string
+  path: string
+  name: string
+  hasSubfolders: boolean
+}
+
+/** 文件视图：某目录下的完整直接内容（忠实磁盘，不做部/卷折叠/隐藏） */
+export interface RawListing {
+  folders: Array<DirNode & { childCount: number; coverUrl: string | null }>
+  files: LibraryVolume[]
+  self: { readable: boolean; pageCount: number; coverUrl: string | null }
+}
+
 export interface LibraryAPI {
   pickFolder: () => Promise<string | null>
   getSavedRoot: () => Promise<string | null>
   scan: (root: string) => Promise<LibraryEntry[]>
   /** 列出某「部」目录下的条目（可能含可继续下钻的子部），与顶层书架同构 */
   listVolumes: (seriesPath: string) => Promise<LibraryEntry[]>
+  /** 文件视图树：某目录的直接子文件夹（忠实，含空目录） */
+  listSubdirs: (dir: string) => Promise<DirNode[]>
+  /** 文件视图网格：某目录的完整直接内容（忠实磁盘） */
+  listDirRaw: (dir: string) => Promise<RawListing>
   listPages: (volumePath: string) => Promise<string[]>
   /** 保存某部漫画的名称/作者覆盖（按部文件夹名为键），返回叠加后的结果 */
   setSeriesMeta: (

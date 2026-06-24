@@ -8,6 +8,8 @@ const api = {
     getSavedRoot: (): Promise<string | null> => ipcRenderer.invoke('library:getSavedRoot'),
     scan: (root: string) => ipcRenderer.invoke('library:scan', root),
     listVolumes: (seriesPath: string) => ipcRenderer.invoke('library:listVolumes', seriesPath),
+    listSubdirs: (dir: string) => ipcRenderer.invoke('library:listSubdirs', dir),
+    listDirRaw: (dir: string) => ipcRenderer.invoke('library:listDirRaw', dir),
     listPages: (volumePath: string) => ipcRenderer.invoke('library:listPages', volumePath),
     setSeriesMeta: (name: string, meta: { title: string; author: string | null }) =>
       ipcRenderer.invoke('library:setSeriesMeta', name, meta),

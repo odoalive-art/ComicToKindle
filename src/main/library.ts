@@ -371,6 +371,98 @@ async function listVolumes(seriesPath: string): Promise<LibraryEntry[]> {
   return listChildren(seriesPath)
 }
 
+// ---------- 文件视图（忠实磁盘，不做部/卷折叠/隐藏）----------
+// 与书架视图相反：树/网格 1:1 映射磁盘，所有文件夹（含空/无漫画）都展示，便于像 Finder/Eagle 那样整理。
+
+/** 文件视图树节点：某目录的一个直接子文件夹（轻量，仅供左侧树） */
+export interface DirNode {
+  id: string
+  path: string
+  name: string
+  /** 是否还含子文件夹（决定树是否显示展开箭头） */
+  hasSubfolders: boolean
+}
+
+/** 文件视图：某目录下的完整直接内容（子文件夹卡 + 可读单文件 + 自身是否可当一卷读） */
+export interface RawListing {
+  /** 直接子文件夹（忠实，含空目录），带封面/子项数供网格卡片展示 */
+  folders: Array<DirNode & { childCount: number; coverUrl: string | null }>
+  /** 直接放着的可读单文件（cbz/pdf/epub），各算一卷 */
+  files: LibraryVolume[]
+  /** 本文件夹自身是否直接铺着图片（可作为一卷阅读） */
+  self: { readable: boolean; pageCount: number; coverUrl: string | null }
+}
+
+const sortedChildDirs = (entries: import('fs').Dirent[]): string[] =>
+  entries
+    .filter((e) => e.isDirectory() && !isHidden(e.name))
+    .map((e) => e.name)
+    .sort(naturalSort)
+
+const sortedVolumeFiles = (entries: import('fs').Dirent[]): string[] =>
+  entries
+    .filter(
+      (e) => e.isFile() && !isHidden(e.name) && isVolumeFile(e.name) && !isSplitContinuation(e.name)
+    )
+    .map((e) => e.name)
+    .sort(naturalSort)
+
+/** 某目录是否含直接子文件夹（用于树的展开箭头） */
+async function hasSubfolders(dir: string): Promise<boolean> {
+  const entries = await readDirSafe(dir)
+  return entries.some((e) => e.isDirectory() && !isHidden(e.name))
+}
+
+/** 文件视图树：列某目录的直接子文件夹（忠实，含空目录），轻量不算封面 */
+async function listSubdirs(dir: string): Promise<DirNode[]> {
+  assertWithinRoot(dir)
+  const entries = await readDirSafe(dir)
+  const names = sortedChildDirs(entries)
+  return Promise.all(
+    names.map(async (name) => {
+      const path = join(dir, name)
+      return { id: path, path, name, hasSubfolders: await hasSubfolders(path) }
+    })
+  )
+}
+
+/** 文件视图网格：列某目录的完整直接内容（忠实磁盘） */
+async function listDirRaw(dir: string): Promise<RawListing> {
+  assertWithinRoot(dir)
+  const entries = await readDirSafe(dir)
+
+  const folderNames = sortedChildDirs(entries)
+  const folders = await Promise.all(
+    folderNames.map(async (name) => {
+      const path = join(dir, name)
+      const sub = await readDirSafe(path)
+      const childCount = sortedChildDirs(sub).length + sortedVolumeFiles(sub).length // 直接子文件夹 + 直接可读文件
+      const cover = await findFirstImage(path)
+      return {
+        id: path,
+        path,
+        name,
+        hasSubfolders: sub.some((e) => e.isDirectory() && !isHidden(e.name)),
+        childCount,
+        coverUrl: cover ? toThumbUrl(cover) : null
+      }
+    })
+  )
+
+  const fileNames = sortedVolumeFiles(entries)
+  const files = await Promise.all(fileNames.map((name) => buildFileVolume(join(dir, name), name)))
+
+  // 自身直接含图片 → 可作为一卷读
+  const hasDirectImage = entries.some((e) => e.isFile() && !isHidden(e.name) && isImage(e.name))
+  let self: RawListing['self'] = { readable: false, pageCount: 0, coverUrl: null }
+  if (hasDirectImage) {
+    const [cover, pageCount] = await Promise.all([findFirstImage(dir), countImages(dir)])
+    self = { readable: true, pageCount, coverUrl: cover ? toThumbUrl(cover) : null }
+  }
+
+  return { folders, files, self }
+}
+
 /** 按阅读顺序递归收集一卷的所有页：本级图片（自然排序）在前，再依次进入子文件夹（自然排序） */
 async function collectPages(dir: string, depth = 5): Promise<string[]> {
   const entries = await readDirSafe(dir)
@@ -644,6 +736,10 @@ export function setupLibrary(): void {
   ipcMain.handle('library:listVolumes', async (_event, seriesPath: string) =>
     listVolumes(seriesPath)
   )
+
+  // 文件视图：忠实列磁盘
+  ipcMain.handle('library:listSubdirs', async (_event, dir: string) => listSubdirs(dir))
+  ipcMain.handle('library:listDirRaw', async (_event, dir: string) => listDirRaw(dir))
 
   ipcMain.handle('library:listPages', async (_event, volumePath: string) => listPages(volumePath))
 
