@@ -81,6 +81,7 @@ import {
   SidebarGroupLabel,
   SidebarInset,
   SidebarMenu,
+  SidebarMenuAction,
   SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -252,7 +253,7 @@ function App(): React.JSX.Element {
       setFileDir(dir)
       // 仅展开 root→dir 的祖先链（不含 dir 自身，dir 的展开/收起交给其节点的折叠开关，
       // 否则点已展开的文件夹会被强制展开、无法收起）；方便左树定位选中项。
-      if (libRoot && dir.startsWith(libRoot)) {
+      if (libRoot && dir !== libRoot && dir.startsWith(libRoot)) {
         const chain = new Set<string>([libRoot])
         let acc = libRoot
         const segs = dir.slice(libRoot.length).split('/').filter(Boolean)
@@ -546,32 +547,93 @@ function fileopErrText(e: unknown, text: (typeof uiText)[LanguageMode]): string 
   return text.fileops.errGeneric
 }
 
-/** 边栏常驻文件夹树：消费 FileNav 上下文，点文件夹即进文件视图；拖卡片到节点=移动 */
-function FileTree({ locale }: { locale: LanguageMode }): React.JSX.Element | null {
+/** 拖拽源移动到 dest（边栏树与「所有漫画」根共用） */
+async function fileNavMove(
+  fileNav: FileNavValue,
+  text: (typeof uiText)[LanguageMode],
+  dest: string
+): Promise<void> {
+  const paths = fileNav.getDragPaths()
+  if (!paths.length) return
+  try {
+    await window.api.library.move(paths, dest)
+    toast.success(text.fileops.moved(paths.length))
+    fileNav.bump()
+  } catch (e) {
+    toast.error(fileopErrText(e, text))
+  }
+}
+
+/**
+ * 边栏「所有漫画」项 = 文件夹树根（不再单列 Library 标签）：
+ * 点名字 = 回书架；点右侧箭头 = 展开/收起其下真实文件夹（FileTreeNode）；可作拖放目标=移到库根。
+ */
+function LibraryNav({
+  locale,
+  active,
+  onShelf
+}: {
+  locale: LanguageMode
+  active: boolean
+  onShelf: () => void
+}): React.JSX.Element {
   const fileNav = useFileNav()
   const text = uiText[locale]
-  if (!fileNav.root) return null
-  const rootNode: DirNode = {
-    id: fileNav.root,
-    path: fileNav.root,
-    name: text.fileView.root,
-    hasSubfolders: true
-  }
-  const dropMove = async (dest: string): Promise<void> => {
-    const paths = fileNav.getDragPaths()
-    if (!paths.length) return
-    try {
-      await window.api.library.move(paths, dest)
-      toast.success(text.fileops.moved(paths.length))
-      fileNav.bump()
-    } catch (e) {
-      toast.error(fileopErrText(e, text))
-    }
-  }
+  const root = fileNav.root
+  const open = !!root && fileNav.expanded.has(root)
+  const isOver = !!root && fileNav.dropTarget === root
+  const children = root ? (fileNav.kids.get(root) ?? []) : []
   return (
-    <SidebarMenu>
-      <FileTreeNode node={rootNode} onDropTo={(dest) => void dropMove(dest)} />
-    </SidebarMenu>
+    <Collapsible
+      open={open}
+      onOpenChange={() => root && fileNav.toggleNode(root)}
+      asChild
+      className="group/coll"
+    >
+      <SidebarMenuItem>
+        <SidebarMenuButton
+          isActive={active}
+          tooltip={text.nav.library}
+          className={isOver ? 'bg-sidebar-accent ring-1 ring-sidebar-ring' : ''}
+          onClick={onShelf}
+          onDragOver={(e) => {
+            if (!root) return
+            e.preventDefault()
+            e.dataTransfer.dropEffect = 'move'
+            fileNav.setDropTarget(root)
+          }}
+          onDragLeave={() => fileNav.setDropTarget(null)}
+          onDrop={(e) => {
+            if (!root) return
+            e.preventDefault()
+            fileNav.setDropTarget(null)
+            void fileNavMove(fileNav, text, root)
+          }}
+        >
+          <Library className="size-4 shrink-0" />
+          <span>{text.nav.library}</span>
+        </SidebarMenuButton>
+        {root ? (
+          <CollapsibleTrigger asChild>
+            <SidebarMenuAction className="text-muted-foreground">
+              <ChevronRight className="transition-transform group-data-[state=open]/coll:rotate-90" />
+              <span className="sr-only">{text.library.viewFile}</span>
+            </SidebarMenuAction>
+          </CollapsibleTrigger>
+        ) : null}
+        <CollapsibleContent>
+          <SidebarMenuSub className="mr-0 translate-x-px pr-0">
+            {children.map((c) => (
+              <FileTreeNode
+                key={c.path}
+                node={c}
+                onDropTo={(dest) => void fileNavMove(fileNav, text, dest)}
+              />
+            ))}
+          </SidebarMenuSub>
+        </CollapsibleContent>
+      </SidebarMenuItem>
+    </Collapsible>
   )
 }
 
@@ -790,7 +852,7 @@ function FileView({
 
   // 面包屑：root → currentDir
   const crumbs: Array<{ name: string; path: string }> = (() => {
-    const out: Array<{ name: string; path: string }> = [{ name: text.fileView.root, path: root }]
+    const out: Array<{ name: string; path: string }> = [{ name: text.nav.library, path: root }]
     if (currentDir.startsWith(root)) {
       let acc = root
       for (const seg of currentDir.slice(root.length).split('/').filter(Boolean)) {
@@ -5009,18 +5071,25 @@ function AppSidebar({
                   <SidebarMenu>
                     {group.items.map((item, itemIdx) => {
                       const uniqueKey = `${group.titleKey}-${item.id}-${itemIdx}`
-                      // 「所有漫画」= 书架视图；点它回到书架（退出文件视图）
-                      const active =
-                        item.id === activeView &&
-                        !(item.id === 'library' && fileNav.fileDir !== null)
+                      // 「所有漫画」即文件夹树根：点名字回书架、点箭头展开其下文件夹
+                      if (item.id === 'library') {
+                        return (
+                          <LibraryNav
+                            key={uniqueKey}
+                            locale={locale}
+                            active={activeView === 'library' && fileNav.fileDir === null}
+                            onShelf={() => {
+                              fileNav.exitToShelf()
+                              onSelect('library')
+                            }}
+                          />
+                        )
+                      }
                       return (
                         <SidebarMenuItem key={uniqueKey}>
                           <SidebarMenuButton
-                            isActive={active}
-                            onClick={() => {
-                              if (item.id === 'library') fileNav.exitToShelf()
-                              onSelect(item.id)
-                            }}
+                            isActive={item.id === activeView}
+                            onClick={() => onSelect(item.id)}
                             tooltip={text.nav[item.id]}
                           >
                             <item.icon className="size-4 shrink-0" />
@@ -5031,10 +5100,6 @@ function AppSidebar({
                       )
                     })}
                   </SidebarMenu>
-                  {/* 「我的书库」下常驻文件夹树（仅展开态显示） */}
-                  {group.titleKey === 'groupMyLibrary' && state === 'expanded' ? (
-                    <FileTree locale={locale} />
-                  ) : null}
                 </SidebarGroupContent>
               </SidebarGroup>
             </React.Fragment>
