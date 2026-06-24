@@ -1779,7 +1779,7 @@ function LibraryView({
       return selectedVols.has(vol.path) && selectedVols.size > 1 ? [...selectedVols] : [vol.path]
     }
     if (selectedVols.has(vol.path) && selectedVols.size > 1) {
-      return volumes
+      return (selected !== null ? volumes : series)
         .filter((v): v is LibraryVolume => v.type === 'book' && selectedVols.has(v.path))
         .map((v) => v.id)
     }
@@ -1917,8 +1917,10 @@ function LibraryView({
     await openVolume(vol)
   }
 
-  // 当前层里可选/可转换的「卷」(book)——子部不参与多选与批量转换
-  const bookVolumes = volumes.filter((v): v is LibraryVolume => v.type === 'book')
+  // 当前层里可选/可转换的「卷」(book)——子部不参与多选；部内取卷册，顶层书架取散卷
+  const bookVolumes = (selected !== null ? volumes : series).filter(
+    (v): v is LibraryVolume => v.type === 'book'
+  )
   const topSeriesIds = series.filter((item) => item.type === 'folder').map((item) => item.id)
   const topBookIds = series.filter((item) => item.type === 'book').map((item) => item.id)
   const currentVolumeIds = bookVolumes.map((item) => item.id)
@@ -1930,21 +1932,31 @@ function LibraryView({
     setSelectMode(!allSelected && shouldUseSelectMode(paths.length))
   }
 
-  // 转换所选：单本走单本确认弹窗（含封面预览），多本走批量确认弹窗
+  // 转换所选：单本走单本确认弹窗（含封面预览），多本走批量确认弹窗。
+  // 部内用所属部的系列信息；顶层散卷各自为系列（seriesTitle 空，书名即卷名）。
   const convertSelected = (): void => {
-    if (!selected || selectedVols.size === 0) return
+    if (selectedVols.size === 0) return
     const picked = bookVolumes.filter((v) => selectedVols.has(v.path))
+    if (picked.length === 0) return
     if (picked.length === 1) {
-      enqueueVolume(picked[0])
+      if (selected) enqueueVolume(picked[0])
+      else enqueueTopBook(picked[0] as LibraryBook)
       return
     }
     setBatchConvertReq({
-      seriesPathName: selected.name,
-      seriesTitle: selected.title,
-      author: selected.author ?? '',
+      seriesPathName: selected?.name ?? '',
+      seriesTitle: selected?.title ?? '',
+      author: selected?.author ?? '',
       vols: picked,
       busy: false
     })
+  }
+
+  // 把当前选中的散卷/卷册移入某部（成组）：打开移动弹窗选目标部或新建部
+  const groupSelected = (): void => {
+    const ids = bookVolumes.filter((v) => selectedVols.has(v.path)).map((v) => v.id)
+    if (ids.length === 0) return
+    setMoveReq({ sources: ids, busy: false })
   }
 
   const submitBatchConvert = async (): Promise<void> => {
@@ -3075,6 +3087,17 @@ function LibraryView({
                   <Button variant="ghost" size="sm" onClick={toggleAll}>
                     {allSelected ? text.activity.selectNone : text.activity.selectAll}
                   </Button>
+                  {managedLibrary ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={selectedVols.size === 0}
+                      onClick={groupSelected}
+                    >
+                      <FolderInput className="size-4" />
+                      {text.fileops.move}
+                    </Button>
+                  ) : null}
                   <Button
                     size="sm"
                     disabled={selectedConvertCount === 0}
@@ -3446,6 +3469,15 @@ function LibraryView({
                           </div>
                         </ContextMenuTrigger>
                         <ContextMenuContent>
+                          {selected ? (
+                            <ContextMenuItem
+                              onSelect={() => deferOpen(() => enqueueVolumeIn(vol, selected))}
+                            >
+                              <BookUp className="size-4" />
+                              {text.convert.action}
+                            </ContextMenuItem>
+                          ) : null}
+                          <ContextMenuSeparator />
                           <ContextMenuItem
                             onSelect={() =>
                               deferOpen(() =>
@@ -3521,15 +3553,17 @@ function LibraryView({
                 {series.map((item) => {
                   const picked = selectedSeriesPath === item.path
                   if (item.type === 'book') {
+                    const bookPicked = selectedVols.has(item.path)
                     return (
                       <ContextMenu key={item.id}>
                         <ContextMenuTrigger asChild>
                           <div
-                            data-series-card
-                            onClick={() => onSeriesClick(item)}
+                            data-vol-card
+                            data-vol-path={item.path}
+                            onPointerDown={(e) => onVolumePointerDown(item, e)}
                             onDoubleClick={() => void onVolumeOpen(item)}
                             className={`group flex cursor-default items-center gap-2.5 rounded-md px-3 py-2 ${
-                              picked ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/50'
+                              bookPicked ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/50'
                             }`}
                           >
                             <span className="shrink-0 text-muted-foreground">
@@ -3579,12 +3613,7 @@ function LibraryView({
                           <ContextMenuItem
                             disabled={!managedLibrary && moveTargets().length === 0}
                             onSelect={() =>
-                              deferOpen(() =>
-                                setMoveReq({
-                                  sources: [managedLibrary ? item.id : item.path],
-                                  busy: false
-                                })
-                              )
+                              deferOpen(() => setMoveReq({ sources: volTargets(item), busy: false }))
                             }
                           >
                             <FolderInput className="size-4" />
@@ -3599,7 +3628,7 @@ function LibraryView({
                             onSelect={() =>
                               deferOpen(() =>
                                 setDeleteReq({
-                                  paths: [managedLibrary ? item.id : item.path],
+                                  paths: volTargets(item),
                                   kind: managedLibrary ? 'books' : undefined,
                                   busy: false
                                 })
@@ -3891,17 +3920,19 @@ function LibraryView({
               <div className={LIBRARY_GRID}>
                 {series.map((item) => {
                   const picked = selectedSeriesPath === item.path
-                  // ① 书(卷册)：平铺一张封面，双击直接进阅读器、可转换/整理
+                  // ① 书(卷册)：平铺一张封面，双击直接进阅读器、可多选/转换/整理
                   if (item.type === 'book') {
                     const isConverted = convertedPaths.has(item.path)
                     const job = jobByPath.get(item.path)
                     const prog = getProgress(item.path)
+                    const bookPicked = selectedVols.has(item.path)
                     return (
                       <ContextMenu key={item.id}>
                         <ContextMenuTrigger asChild>
                           <div
-                            data-series-card
-                            onClick={() => onSeriesClick(item)}
+                            data-vol-card
+                            data-vol-path={item.path}
+                            onPointerDown={(e) => onVolumePointerDown(item, e)}
                             onDoubleClick={() => void onVolumeOpen(item)}
                             className="group flex cursor-default flex-col gap-2 text-left"
                           >
@@ -3909,9 +3940,11 @@ function LibraryView({
                               <AspectRatio
                                 ratio={3 / 4}
                                 className={`overflow-hidden rounded-lg bg-muted transition-all ${
-                                  picked
+                                  bookPicked
                                     ? 'ring-2 ring-primary ring-offset-2 ring-offset-background'
-                                    : ''
+                                    : selectMode
+                                      ? 'brightness-[0.7] dark:brightness-[0.82]'
+                                      : ''
                                 }`}
                               >
                                 <CoverImage
@@ -3983,7 +4016,7 @@ function LibraryView({
                             </div>
                             <div
                               className={`min-w-0 rounded-md px-1.5 py-0.5 ${
-                                picked ? 'bg-accent text-accent-foreground' : ''
+                                bookPicked ? 'bg-accent text-accent-foreground' : ''
                               }`}
                             >
                               <div className="truncate text-sm font-medium" title={item.title}>
@@ -4022,12 +4055,7 @@ function LibraryView({
                           <ContextMenuItem
                             disabled={!managedLibrary && moveTargets().length === 0}
                             onSelect={() =>
-                              deferOpen(() =>
-                                setMoveReq({
-                                  sources: [managedLibrary ? item.id : item.path],
-                                  busy: false
-                                })
-                              )
+                              deferOpen(() => setMoveReq({ sources: volTargets(item), busy: false }))
                             }
                           >
                             <FolderInput className="size-4" />
@@ -4042,7 +4070,7 @@ function LibraryView({
                             onSelect={() =>
                               deferOpen(() =>
                                 setDeleteReq({
-                                  paths: [managedLibrary ? item.id : item.path],
+                                  paths: volTargets(item),
                                   kind: managedLibrary ? 'books' : undefined,
                                   busy: false
                                 })
