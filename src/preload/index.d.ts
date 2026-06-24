@@ -139,11 +139,7 @@ export interface LibraryAPI {
     candidates: ImportCandidate[],
     opts: { deleteSourceAfter?: boolean }
   ) => Promise<string[]>
-  createSeries: (
-    title: string,
-    author: string | null,
-    bookIds: string[]
-  ) => Promise<SeriesNode>
+  createSeries: (title: string, author: string | null, bookIds: string[]) => Promise<SeriesNode>
   renameSeries: (seriesId: string, title: string, author: string | null) => Promise<void>
   deleteSeries: (seriesId: string) => Promise<void>
   assignBooks: (bookIds: string[], targetSeriesId: string | null) => Promise<void>

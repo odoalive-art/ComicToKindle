@@ -423,7 +423,9 @@ async function scanImportPath(srcPath: string, result: ImportScanResult): Promis
     if (isVolumeFile(name) && !isSplitContinuation(name)) {
       result.candidates.push({
         sourcePath: srcPath,
-        sourceType: (isArchiveFile(name) ? 'archive' : documentType(srcPath)) as ImportCandidate['sourceType'],
+        sourceType: (isArchiveFile(name)
+          ? 'archive'
+          : documentType(srcPath)) as ImportCandidate['sourceType'],
         displayName: name.replace(/\.[^.]+$/, '')
       })
     } else {
@@ -963,7 +965,11 @@ async function createSeries(
   return node
 }
 
-async function renameSeries(seriesId: string, titleRaw: string, authorRaw: string | null): Promise<void> {
+async function renameSeries(
+  seriesId: string,
+  titleRaw: string,
+  authorRaw: string | null
+): Promise<void> {
   const title = titleRaw.trim()
   if (!title) throw new Error('INVALID_NAME')
   const author = authorRaw?.trim() || null
@@ -1744,36 +1750,35 @@ export function setupLibrary(): void {
     return inspectFileVolume(bucketSourcePath(rec), basename(bucketSourcePath(rec)))
   })
 
-  ipcMain.handle('library:scanImport', async (event, srcRoot?: string): Promise<ImportScanResult> => {
-    let target = srcRoot
-    if (!target) {
-      const win = BrowserWindow.fromWebContents(event.sender)
-      const options: Electron.OpenDialogOptions = {
-        properties: ['openFile', 'openDirectory', 'multiSelections'],
-        title: '选择要导入的漫画文件或文件夹'
+  ipcMain.handle(
+    'library:scanImport',
+    async (event, srcRoot?: string): Promise<ImportScanResult> => {
+      const target = srcRoot
+      if (!target) {
+        const win = BrowserWindow.fromWebContents(event.sender)
+        const options: Electron.OpenDialogOptions = {
+          properties: ['openFile', 'openDirectory', 'multiSelections'],
+          title: '选择要导入的漫画文件或文件夹'
+        }
+        const { canceled, filePaths } = win
+          ? await dialog.showOpenDialog(win, options)
+          : await dialog.showOpenDialog(options)
+        if (canceled || filePaths.length === 0) return { candidates: [], skipped: [] }
+        const combined: ImportScanResult = { candidates: [], skipped: [] }
+        for (const filePath of filePaths) {
+          const next = await scanImportSource(filePath)
+          combined.candidates.push(...next.candidates)
+          combined.skipped.push(...next.skipped)
+        }
+        return combined
       }
-      const { canceled, filePaths } = win
-        ? await dialog.showOpenDialog(win, options)
-        : await dialog.showOpenDialog(options)
-      if (canceled || filePaths.length === 0) return { candidates: [], skipped: [] }
-      const combined: ImportScanResult = { candidates: [], skipped: [] }
-      for (const filePath of filePaths) {
-        const next = await scanImportSource(filePath)
-        combined.candidates.push(...next.candidates)
-        combined.skipped.push(...next.skipped)
-      }
-      return combined
+      return scanImportSource(target)
     }
-    return scanImportSource(target)
-  })
+  )
 
   ipcMain.handle(
     'library:import',
-    async (
-      event,
-      candidates: ImportCandidate[],
-      opts: ImportOptions = {}
-    ): Promise<string[]> => {
+    async (event, candidates: ImportCandidate[], opts: ImportOptions = {}): Promise<string[]> => {
       if (!isManagedLibraryPath(currentRoot)) throw new Error('NO_LIBRARY')
       return importBooks(candidates, opts, (done, total, name) => {
         event.sender.send('library:importProgress', { done, total, name })
@@ -1793,8 +1798,9 @@ export function setupLibrary(): void {
       renameSeries(seriesId, title, author)
   )
 
-  ipcMain.handle('library:deleteSeries', async (_event, seriesId: string): Promise<void> =>
-    deleteSeries(seriesId)
+  ipcMain.handle(
+    'library:deleteSeries',
+    async (_event, seriesId: string): Promise<void> => deleteSeries(seriesId)
   )
 
   ipcMain.handle(
@@ -1814,18 +1820,21 @@ export function setupLibrary(): void {
       reorderBooks(seriesId, orderedBookIds)
   )
 
-  ipcMain.handle('library:renameBook', async (_event, id: string, displayName: string): Promise<void> =>
-    renameBook(id, displayName)
+  ipcMain.handle(
+    'library:renameBook',
+    async (_event, id: string, displayName: string): Promise<void> => renameBook(id, displayName)
   )
 
-  ipcMain.handle('library:trashBooks', async (_event, ids: string[]): Promise<void> =>
-    trashBooks(ids)
+  ipcMain.handle(
+    'library:trashBooks',
+    async (_event, ids: string[]): Promise<void> => trashBooks(ids)
   )
 
   ipcMain.handle('library:listTrash', async (): Promise<TrashBookView[]> => listTrashBooks())
 
-  ipcMain.handle('library:restoreTrashBooks', async (_event, trashIds: string[]): Promise<void> =>
-    restoreTrashBooks(trashIds)
+  ipcMain.handle(
+    'library:restoreTrashBooks',
+    async (_event, trashIds: string[]): Promise<void> => restoreTrashBooks(trashIds)
   )
 
   ipcMain.handle('library:emptyTrash', async (): Promise<void> => emptyTrash())
@@ -1860,10 +1869,13 @@ export function setupLibrary(): void {
   ipcMain.handle('library:listDirRaw', async (_event, dir: string) => listDirRaw(dir))
 
   // 懒加载单文件卷的页数/加密态/封面（文件视图列目录后由 renderer 后台逐个调用补齐）
-  ipcMain.handle('library:inspectVolume', async (_event, volumePath: string): Promise<VolumeInspect> => {
-    assertWithinRoot(volumePath)
-    return inspectFileVolume(volumePath, basename(volumePath))
-  })
+  ipcMain.handle(
+    'library:inspectVolume',
+    async (_event, volumePath: string): Promise<VolumeInspect> => {
+      assertWithinRoot(volumePath)
+      return inspectFileVolume(volumePath, basename(volumePath))
+    }
+  )
 
   ipcMain.handle('library:listPages', async (_event, volumePath: string) => listPages(volumePath))
 
