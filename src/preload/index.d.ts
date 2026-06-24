@@ -35,7 +35,8 @@ export interface LibraryAPI {
   pickFolder: () => Promise<string | null>
   getSavedRoot: () => Promise<string | null>
   scan: (root: string) => Promise<LibraryEntry[]>
-  listVolumes: (seriesPath: string) => Promise<LibraryVolume[]>
+  /** 列出某「部」目录下的条目（可能含可继续下钻的子部），与顶层书架同构 */
+  listVolumes: (seriesPath: string) => Promise<LibraryEntry[]>
   listPages: (volumePath: string) => Promise<string[]>
   /** 保存某部漫画的名称/作者覆盖（按部文件夹名为键），返回叠加后的结果 */
   setSeriesMeta: (

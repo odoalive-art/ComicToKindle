@@ -212,11 +212,6 @@ function resolveSeriesMeta(
   }
 }
 
-const isVolumeEntry = (e: import('fs').Dirent): boolean =>
-  !isHidden(e.name) &&
-  !isSplitContinuation(e.name) && // 隐藏分卷续卷（.002…/.rNN），只保留入口卷
-  (e.isDirectory() || (e.isFile() && isVolumeFile(e.name)))
-
 // ---------- 扫描实现 ----------
 
 /** 构造一个「单文件卷册」(压缩包 / pdf / epub) 的展示信息（封面/页数/加密态，缓存优先）。 */
@@ -260,22 +255,60 @@ async function buildFileVolume(path: string, name: string): Promise<LibraryVolum
 }
 
 /**
- * 扫描库根，返回「书 / 部文件夹」统一清单（自然排序）。
- * 主单位是「书(卷册)」：散落在库根的图片文件夹 / cbz / pdf / epub 各算一本书；
- * 只有「装了多个卷」的文件夹才算「部」(需双击进入看卷)。
+ * 判定一个目录在库里的角色（递归，深度受限），替代旧的「固定层级 + 命名约定」扫描：
+ *   - 'volume'：目录**直接**含图片，或直接放着 cbz/pdf/epub 单文件 → 可读的「卷」；
+ *               其下的「单话子文件夹」由 collectPages 递归收图，不再单列。
+ *   - 'part'  ：自身无漫画，但某层子目录里递归地有 → 可下钻的「部」容器。
+ *   - 'empty' ：整棵子树都没有漫画资源 → 不展示（只识别含真实漫画资源的目录）。
  */
-async function scanLibrary(root: string): Promise<LibraryEntry[]> {
-  currentRoot = root
-  const dirents = (await readDirSafe(root))
+async function classifyDir(dir: string, depth = 6): Promise<'volume' | 'part' | 'empty'> {
+  const entries = await readDirSafe(dir)
+  const hasDirectVolume = entries.some(
+    (e) =>
+      e.isFile() &&
+      !isHidden(e.name) &&
+      (isImage(e.name) || (isVolumeFile(e.name) && !isSplitContinuation(e.name)))
+  )
+  if (hasDirectVolume) return 'volume'
+  if (depth <= 0) return 'empty'
+  for (const e of entries) {
+    if (e.isDirectory() && !isHidden(e.name)) {
+      if ((await classifyDir(join(dir, e.name), depth - 1)) !== 'empty') return 'part'
+    }
+  }
+  return 'empty'
+}
+
+/** 统计一个「部」目录下有效子条目（卷 或 子部）的数量，用于书架徽标 */
+async function countValidChildren(dir: string): Promise<number> {
+  const sub = (await readDirSafe(dir)).filter(
+    (e) => !isHidden(e.name) && !isSplitContinuation(e.name)
+  )
+  const flags = await Promise.all(
+    sub.map(async (e) => {
+      if (e.isFile()) return isVolumeFile(e.name) ? 1 : 0
+      if (!e.isDirectory()) return 0
+      return (await classifyDir(join(dir, e.name))) !== 'empty' ? 1 : 0
+    })
+  )
+  return flags.reduce((a: number, b: number) => a + b, 0)
+}
+
+/**
+ * 列出一个目录下的库条目（书/卷 或 可下钻的部），自然排序。每一级都是同构的条目清单——
+ * 库根（顶层书架）与任意「部」下钻共用此函数，从而支持任意深度的嵌套。
+ */
+async function listChildren(dir: string): Promise<LibraryEntry[]> {
+  const dirents = (await readDirSafe(dir))
     .filter((e) => !isHidden(e.name) && !isSplitContinuation(e.name))
     .sort((a, b) => naturalSort(a.name, b.name))
 
   const overrides = await readSeriesMeta()
   const result: LibraryEntry[] = []
   for (const e of dirents) {
-    const path = join(root, e.name)
+    const path = join(dir, e.name)
     if (e.isFile()) {
-      // 库根下散落的单文件卷册（cbz/pdf/epub…）→ 各算一本独立的书
+      // 散落的单文件卷册（cbz/pdf/epub…）→ 各算一本独立的书
       if (!isVolumeFile(e.name)) continue
       const vol = await buildFileVolume(path, e.name)
       const parsed = parseSeriesName(vol.title)
@@ -284,25 +317,12 @@ async function scanLibrary(root: string): Promise<LibraryEntry[]> {
     }
     if (!e.isDirectory()) continue
 
-    const sub = await readDirSafe(path)
-    const volumeCount = sub.filter(isVolumeEntry).length
-    const cover = await findFirstImage(path)
+    const cls = await classifyDir(path)
+    if (cls === 'empty') continue // 隐藏整棵子树都没有漫画的目录
     const { title, author } = resolveSeriesMeta(e.name, overrides[e.name])
-    if (volumeCount > 0) {
-      // 装了多卷 → 部文件夹
-      result.push({
-        type: 'folder',
-        id: path,
-        path,
-        name: e.name,
-        title,
-        author,
-        volumeCount,
-        coverUrl: cover ? toThumbUrl(cover) : null
-      })
-    } else if (cover) {
-      // 图片直接铺在文件夹里（无更细的卷）→ 这文件夹本身就是一本书
-      const pageCount = await countImages(path)
+    if (cls === 'volume') {
+      // 直接铺着图片的文件夹本身就是一本书（卷）
+      const [cover, pageCount] = await Promise.all([findFirstImage(path), countImages(path)])
       result.push({
         type: 'book',
         id: path,
@@ -313,10 +333,14 @@ async function scanLibrary(root: string): Promise<LibraryEntry[]> {
         kind: 'folder',
         sourceType: 'folder',
         pageCount,
-        coverUrl: toThumbUrl(cover)
+        coverUrl: cover ? toThumbUrl(cover) : null
       })
     } else {
-      // 空文件夹 → 仍作为部文件夹呈现（卷数 0）
+      // 'part'：含子级漫画的容器 → 可下钻的「部」
+      const [volumeCount, cover] = await Promise.all([
+        countValidChildren(path),
+        findFirstImage(path)
+      ])
       result.push({
         type: 'folder',
         id: path,
@@ -324,38 +348,25 @@ async function scanLibrary(root: string): Promise<LibraryEntry[]> {
         name: e.name,
         title,
         author,
-        volumeCount: 0,
-        coverUrl: null
+        volumeCount,
+        coverUrl: cover ? toThumbUrl(cover) : null
       })
     }
   }
   return result
 }
 
-async function listVolumes(seriesPath: string): Promise<LibraryVolume[]> {
-  const entries = (await readDirSafe(seriesPath)).filter(isVolumeEntry)
-  entries.sort((a, b) => naturalSort(a.name, b.name))
+/**
+ * 扫描库根，返回顶层「书/卷 或 部」清单。
+ */
+async function scanLibrary(root: string): Promise<LibraryEntry[]> {
+  currentRoot = root
+  return listChildren(root)
+}
 
-  const result: LibraryVolume[] = []
-  for (const entry of entries) {
-    const path = join(seriesPath, entry.name)
-    if (entry.isDirectory()) {
-      const [cover, pageCount] = await Promise.all([findFirstImage(path), countImages(path)])
-      result.push({
-        id: path,
-        path,
-        name: entry.name,
-        title: entry.name,
-        kind: 'folder',
-        sourceType: 'folder',
-        pageCount,
-        coverUrl: cover ? toThumbUrl(cover) : null
-      })
-    } else {
-      result.push(await buildFileVolume(path, entry.name))
-    }
-  }
-  return result
+/** 列出某「部」目录下的条目（可能含可继续下钻的子部），与顶层书架同构。 */
+async function listVolumes(seriesPath: string): Promise<LibraryEntry[]> {
+  return listChildren(seriesPath)
 }
 
 /** 按阅读顺序递归收集一卷的所有页：本级图片（自然排序）在前，再依次进入子文件夹（自然排序） */
