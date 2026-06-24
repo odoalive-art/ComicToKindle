@@ -212,6 +212,51 @@ function resolveSeriesMeta(
   }
 }
 
+// ---------- 单文件卷 inspect 结果缓存（压缩包页数/加密态、PDF 页数）----------
+// inspectArchive 会起 7z、inspectDocument 会跑 pdfjs，单个文件夹里十几个压缩包并发列举可达数秒，
+// 且每次进入都重算。按「路径:mtime:size」缓存——源文件变更则 key 变、自动失效——重进瞬开。
+interface InspectEntry {
+  imageCount?: number
+  encrypted?: boolean
+  pageCount?: number
+}
+const inspectCacheFile = (): string => join(app.getPath('userData'), 'inspect-cache.json')
+let inspectCache: Record<string, InspectEntry> | null = null
+let inspectCacheDirty = false
+let inspectFlushTimer: ReturnType<typeof setTimeout> | null = null
+
+async function loadInspectCache(): Promise<Record<string, InspectEntry>> {
+  if (inspectCache) return inspectCache
+  let loaded: Record<string, InspectEntry> = {}
+  try {
+    loaded = JSON.parse(await fs.readFile(inspectCacheFile(), 'utf-8'))
+  } catch {
+    loaded = {}
+  }
+  inspectCache = loaded
+  return loaded
+}
+
+function scheduleInspectFlush(): void {
+  inspectCacheDirty = true
+  if (inspectFlushTimer) return
+  inspectFlushTimer = setTimeout(() => {
+    inspectFlushTimer = null
+    if (!inspectCacheDirty || !inspectCache) return
+    inspectCacheDirty = false
+    void fs.writeFile(inspectCacheFile(), JSON.stringify(inspectCache)).catch(() => {})
+  }, 800)
+}
+
+async function statKey(path: string): Promise<string | null> {
+  try {
+    const s = await fs.stat(path)
+    return `${path}:${s.mtimeMs}:${s.size}`
+  } catch {
+    return null
+  }
+}
+
 // ---------- 扫描实现 ----------
 
 /** 构造一个「单文件卷册」(压缩包 / pdf / epub) 的展示信息（封面/页数/加密态，缓存优先）。 */
@@ -234,24 +279,42 @@ async function buildFileVolume(path: string, name: string): Promise<LibraryVolum
   if (cached && cached.length > 0) {
     return { ...base, pageCount: cached.length, coverUrl: toThumbUrl(cached[0]) }
   }
+  const cache = await loadInspectCache()
+  const key = await statKey(path)
   if (isArchiveFile(name)) {
-    // 未解出 → 轻量列表拿页数 + 加密状态（封面待首次打开后出现）
-    const info = await inspectArchive(path).catch(() => null)
+    // 未解出 → 轻量列表拿页数 + 加密状态（封面待首次打开后出现）；命中缓存则免起 7z
+    let entry = key ? cache[key] : undefined
+    if (!entry || entry.imageCount === undefined) {
+      const info = await inspectArchive(path).catch(() => null)
+      entry = { imageCount: info?.imageCount ?? 0, encrypted: info?.encrypted ?? false }
+      if (key) {
+        cache[key] = entry
+        scheduleInspectFlush()
+      }
+    }
     return {
       ...base,
-      pageCount: info?.imageCount ?? 0,
+      pageCount: entry.imageCount ?? 0,
       coverUrl: null,
-      locked: info?.encrypted ?? false
+      locked: entry.encrypted ?? false
     }
   }
   // PDF 未准备 → 只渲染首页作封面（带缓存）；EPUB 封面解包较重，仍待首次打开后出现
-  const info = await inspectDocument(path).catch(() => null)
+  let entry = key ? cache[key] : undefined
+  if (!entry || entry.pageCount === undefined) {
+    const info = await inspectDocument(path).catch(() => null)
+    entry = { pageCount: info?.pageCount ?? 0 }
+    if (key) {
+      cache[key] = entry
+      scheduleInspectFlush()
+    }
+  }
   let coverUrl: string | null = null
   if (docType === 'pdf') {
     const cover = await getPdfCoverImage(path).catch(() => null)
     coverUrl = cover ? toThumbUrl(cover) : null
   }
-  return { ...base, pageCount: info?.pageCount ?? 0, coverUrl }
+  return { ...base, pageCount: entry.pageCount ?? 0, coverUrl }
 }
 
 /**
