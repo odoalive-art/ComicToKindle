@@ -84,6 +84,12 @@ const isHidden = (name: string): boolean => name.startsWith('.')
 // 当前库根目录，用于 comic:// 协议的越权访问校验
 let currentRoot: string | null = null
 
+// 导入进行中标记：导入会在库内建 `<bucket>.tmp` 临时桶，期间任何并发的扫描/开库
+// （managedScanLibrary→openLibrary→cleanupTmpBuckets）都不能删 .tmp 桶，否则正在写入
+// 的桶会被清掉，导致 book.json 写入 ENOENT。ipcMain 处理器与 importBooks 的 await 会交错，
+// 故必须用此标记保护。
+let importing = false
+
 export interface LibraryManifest {
   version: 1
   libraryId: string
@@ -306,6 +312,8 @@ async function readLibraryManifest(): Promise<LibraryManifest> {
 }
 
 async function cleanupTmpBuckets(): Promise<void> {
+  // 导入进行中绝不清 .tmp 桶（正在写入的就是 .tmp 桶）；残留的崩溃桶留到下次开库再清。
+  if (importing) return
   const entries = await readDirSafe(booksDir())
   await Promise.all(
     entries
@@ -574,6 +582,19 @@ async function importBooks(
   onProgress: (p: { done: number; total: number; name: string; fraction: number }) => void
 ): Promise<string[]> {
   if (!isManagedLibraryPath(currentRoot)) throw new Error('NO_LIBRARY')
+  importing = true
+  try {
+    return await runImport(candidates, opts, onProgress)
+  } finally {
+    importing = false
+  }
+}
+
+async function runImport(
+  candidates: ImportCandidate[],
+  opts: ImportOptions,
+  onProgress: (p: { done: number; total: number; name: string; fraction: number }) => void
+): Promise<string[]> {
   const manifest = await readLibraryManifest()
   const imported: string[] = []
   await fs.mkdir(booksDir(), { recursive: true })
