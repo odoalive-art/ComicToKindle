@@ -912,10 +912,20 @@ async function renameSeries(
   await updateBookHints(node.bookIds, title, author)
 }
 
-async function deleteSeries(seriesId: string): Promise<void> {
+async function deleteSeries(seriesId: string, deleteBooks = false): Promise<void> {
   const manifest = await readLibraryManifest()
   const node = manifest.series.find((s) => s.id === seriesId)
   if (!node) throw new Error('NOT_FOUND')
+  if (deleteBooks) {
+    // 连卷册一并删除：先把部内卷册移入库内回收站（trashBooks 自行读写 manifest 并摘除 ids），
+    // 再从最新 manifest 里移除已清空的部节点。
+    await trashBooks(node.bookIds)
+    const fresh = await readLibraryManifest()
+    fresh.series = fresh.series.filter((s) => s.id !== seriesId)
+    await writeLibraryManifest(fresh)
+    return
+  }
+  // 解散：部内卷册移到「未分组」，卷册本身保留。
   manifest.series = manifest.series.filter((s) => s.id !== seriesId)
   manifest.ungrouped.push(...node.bookIds)
   await writeLibraryManifest(manifest)
@@ -1350,7 +1360,8 @@ export function setupLibrary(): void {
 
   ipcMain.handle(
     'library:deleteSeries',
-    async (_event, seriesId: string): Promise<void> => deleteSeries(seriesId)
+    async (_event, seriesId: string, deleteBooks?: boolean): Promise<void> =>
+      deleteSeries(seriesId, deleteBooks === true)
   )
 
   ipcMain.handle(

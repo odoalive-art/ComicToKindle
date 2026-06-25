@@ -100,7 +100,7 @@ export interface LibraryAPI {
   ) => Promise<string[]>
   createSeries: (title: string, author: string | null, bookIds: string[]) => Promise<SeriesNode>
   renameSeries: (seriesId: string, title: string, author: string | null) => Promise<void>
-  deleteSeries: (seriesId: string) => Promise<void>
+  deleteSeries: (seriesId: string, deleteBooks?: boolean) => Promise<void>
   assignBooks: (bookIds: string[], targetSeriesId: string | null) => Promise<void>
   reorderSeries: (orderedSeriesIds: string[]) => Promise<void>
   reorderBooks: (seriesId: string | null, orderedBookIds: string[]) => Promise<void>

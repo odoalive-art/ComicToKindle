@@ -1458,6 +1458,8 @@ function LibraryView({
   const [deleteReq, setDeleteReq] = useState<{
     paths: string[]
     kind?: 'series' | 'books'
+    /** 删「部」时是否连卷册一并删除（默认 false = 解散，卷册移到未分组） */
+    withBooks?: boolean
     busy: boolean
   } | null>(null)
   const [importReq, setImportReq] = useState<{
@@ -1846,7 +1848,10 @@ function LibraryView({
     setDeleteReq((s) => (s ? { ...s, busy: true } : s))
     try {
       if (deleteReq.kind === 'series') {
-        await Promise.all(deleteReq.paths.map((id) => window.api.library.deleteSeries(id)))
+        const withBooks = deleteReq.withBooks === true
+        await Promise.all(
+          deleteReq.paths.map((id) => window.api.library.deleteSeries(id, withBooks))
+        )
       } else {
         await window.api.library.trashBooks(deleteReq.paths)
       }
@@ -2948,16 +2953,34 @@ function LibraryView({
             <AlertDialogTitle>
               {managedLibrary && deleteReq?.kind === 'books'
                 ? text.library.trashBooksTitle
-                : text.fileops.deleteTitle}
+                : managedLibrary && deleteReq?.kind === 'series'
+                  ? text.library.deleteSeriesTitle
+                  : text.fileops.deleteTitle}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {deleteReq
                 ? managedLibrary && deleteReq.kind === 'books'
                   ? text.library.trashBooksDesc(deleteReq.paths.length)
-                  : text.fileops.deleteDesc(deleteReq.paths.length)
+                  : managedLibrary && deleteReq.kind === 'series'
+                    ? text.library.deleteSeriesDesc
+                    : text.fileops.deleteDesc(deleteReq.paths.length)
                 : ''}
             </AlertDialogDescription>
           </AlertDialogHeader>
+          {managedLibrary && deleteReq?.kind === 'series' ? (
+            <label className="flex items-start gap-2 rounded-md border border-destructive/25 bg-destructive/5 p-3 text-sm">
+              <Checkbox
+                checked={deleteReq.withBooks === true}
+                disabled={deleteReq.busy}
+                onCheckedChange={(checked) =>
+                  setDeleteReq((s) => (s ? { ...s, withBooks: checked === true } : s))
+                }
+              />
+              <span className="leading-5 text-muted-foreground">
+                {text.library.deleteSeriesWithBooks}
+              </span>
+            </label>
+          ) : null}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleteReq?.busy}>{text.fileops.cancel}</AlertDialogCancel>
             <AlertDialogAction

@@ -17,7 +17,8 @@ const api = {
       ipcRenderer.invoke('library:createSeries', title, author, bookIds),
     renameSeries: (seriesId: string, title: string, author: string | null) =>
       ipcRenderer.invoke('library:renameSeries', seriesId, title, author),
-    deleteSeries: (seriesId: string) => ipcRenderer.invoke('library:deleteSeries', seriesId),
+    deleteSeries: (seriesId: string, deleteBooks?: boolean) =>
+      ipcRenderer.invoke('library:deleteSeries', seriesId, deleteBooks),
     assignBooks: (bookIds: string[], targetSeriesId: string | null) =>
       ipcRenderer.invoke('library:assignBooks', bookIds, targetSeriesId),
     reorderSeries: (orderedSeriesIds: string[]) =>
