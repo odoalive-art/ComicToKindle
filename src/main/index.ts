@@ -49,6 +49,34 @@ function createWindow(): void {
     return { action: 'deny' }
   })
 
+  // 桌面化收敛：拦掉网页式快捷键（刷新/缩放/打印），dev 与 prod 行为一致。
+  // 注意：before-input-event 里 preventDefault 会连页面的 keydown 一并吞掉，所以
+  // Cmd/Ctrl+R 不能交给渲染层自行处理——在这里直接转成「重命名选中项」的 IPC。
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if (input.type !== 'keyDown') return
+    const mod = input.control || input.meta
+    const key = input.key.toLowerCase()
+
+    // 刷新类：Cmd/Ctrl+R、Cmd/Ctrl+Shift+R、F5
+    if ((mod && key === 'r') || input.code === 'F5') {
+      event.preventDefault()
+      // 不带 Shift 的 Cmd/Ctrl+R 复用为「重命名选中项」
+      if (mod && key === 'r' && !input.shift) {
+        mainWindow.webContents.send('app:rename-selected')
+      }
+      return
+    }
+    // 页面缩放：Cmd/Ctrl + =/+/-/_/0
+    if (mod && ['=', '+', '-', '_', '0'].includes(key)) {
+      event.preventDefault()
+      return
+    }
+    // 打印
+    if (mod && key === 'p') {
+      event.preventDefault()
+    }
+  })
+
   // HMR for renderer base on electron-vite cli.
   // Load the remote URL for development or the local html file for production.
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {

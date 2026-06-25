@@ -398,7 +398,7 @@ function FolderStackCard({
       onKeyDown={(e) => {
         if (e.key === 'Enter') onDoubleClick()
       }}
-      className="group flex cursor-default flex-col gap-2 text-left"
+      className="group flex cursor-default flex-col gap-2 text-left outline-none"
     >
       <div className="group relative">
         {/* 背后两层错位卡片，暗示「文件夹里有多卷」 */}
@@ -1617,7 +1617,7 @@ function LibraryView({
     })
   }
 
-  const openSeriesMeta = (item: LibrarySeries | null): void => {
+  const openSeriesMeta = React.useCallback((item: LibrarySeries | null): void => {
     if (!item) return
     setSeriesMetaReq({
       id: item.id,
@@ -1626,7 +1626,7 @@ function LibraryView({
       author: item.author ?? '',
       busy: false
     })
-  }
+  }, [])
 
   const submitSeriesMeta = async (): Promise<void> => {
     if (!seriesMetaReq || seriesMetaReq.busy) return
@@ -1852,6 +1852,7 @@ function LibraryView({
       }
       setDeleteReq(null)
       exitSelect() // 删除后清掉多选态，避免残留已删 path 让 toolbar 计数变脏
+      setSelectedSeriesPath(null) // 删的是部时，清掉部选中态
       toast.success(text.fileops.deleted(deleteReq.paths.length))
       await refreshAfterFileop()
     } catch (e) {
@@ -2352,17 +2353,80 @@ function LibraryView({
       const sel = layer.filter(
         (v): v is LibraryVolume => v.type === 'book' && selectedVols.has(v.path)
       )
-      if (sel.length === 0) return
-      e.preventDefault()
-      setDeleteReq({
-        paths: managedLibrary ? sel.map((v) => v.id) : sel.map((v) => v.path),
-        kind: managedLibrary ? 'books' : undefined,
-        busy: false
-      })
+      // 优先删选中的卷；没有选中卷时，若单选了某个「部」文件夹则删该部
+      if (sel.length > 0) {
+        e.preventDefault()
+        setDeleteReq({
+          paths: managedLibrary ? sel.map((v) => v.id) : sel.map((v) => v.path),
+          kind: managedLibrary ? 'books' : undefined,
+          busy: false
+        })
+        return
+      }
+      if (selectedSeriesPath) {
+        const folder = [...series, ...volumes, ...[...volCache.values()].flat()].find(
+          (s): s is LibrarySeries => s.type === 'folder' && s.path === selectedSeriesPath
+        )
+        if (folder) {
+          e.preventDefault()
+          setDeleteReq({
+            paths: [managedLibrary ? folder.id : folder.path],
+            kind: managedLibrary ? 'series' : undefined,
+            busy: false
+          })
+        }
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [selectedVols, selected, volumes, series, managedLibrary, readingVolume, deleteReq])
+  }, [
+    selectedVols,
+    selectedSeriesPath,
+    selected,
+    volumes,
+    series,
+    volCache,
+    managedLibrary,
+    readingVolume,
+    deleteReq
+  ])
+
+  // Cmd/Ctrl+R（主进程已拦掉刷新并转发为 IPC）：单选「卷」→重命名弹窗；单选「部」→编辑信息
+  useEffect(() => {
+    const off = window.api?.onRenameShortcut?.(() => {
+      if (readingVolume || renameReq) return
+      const ae = document.activeElement as HTMLElement | null
+      if (ae && (ae.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))) return
+      const layer = selected !== null ? volumes : series
+      // 单选一个卷 → 重命名弹窗
+      if (selectedVols.size === 1) {
+        const path = [...selectedVols][0]
+        const vol = layer.find((v): v is LibraryVolume => v.type === 'book' && v.path === path)
+        if (vol) {
+          setRenameReq({ path: vol.path, id: vol.id, kind: 'book', name: vol.name, busy: false })
+        }
+        return
+      }
+      // 没选卷、单选了一个部 → 编辑信息
+      if (selectedVols.size === 0 && selectedSeriesPath) {
+        const folder = [...series, ...volumes, ...[...volCache.values()].flat()].find(
+          (s): s is LibrarySeries => s.type === 'folder' && s.path === selectedSeriesPath
+        )
+        if (folder) openSeriesMeta(folder)
+      }
+    })
+    return off
+  }, [
+    readingVolume,
+    renameReq,
+    selectedVols,
+    selectedSeriesPath,
+    selected,
+    volumes,
+    series,
+    volCache,
+    openSeriesMeta
+  ])
 
   const showVolumes = selected !== null
 
@@ -4091,7 +4155,7 @@ function LibraryView({
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') void openSeries(item)
                           }}
-                          className="group flex cursor-default flex-col gap-2 text-left"
+                          className="group flex cursor-default flex-col gap-2 text-left outline-none"
                         >
                           <div className="group relative">
                             {/* 背后两层错位卡片，暗示「文件夹里有多卷」 */}

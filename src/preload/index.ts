@@ -84,7 +84,13 @@ const api = {
     open: (artifactId: string) => ipcRenderer.invoke('webpush:open', artifactId),
     reveal: (artifactId: string) => ipcRenderer.invoke('webpush:reveal', artifactId)
   },
-  setBackgroundColor: (color: string): void => ipcRenderer.send('set-background-color', color)
+  setBackgroundColor: (color: string): void => ipcRenderer.send('set-background-color', color),
+  // 主进程把被收敛的浏览器快捷键复用为应用动作（如 Cmd/Ctrl+R → 重命名选中项）后转发到这里
+  onRenameShortcut: (cb: () => void): (() => void) => {
+    const listener = (): void => cb()
+    ipcRenderer.on('app:rename-selected', listener)
+    return () => ipcRenderer.removeListener('app:rename-selected', listener)
+  }
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

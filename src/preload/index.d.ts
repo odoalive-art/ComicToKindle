@@ -291,6 +291,8 @@ export interface CustomAPI {
   deliver: DeliverAPI
   webpush: WebPushAPI
   setBackgroundColor: (color: string) => void
+  /** 订阅主进程转发的「重命名选中项」快捷键（Cmd/Ctrl+R）；返回取消订阅函数 */
+  onRenameShortcut: (cb: () => void) => () => void
 }
 
 declare global {
