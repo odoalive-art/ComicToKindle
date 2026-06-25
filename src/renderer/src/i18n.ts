@@ -33,8 +33,8 @@ export const uiText = {
     },
     library: {
       chooseFolder: '选择漫画库文件夹',
-      createLibrary: '新建库包',
-      openLibrary: '打开库包',
+      createLibrary: '新建漫画库',
+      openLibrary: '打开其他库',
       openInvalid: '这不是 ComicToKindle 库包（.ctklib）。请先「新建库包」，再用「导入卷册」把漫画加进来。',
       importBooks: '导入卷册',
       changeFolder: '切换库包',
@@ -61,7 +61,7 @@ export const uiText = {
       importDone: (found: number) => `已导入 ${found} 卷`,
       rescan: '重新扫描',
       emptyTitle: '还没有漫画库',
-      emptyDescription: '新建一个库包，再用「导入卷册」把漫画文件夹或压缩包加进来，开始整理你的漫画。',
+      emptyDescription: '新建一个漫画库，再用「导入卷册」把漫画文件夹或压缩包加进来，开始整理你的漫画。',
       emptyLibraryTitle: '这个库还是空的',
       emptyLibraryDesc: '点下面的按钮，把漫画文件夹或压缩包导入进来。',
       loading: '正在扫描漫画库…',
@@ -399,8 +399,8 @@ export const uiText = {
     },
     library: {
       chooseFolder: 'Choose library folder',
-      createLibrary: 'Create library package',
-      openLibrary: 'Open library package',
+      createLibrary: 'New library',
+      openLibrary: 'Open another library',
       openInvalid:
         'Not a ComicToKindle library (.ctklib). Create a new library package first, then use “Import volumes” to add your comics.',
       importBooks: 'Import volumes',
@@ -433,7 +433,7 @@ export const uiText = {
       rescan: 'Rescan',
       emptyTitle: 'No library yet',
       emptyDescription:
-        'Create a library package, then use “Import volumes” to add comic folders or archives and start organizing.',
+        'Create a library, then use “Import volumes” to add comic folders or archives and start organizing.',
       emptyLibraryTitle: 'This library is empty',
       emptyLibraryDesc: 'Import comic folders or archives to get started.',
       loading: 'Scanning library…',

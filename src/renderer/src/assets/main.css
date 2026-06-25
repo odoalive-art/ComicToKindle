@@ -166,4 +166,20 @@
   #root {
     height: 100%;
   }
+
+  /* 桌面应用：整体禁用网页式文字选择（边栏/标题/按钮/标签等 chrome 不应被选中或被
+     Cmd/Ctrl+A 选走）。输入类控件恢复可选；个别需要选中文本处用 Tailwind 的
+     `select-text` 工具类逐元素放开（工具类层级高于 base，会覆盖此处）。 */
+  body {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  input,
+  textarea,
+  [contenteditable='true'],
+  [contenteditable=''] {
+    user-select: text;
+    -webkit-user-select: text;
+  }
 }

@@ -47,6 +47,7 @@ import {
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import { EntityListDialog } from '@/components/EntityListDialog'
 import { TrafficLights } from '@/components/ui/traffic-lights'
 import {
   Dialog,
@@ -93,14 +94,6 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import {
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle
-} from '@/components/ui/empty'
 import {
   ContextMenu,
   ContextMenuContent,
@@ -1379,6 +1372,8 @@ function LibraryView({
   // 多选模式：先勾选若干卷再批量转换（替代「转换整部」入口）
   const [selectMode, setSelectMode] = useState(false)
   const [selectedVols, setSelectedVols] = useState<Set<string>>(new Set())
+  // Shift+单击的范围锚点：记录上一次普通点选的卷 path，shift 时据此整段选中
+  const selectAnchorRef = useRef<string | null>(null)
   // 部（series）层单击选中：纯视觉高亮，给「可双击进入」的预期反馈（暂无批量动作，故单选）
   const [selectedSeriesPath, setSelectedSeriesPath] = useState<string | null>(null)
   // 书架视图模式（图标/列表）+ 列表视图里就地展开的部 + 各部卷册缓存
@@ -1856,6 +1851,7 @@ function LibraryView({
         await window.api.library.trashBooks(deleteReq.paths)
       }
       setDeleteReq(null)
+      exitSelect() // 删除后清掉多选态，避免残留已删 path 让 toolbar 计数变脏
       toast.success(text.fileops.deleted(deleteReq.paths.length))
       await refreshAfterFileop()
     } catch (e) {
@@ -1895,10 +1891,29 @@ function LibraryView({
 
   const shouldUseSelectMode = (count: number): boolean => count >= 2
 
-  // 文件管理器式按下即选中：普通点 = 只选这一项；Cmd/Ctrl 点或已在多选模式 = 累加/切换。
-  // 只有选中 2 个及以上才进入多选模式；单个选中只保留高亮反馈。
+  // 文件管理器式按下即选中：普通点 = 只选这一项；Cmd/Ctrl 点或已在多选模式 = 累加/切换；
+  // Shift 点 = 从锚点到当前项整段选中。只有选中 2 个及以上才进入多选模式。
   const onSelectablePointerDown = (path: string, e: React.PointerEvent): void => {
     if (e.button !== 0 || !e.isPrimary) return
+
+    // Shift+单击：以上一次点选项为锚点，对当前层可选「卷」的视觉顺序整段选中。
+    // 锚点保持不变，便于反复 shift 调整范围；Cmd/Ctrl 同按时在现有选区上叠加。
+    if (e.shiftKey) {
+      const orderedPaths = bookVolumes.map((v) => v.path)
+      const anchorIdx = selectAnchorRef.current ? orderedPaths.indexOf(selectAnchorRef.current) : -1
+      const curIdx = orderedPaths.indexOf(path)
+      if (anchorIdx !== -1 && curIdx !== -1) {
+        const [lo, hi] = anchorIdx <= curIdx ? [anchorIdx, curIdx] : [curIdx, anchorIdx]
+        const additive = e.metaKey || e.ctrlKey || selectMode
+        const next = new Set(additive ? selectedVols : [])
+        for (let i = lo; i <= hi; i++) next.add(orderedPaths[i])
+        setSelectedVols(next)
+        setSelectMode(shouldUseSelectMode(next.size))
+        return
+      }
+      // 无有效锚点：退化为普通单选（落到下方逻辑，并把当前项设为新锚点）
+    }
+
     if (!e.metaKey && !e.ctrlKey && selectedVols.size > 1 && selectedVols.has(path)) return
     const additive = e.metaKey || e.ctrlKey || selectMode
     const next = new Set(additive ? selectedVols : [])
@@ -1906,6 +1921,7 @@ function LibraryView({
     else next.add(path)
     setSelectedVols(next)
     setSelectMode(shouldUseSelectMode(next.size))
+    selectAnchorRef.current = path
   }
 
   const onVolumePointerDown = (vol: LibraryVolume, e: React.PointerEvent): void =>
@@ -2304,22 +2320,49 @@ function LibraryView({
     return () => window.removeEventListener('keydown', onKey)
   }, [selectMode])
 
-  // 卷册视图下 Cmd/Ctrl+A：只全选内容区的漫画卷，而非浏览器默认的整页全选
+  // Cmd/Ctrl+A：只全选内容区的漫画卷（顶层散卷或部内卷册），而非浏览器默认的整页全选
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
       if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== 'a') return
+      // 阅读时内容区是阅读器而非书架，全选漫画卷不应生效
+      if (readingVolume) return
       const t = e.target as HTMLElement | null
       // 输入类控件内保留原生全选
       if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return
-      if (selected === null || volumes.length === 0) return
-      const paths = volumes.filter((v) => v.type === 'book').map((v) => v.path)
+      const layer = selected !== null ? volumes : series
+      const paths = layer.filter((v) => v.type === 'book').map((v) => v.path)
+      if (paths.length === 0) return
       e.preventDefault()
       setSelectedVols(new Set(paths))
       setSelectMode(shouldUseSelectMode(paths.length))
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [selected, volumes])
+  }, [selected, volumes, series, readingVolume])
+
+  // Delete / Backspace：删除内容区当前选中的漫画卷，走删除确认弹窗。
+  // macOS 主删除键产生 'Backspace'，故两者都接管；阅读/输入/弹窗已开时不介入。
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key !== 'Delete' && e.key !== 'Backspace') return
+      if (readingVolume || deleteReq) return
+      const t = e.target as HTMLElement | null
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return
+      const layer = selected !== null ? volumes : series
+      const sel = layer.filter(
+        (v): v is LibraryVolume => v.type === 'book' && selectedVols.has(v.path)
+      )
+      if (sel.length === 0) return
+      e.preventDefault()
+      setDeleteReq({
+        paths: managedLibrary ? sel.map((v) => v.id) : sel.map((v) => v.path),
+        kind: managedLibrary ? 'books' : undefined,
+        busy: false
+      })
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [selectedVols, selected, volumes, series, managedLibrary, readingVolume, deleteReq])
 
   const showVolumes = selected !== null
 
@@ -2865,143 +2908,98 @@ function LibraryView({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      <Dialog
+      <EntityListDialog
         open={importReq !== null}
-        onOpenChange={(o) => (!o && !importReq?.busy ? setImportReq(null) : undefined)}
+        busy={importReq?.busy}
+        onClose={() => setImportReq(null)}
+        title={text.library.importBooks}
+        description={
+          importReq
+            ? text.library.importConfirm(
+                importReq.scan.candidates.length,
+                importReq.scan.skipped.length
+              )
+            : ''
+        }
+        items={(importReq?.scan.candidates ?? []).map((item) => ({
+          key: item.sourcePath,
+          icon: BookText,
+          primary: item.displayName,
+          primaryTitle: item.displayName,
+          secondary: item.sourceType.toUpperCase()
+        }))}
+        actions={[
+          {
+            label: text.fileops.cancel,
+            variant: 'ghost',
+            disabled: importReq?.busy,
+            onClick: () => setImportReq(null)
+          },
+          {
+            label: text.library.importBooks,
+            disabled: importReq?.busy,
+            loading: importReq?.busy,
+            onClick: () => void submitImport()
+          }
+        ]}
       >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{text.library.importBooks}</DialogTitle>
-            <DialogDescription>
-              {importReq
-                ? text.library.importConfirm(
-                    importReq.scan.candidates.length,
-                    importReq.scan.skipped.length
-                  )
-                : ''}
-            </DialogDescription>
-          </DialogHeader>
-          {importReq ? (
-            <>
-              <ScrollArea className="h-72 rounded-md border">
-                <div className="divide-y">
-                  {importReq.scan.candidates.map((item) => (
-                    <div key={item.sourcePath} className="flex items-center gap-2 px-3 py-2">
-                      <BookText className="size-4 shrink-0 text-muted-foreground" />
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate text-sm font-medium" title={item.displayName}>
-                          {item.displayName}
-                        </div>
-                        <div className="truncate text-xs text-muted-foreground">
-                          {item.sourceType.toUpperCase()}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-              <label className="flex items-start gap-2 rounded-md border border-destructive/25 bg-destructive/5 p-3 text-sm">
-                <Checkbox
-                  checked={importReq.deleteSourceAfter}
-                  disabled={importReq.busy}
-                  onCheckedChange={(checked) =>
-                    setImportReq((s) => (s ? { ...s, deleteSourceAfter: checked === true } : s))
-                  }
-                />
-                <span className="leading-5 text-muted-foreground">
-                  {text.library.deleteSourceAfterImport}
-                </span>
-              </label>
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  disabled={importReq.busy}
-                  onClick={() => setImportReq(null)}
-                >
-                  {text.fileops.cancel}
-                </Button>
-                <Button type="button" disabled={importReq.busy} onClick={() => void submitImport()}>
-                  {importReq.busy ? (
-                    <>
-                      <Loader2 className="size-4 animate-spin" />
-                      {text.library.importBooks}
-                    </>
-                  ) : (
-                    text.library.importBooks
-                  )}
-                </Button>
-              </DialogFooter>
-            </>
-          ) : null}
-        </DialogContent>
-      </Dialog>
-      <Dialog
+        {importReq ? (
+          <label className="flex items-start gap-2 rounded-md border border-destructive/25 bg-destructive/5 p-3 text-sm">
+            <Checkbox
+              checked={importReq.deleteSourceAfter}
+              disabled={importReq.busy}
+              onCheckedChange={(checked) =>
+                setImportReq((s) => (s ? { ...s, deleteSourceAfter: checked === true } : s))
+              }
+            />
+            <span className="leading-5 text-muted-foreground">
+              {text.library.deleteSourceAfterImport}
+            </span>
+          </label>
+        ) : null}
+      </EntityListDialog>
+      <EntityListDialog
         open={trashReq !== null}
-        onOpenChange={(o) => (!o && !trashReq?.busy ? setTrashReq(null) : undefined)}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{text.library.trashTitle}</DialogTitle>
-            <DialogDescription>{text.library.trashDesc}</DialogDescription>
-          </DialogHeader>
-          {trashReq ? (
-            <div className="space-y-3">
-              {trashReq.items.length === 0 ? (
-                <p className="rounded-md border border-dashed py-8 text-center text-sm text-muted-foreground">
-                  {text.library.trashEmpty}
-                </p>
-              ) : (
-                <ScrollArea className="max-h-72 rounded-md border">
-                  <div className="divide-y">
-                    {trashReq.items.map((item) => (
-                      <div key={item.trashId} className="flex items-center gap-2 px-3 py-2">
-                        <BookText className="size-4 shrink-0 text-muted-foreground" />
-                        <div className="min-w-0 flex-1">
-                          <div className="truncate text-sm font-medium" title={item.displayName}>
-                            {item.displayName}
-                          </div>
-                          <div className="truncate text-xs text-muted-foreground">
-                            {item.seriesTitleHint ?? text.library.ungrouped}
-                          </div>
-                        </div>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          disabled={trashReq.busy}
-                          onClick={() => void restoreTrashItem(item.trashId)}
-                        >
-                          <RotateCcw className="size-3.5" />
-                          {text.library.restore}
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-              )}
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  disabled={trashReq.busy || trashReq.items.length === 0}
-                  onClick={() => void emptyLibraryTrash()}
-                >
-                  {text.library.emptyTrash}
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  disabled={trashReq.busy}
-                  onClick={() => setTrashReq(null)}
-                >
-                  {text.fileops.cancel}
-                </Button>
-              </DialogFooter>
-            </div>
-          ) : null}
-        </DialogContent>
-      </Dialog>
+        busy={trashReq?.busy}
+        onClose={() => setTrashReq(null)}
+        title={text.library.trashTitle}
+        description={text.library.trashDesc}
+        scrollClassName="max-h-72"
+        emptyText={text.library.trashEmpty}
+        items={(trashReq?.items ?? []).map((item) => ({
+          key: item.trashId,
+          icon: BookText,
+          primary: item.displayName,
+          primaryTitle: item.displayName,
+          secondary: item.seriesTitleHint ?? text.library.ungrouped,
+          action: (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={trashReq?.busy}
+              onClick={() => void restoreTrashItem(item.trashId)}
+            >
+              <RotateCcw className="size-3.5" />
+              {text.library.restore}
+            </Button>
+          )
+        }))}
+        actions={[
+          {
+            label: text.library.emptyTrash,
+            variant: 'destructive',
+            disabled: trashReq?.busy || trashReq?.items.length === 0,
+            onClick: () => void emptyLibraryTrash()
+          },
+          {
+            label: text.fileops.cancel,
+            variant: 'ghost',
+            disabled: trashReq?.busy,
+            onClick: () => setTrashReq(null)
+          }
+        ]}
+      />
       <div className="flex min-h-0 flex-1 flex-col bg-background">
         {/* 合并后的顶栏：侧栏开关 + 标题/面包屑 + 操作 */}
         <header
@@ -3228,29 +3226,19 @@ function LibraryView({
         </header>
 
         {!root ? (
-          <div className="flex flex-1 items-center justify-center p-6">
-            <Empty>
-              <EmptyHeader>
-                <EmptyMedia variant="icon">
-                  <FolderOpen />
-                </EmptyMedia>
-                <EmptyTitle>{text.library.emptyTitle}</EmptyTitle>
-                <EmptyDescription>{text.library.emptyDescription}</EmptyDescription>
-              </EmptyHeader>
-              <EmptyContent>
-                <div className="flex flex-wrap justify-center gap-2">
-                  <Button onClick={createManagedLibrary}>
-                    <FolderPlus className="size-4" />
-                    {text.library.createLibrary}
-                  </Button>
-                  <Button variant="outline" onClick={openManagedLibrary}>
-                    <FolderOpen className="size-4" />
-                    {text.library.openLibrary}
-                  </Button>
-                </div>
-              </EmptyContent>
-            </Empty>
-          </div>
+          <PageEmpty
+            icon={FolderOpen}
+            title={text.library.emptyTitle}
+            label={text.library.emptyDescription}
+            actions={
+              <>
+                <Button onClick={createManagedLibrary}>{text.library.createLibrary}</Button>
+                <Button variant="outline" onClick={openManagedLibrary}>
+                  {text.library.openLibrary}
+                </Button>
+              </>
+            }
+          />
         ) : (
           // 用原生滚动容器而非 Radix ScrollArea：后者 Viewport 内层 display:table 使
           // min-h-full 失效、内容下方空白不在容器内（空白单击取消选择会失灵）。容器自身
@@ -3363,12 +3351,10 @@ function LibraryView({
                               <div className="block w-full text-left">
                                 <AspectRatio
                                   ratio={3 / 4}
-                                  className={`overflow-hidden rounded-lg bg-muted transition-all ${
+                                  className={`overflow-hidden rounded-lg bg-muted transition-shadow ${
                                     picked
                                       ? 'ring-2 ring-primary ring-offset-2 ring-offset-background'
-                                      : selectMode
-                                        ? 'brightness-[0.7] dark:brightness-[0.82]'
-                                        : ''
+                                      : ''
                                   }`}
                                 >
                                   <CoverImage
@@ -3405,6 +3391,12 @@ function LibraryView({
                                       </div>
                                     )
                                   })()}
+                                  {/* 多选未选中项压暗：用遮罩代替 filter:brightness，避免逐张封面建合成层导致首次进入卡顿 */}
+                                  <div
+                                    className={`pointer-events-none absolute inset-0 rounded-lg bg-black/30 transition-opacity duration-300 ease-out ${
+                                      selectMode && !picked ? 'opacity-100' : 'opacity-0'
+                                    }`}
+                                  />
                                 </AspectRatio>
                               </div>
                               {/* 已转换角标：小封面下用图标圆点，避免文字撑破封面 */}
@@ -3529,22 +3521,17 @@ function LibraryView({
                 </div>
               )
             ) : series.length === 0 ? (
-              <div className="flex h-full min-h-[24rem] items-center justify-center">
-                <Empty>
-                  <EmptyHeader>
-                    <EmptyMedia variant="icon">
-                      <BookUp />
-                    </EmptyMedia>
-                    <EmptyTitle>{text.library.emptyLibraryTitle}</EmptyTitle>
-                    <EmptyDescription>{text.library.emptyLibraryDesc}</EmptyDescription>
-                  </EmptyHeader>
-                  <EmptyContent>
+              <div className="flex h-full min-h-[24rem] flex-col">
+                <PageEmpty
+                  icon={BookUp}
+                  title={text.library.emptyLibraryTitle}
+                  label={text.library.emptyLibraryDesc}
+                  actions={
                     <Button size="lg" onClick={importIntoLibrary}>
-                      <FolderOpen className="size-4" />
                       {text.library.importBooks}
                     </Button>
-                  </EmptyContent>
-                </Empty>
+                  }
+                />
               </div>
             ) : viewMode === 'list' ? (
               // 列表视图：部=纯文字行（三角在右），展开后部名吸顶、其下卷册以封面网格呈现；
@@ -3613,7 +3600,9 @@ function LibraryView({
                           <ContextMenuItem
                             disabled={!managedLibrary && moveTargets().length === 0}
                             onSelect={() =>
-                              deferOpen(() => setMoveReq({ sources: volTargets(item), busy: false }))
+                              deferOpen(() =>
+                                setMoveReq({ sources: volTargets(item), busy: false })
+                              )
                             }
                           >
                             <FolderInput className="size-4" />
@@ -3939,12 +3928,10 @@ function LibraryView({
                             <div className="relative">
                               <AspectRatio
                                 ratio={3 / 4}
-                                className={`overflow-hidden rounded-lg bg-muted transition-all ${
+                                className={`overflow-hidden rounded-lg bg-muted transition-shadow ${
                                   bookPicked
                                     ? 'ring-2 ring-primary ring-offset-2 ring-offset-background'
-                                    : selectMode
-                                      ? 'brightness-[0.7] dark:brightness-[0.82]'
-                                      : ''
+                                    : ''
                                 }`}
                               >
                                 <CoverImage
@@ -3974,6 +3961,12 @@ function LibraryView({
                                     />
                                   </div>
                                 ) : null}
+                                {/* 多选未选中项压暗：用遮罩代替 filter:brightness，避免逐张封面建合成层导致首次进入卡顿 */}
+                                <div
+                                  className={`pointer-events-none absolute inset-0 rounded-lg bg-black/30 transition-opacity duration-300 ease-out ${
+                                    selectMode && !bookPicked ? 'opacity-100' : 'opacity-0'
+                                  }`}
+                                />
                               </AspectRatio>
                               {isConverted && !job ? (
                                 <Tooltip>
@@ -4055,7 +4048,9 @@ function LibraryView({
                           <ContextMenuItem
                             disabled={!managedLibrary && moveTargets().length === 0}
                             onSelect={() =>
-                              deferOpen(() => setMoveReq({ sources: volTargets(item), busy: false }))
+                              deferOpen(() =>
+                                setMoveReq({ sources: volTargets(item), busy: false })
+                              )
                             }
                           >
                             <FolderInput className="size-4" />
@@ -4474,17 +4469,30 @@ function DeliverySettingsView({ locale }: { locale: LanguageMode }): React.JSX.E
   )
 }
 
+// 全 app 统一的空状态组件：裸图标风格（淡灰、无底框）。
+// icon / title / label / actions 均可选，按需组合：纯占位页只给 icon+label，
+// 引导页可叠加 title 与 actions（按钮区）。
 function PageEmpty({
   icon: Icon,
-  label
+  title,
+  label,
+  actions
 }: {
-  icon: React.ElementType
-  label: string
+  icon?: React.ElementType
+  title?: string
+  label?: string
+  actions?: React.ReactNode
 }): React.JSX.Element {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center text-muted-foreground">
-      <Icon className="size-10 opacity-30" />
-      <p className="text-sm">{label}</p>
+    <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
+      {Icon ? <Icon className="size-10 text-muted-foreground opacity-30" /> : null}
+      {title || label ? (
+        <div className="flex flex-col gap-1">
+          {title ? <p className="text-sm font-medium text-foreground">{title}</p> : null}
+          {label ? <p className="text-xs text-muted-foreground">{label}</p> : null}
+        </div>
+      ) : null}
+      {actions ? <div className="mt-1 flex flex-wrap justify-center gap-2">{actions}</div> : null}
     </div>
   )
 }
