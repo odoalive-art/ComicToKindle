@@ -20,7 +20,7 @@ import { ZipArchive } from 'archiver'
 // ---------- 设备档位 ----------
 export type DeviceProfile = 'pw3' | 'pw5' | 'pw6' | 'ko3' | 'oasis' | 'scribe' | 'original'
 
-const PROFILE_RES: Record<DeviceProfile, { width: number; height: number } | null> = {
+export const PROFILE_RES: Record<DeviceProfile, { width: number; height: number } | null> = {
   pw3: { width: 1072, height: 1448 },
   pw5: { width: 1236, height: 1648 },
   pw6: { width: 1264, height: 1680 },
@@ -112,6 +112,26 @@ interface Dimensions {
   height: number
 }
 
+// 单页处理内核：灰度 → 按档位缩放 → mozjpeg 压缩，产出 buffer。转换（落盘）与
+// 预览（返回 data URL）共用同一条管线，保证预览所见即最终产物。
+async function processImageToBuffer(
+  pipeline: sharp.Sharp,
+  targetWidth: number | null,
+  targetHeight: number | null,
+  grayscale: boolean,
+  imageQuality: number
+): Promise<{ buffer: Buffer; info: sharp.OutputInfo }> {
+  let p = pipeline
+  if (grayscale) p = p.grayscale()
+  if (targetWidth && targetHeight) {
+    p = p.resize(targetWidth, targetHeight, { fit: 'inside', withoutEnlargement: false })
+  }
+  const { data, info } = await p
+    .jpeg({ quality: imageQuality, progressive: true, mozjpeg: true })
+    .toBuffer({ resolveWithObject: true })
+  return { buffer: data, info }
+}
+
 async function processAndSaveImage(
   pipeline: sharp.Sharp,
   destPath: string,
@@ -120,15 +140,102 @@ async function processAndSaveImage(
   grayscale: boolean,
   imageQuality: number
 ): Promise<Dimensions> {
-  let p = pipeline
-  if (grayscale) p = p.grayscale()
-  if (targetWidth && targetHeight) {
-    p = p.resize(targetWidth, targetHeight, { fit: 'inside', withoutEnlargement: false })
-  }
-  const info = await p
-    .jpeg({ quality: imageQuality, progressive: true, mozjpeg: true })
-    .toFile(destPath)
+  const { buffer, info } = await processImageToBuffer(
+    pipeline,
+    targetWidth,
+    targetHeight,
+    grayscale,
+    imageQuality
+  )
+  await fs.writeFile(destPath, buffer)
   return { width: info.width, height: info.height }
+}
+
+// ---------- 单页预览 ----------
+export interface PreviewPageOutput {
+  dataUrl: string
+  width: number
+  height: number
+  bytes: number
+}
+
+export interface PreviewPageResult {
+  isCover: boolean
+  split: boolean
+  profile: { width: number | null; height: number | null }
+  original: { width: number; height: number; bytes: number; dataUrl: string }
+  outputs: PreviewPageOutput[]
+}
+
+const toDataUrl = (buf: Buffer): string => `data:image/jpeg;base64,${buf.toString('base64')}`
+
+/**
+ * 对单张源页跑一遍真实转换管线，返回处理前后的图与体积，供「模拟 Kindle 预览」调参。
+ * 复用与整本转换完全相同的封面判定 / 双页拆分 / 灰度 / 缩放 / mozjpeg 逻辑。
+ * pageIndex 仅用于判定是否封面（首页保留彩色）；切页由调用方传入对应的源路径。
+ */
+export async function previewConvertPage(
+  srcPath: string,
+  pageIndex: number,
+  options: ConvertOptions = {}
+): Promise<PreviewPageResult> {
+  const opt = { ...DEFAULTS, ...options }
+  const res = PROFILE_RES[opt.deviceProfile]
+  const targetWidth = res?.width ?? null
+  const targetHeight = res?.height ?? null
+
+  const metadata = await sharp(srcPath).metadata()
+  const ow = metadata.width ?? 0
+  const oh = metadata.height ?? 0
+  const srcBytes = (await fs.stat(srcPath)).size
+
+  // 「转换前」展示原图（彩色），缩到适合显示的尺寸，不动质量判断
+  const origPreview = await sharp(srcPath)
+    .resize(1400, 1400, { fit: 'inside', withoutEnlargement: true })
+    .jpeg({ quality: 90 })
+    .toBuffer()
+  const original = { width: ow, height: oh, bytes: srcBytes, dataUrl: toDataUrl(origPreview) }
+
+  const isCover = pageIndex === 0
+  const applyGrayscale = isCover ? false : opt.grayscale
+
+  const outputs: PreviewPageOutput[] = []
+  const makeOutput = async (pipeline: sharp.Sharp): Promise<void> => {
+    const { buffer, info } = await processImageToBuffer(
+      pipeline,
+      targetWidth,
+      targetHeight,
+      applyGrayscale,
+      opt.imageQuality
+    )
+    outputs.push({
+      dataUrl: toDataUrl(buffer),
+      width: info.width,
+      height: info.height,
+      bytes: buffer.length
+    })
+  }
+
+  const isWide = ow > 0 && oh > 0 && ow > oh
+  if (opt.splitDoublePages && isWide) {
+    const halfWidth = Math.floor(ow / 2)
+    const leftCrop = { left: 0, top: 0, width: halfWidth, height: oh }
+    const rightCrop = { left: halfWidth, top: 0, width: ow - halfWidth, height: oh }
+    // RTL：右半在前
+    const [p1Crop, p2Crop] = opt.mangaMode ? [rightCrop, leftCrop] : [leftCrop, rightCrop]
+    await makeOutput(sharp(srcPath).extract(p1Crop))
+    await makeOutput(sharp(srcPath).extract(p2Crop))
+  } else {
+    await makeOutput(sharp(srcPath))
+  }
+
+  return {
+    isCover,
+    split: outputs.length > 1,
+    profile: { width: targetWidth, height: targetHeight },
+    original,
+    outputs
+  }
 }
 
 // ---------- content.opf ----------

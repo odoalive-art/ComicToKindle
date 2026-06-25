@@ -194,8 +194,32 @@ export interface ConvertProgress {
   message: string
 }
 
+export interface PreviewPageOutput {
+  dataUrl: string
+  width: number
+  height: number
+  bytes: number
+}
+
+export interface ConvertPreviewRequest {
+  sourceVolumePath: string
+  pageIndex: number
+  options?: ConvertOptions
+}
+
+export interface ConvertPreviewResult {
+  isCover: boolean
+  split: boolean
+  profile: { width: number | null; height: number | null }
+  original: { width: number; height: number; bytes: number; dataUrl: string }
+  outputs: PreviewPageOutput[]
+  pageIndex: number
+  pageCount: number
+}
+
 export interface ConvertAPI {
   volume: (req: ConvertRequest) => Promise<Artifact>
+  preview: (req: ConvertPreviewRequest) => Promise<ConvertPreviewResult>
   cancel: (sourceVolumePath: string) => Promise<void>
   onProgress: (cb: (payload: ConvertProgress) => void) => () => void
 }

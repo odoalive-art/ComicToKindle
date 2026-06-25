@@ -1,7 +1,13 @@
 import { app, ipcMain, shell, dialog, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { promises as fs } from 'fs'
-import { convertMangaToEPUB, type ConvertOptions, type ConvertOutput } from './convert'
+import {
+  convertMangaToEPUB,
+  previewConvertPage,
+  type ConvertOptions,
+  type ConvertOutput,
+  type PreviewPageResult
+} from './convert'
 import { collectVolumeImagePaths } from './library'
 
 /**
@@ -171,6 +177,21 @@ export function setupArtifacts(): void {
     emitProgress(100, '完成')
     return artifact
   })
+
+  // 模拟 Kindle 预览：对单页跑真实转换管线，返回处理前后图与体积，供调参。
+  ipcMain.handle(
+    'convert:preview',
+    async (
+      _event,
+      req: { sourceVolumePath: string; pageIndex: number; options?: ConvertOptions }
+    ): Promise<PreviewPageResult & { pageIndex: number; pageCount: number }> => {
+      const imagePaths = await collectVolumeImagePaths(req.sourceVolumePath)
+      if (imagePaths.length === 0) throw new Error('这一卷里没有可转换的图片。')
+      const idx = Math.max(0, Math.min(req.pageIndex, imagePaths.length - 1))
+      const result = await previewConvertPage(imagePaths[idx], idx, req.options)
+      return { ...result, pageIndex: idx, pageCount: imagePaths.length }
+    }
+  )
 
   // 请求取消某卷的进行中转换；引擎在下一张图/下一卷边界处中止
   ipcMain.handle('convert:cancel', (_event, sourceVolumePath: string): void => {
