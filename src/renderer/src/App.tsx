@@ -1113,11 +1113,11 @@ function ConvertActivityPopover({
               style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
             >
               {activity.activeCount > 0 ? (
-                <Loader2 className="size-4 animate-spin" />
+                <Loader2 className="size-4 animate-spin text-muted-foreground" strokeWidth={1.75} />
               ) : onlyInterrupted ? (
-                <AlertCircle className="size-4 text-amber-500" />
+                <AlertCircle className="size-4 text-amber-500" strokeWidth={1.75} />
               ) : (
-                <BookOpenCheck className="size-4" />
+                <BookOpenCheck className="size-4 text-muted-foreground" strokeWidth={1.75} />
               )}
               {badgeCount > 0 ? (
                 <span
@@ -1725,14 +1725,14 @@ function LibraryView({
       <>
         <ContextMenuSeparator />
         <ContextMenuItem disabled={idx <= 0} onSelect={() => void onMove(-1)}>
-          <ArrowUp className="size-4" />
+          <ArrowUp className="size-4" strokeWidth={1.75} />
           {text.library.moveUp}
         </ContextMenuItem>
         <ContextMenuItem
           disabled={idx < 0 || idx >= ids.length - 1}
           onSelect={() => void onMove(1)}
         >
-          <ArrowDown className="size-4" />
+          <ArrowDown className="size-4" strokeWidth={1.75} />
           {text.library.moveDown}
         </ContextMenuItem>
       </>
@@ -2032,8 +2032,8 @@ function LibraryView({
     moved: boolean
   } | null>(null)
 
-  // 空白处按下：记录起点并抓取指针。两级都生效——卷册层拖动进入框选，部层仅用于
-  // 「空白单击取消选中」。命中卡片则不处理（交给卡片自身 onClick）。
+  // 空白处按下：记录起点并抓取指针。顶层和部内都可框选卷册卡；部文件夹仍只单选，
+  // 避免批量转换/移动等卷册操作误作用到文件夹。命中卡片则不处理（交给卡片自身 onClick）。
   const onWrapPointerDown = (e: React.PointerEvent<HTMLDivElement>): void => {
     if (e.button !== 0) return
     const el = e.target as HTMLElement
@@ -2060,8 +2060,6 @@ function LibraryView({
   const onWrapPointerMove = (e: React.PointerEvent<HTMLDivElement>): void => {
     const d = marqueeDrag.current
     if (!d) return
-    // 框选橡皮筋在卷册层生效；顶层书架仍只做单选反馈。
-    if (selected === null || volumes.length === 0) return
     const x = e.clientX - d.wrapRect.left
     const y = e.clientY - d.wrapRect.top
     if (!d.moved && Math.hypot(x - d.startX, y - d.startY) < 6) return
@@ -3405,7 +3403,7 @@ function LibraryView({
                       disabled={selectedVols.size === 0}
                       onClick={groupSelected}
                     >
-                      <FolderInput className="size-4" />
+                      <FolderInput className="size-4 text-muted-foreground" strokeWidth={1.75} />
                       {text.fileops.move}
                     </Button>
                   ) : null}
@@ -3414,13 +3412,13 @@ function LibraryView({
                     disabled={selectedConvertCount === 0}
                     onClick={() => convertSelected()}
                   >
-                    <BookUp className="size-4" />
+                    <BookUp className="size-4 text-muted-foreground" strokeWidth={1.75} />
                     {text.activity.convertSelected(selectedConvertCount)}
                   </Button>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button variant="ghost" size="icon" onClick={exitSelect}>
-                        <X className="size-4" />
+                        <X className="size-4 text-muted-foreground" strokeWidth={1.75} />
                         <span className="sr-only">{text.activity.selectExit}</span>
                       </Button>
                     </TooltipTrigger>
@@ -3438,7 +3436,7 @@ function LibraryView({
                           size="icon"
                           onClick={() => openSeriesMeta(selected)}
                         >
-                          <Pencil className="size-4" />
+                          <Pencil className="size-4 text-muted-foreground" strokeWidth={1.75} />
                           <span className="sr-only">{text.seriesMeta.edit}</span>
                         </Button>
                       </TooltipTrigger>
@@ -3450,7 +3448,10 @@ function LibraryView({
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button variant="ghost" size="icon" onClick={openNewFolder}>
-                            <FolderPlus className="size-4" />
+                            <FolderPlus
+                              className="size-4 text-muted-foreground"
+                              strokeWidth={1.75}
+                            />
                             <span className="sr-only">{text.fileops.newFolder}</span>
                           </Button>
                         </TooltipTrigger>
@@ -3459,7 +3460,7 @@ function LibraryView({
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button variant="ghost" size="icon" onClick={importIntoLibrary}>
-                            <FileDown className="size-4" />
+                            <FileDown className="size-4 text-muted-foreground" strokeWidth={1.75} />
                             <span className="sr-only">{text.library.importBooks}</span>
                           </Button>
                         </TooltipTrigger>
@@ -3468,7 +3469,7 @@ function LibraryView({
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button variant="ghost" size="icon" onClick={openTrash}>
-                            <Trash2 className="size-4" />
+                            <Trash2 className="size-4 text-muted-foreground" strokeWidth={1.75} />
                             <span className="sr-only">{text.library.trashTitle}</span>
                           </Button>
                         </TooltipTrigger>
@@ -3479,7 +3480,7 @@ function LibraryView({
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button variant="ghost" size="icon" onClick={openNewFolder}>
-                          <FolderPlus className="size-4" />
+                          <FolderPlus className="size-4 text-muted-foreground" strokeWidth={1.75} />
                           <span className="sr-only">{text.fileops.newFolder}</span>
                         </Button>
                       </TooltipTrigger>
@@ -3494,7 +3495,10 @@ function LibraryView({
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button variant="ghost" size="icon" onClick={rescan} disabled={loading}>
-                        <RefreshCw className={`size-4 ${loading ? 'animate-spin' : ''}`} />
+                        <RefreshCw
+                          className={`size-4 text-muted-foreground ${loading ? 'animate-spin' : ''}`}
+                          strokeWidth={1.75}
+                        />
                         <span className="sr-only">{text.library.rescan}</span>
                       </Button>
                     </TooltipTrigger>
@@ -3503,7 +3507,7 @@ function LibraryView({
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button variant="ghost" size="icon" onClick={openManagedLibrary}>
-                        <FolderOpen className="size-4" />
+                        <FolderOpen className="size-4 text-muted-foreground" strokeWidth={1.75} />
                         <span className="sr-only">{text.library.changeFolder}</span>
                       </Button>
                     </TooltipTrigger>
@@ -3512,7 +3516,7 @@ function LibraryView({
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button variant="ghost" size="icon" onClick={createManagedLibrary}>
-                        <FolderPlus className="size-4" />
+                        <FolderPlus className="size-4 text-muted-foreground" strokeWidth={1.75} />
                         <span className="sr-only">{text.library.createLibrary}</span>
                       </Button>
                     </TooltipTrigger>
@@ -3609,7 +3613,7 @@ function LibraryView({
                           </ContextMenuTrigger>
                           <ContextMenuContent>
                             <ContextMenuItem onSelect={() => deferOpen(() => openSeriesMeta(vol))}>
-                              <Pencil className="size-4" />
+                              <Pencil className="size-4" strokeWidth={1.75} />
                               {text.seriesMeta.edit}
                             </ContextMenuItem>
                             <ContextMenuItem
@@ -3625,7 +3629,7 @@ function LibraryView({
                                 )
                               }
                             >
-                              <FolderInput className="size-4" />
+                              <FolderInput className="size-4" strokeWidth={1.75} />
                               {text.fileops.rename}
                             </ContextMenuItem>
                             <ContextMenuSeparator />
@@ -3641,7 +3645,7 @@ function LibraryView({
                                 )
                               }
                             >
-                              <Trash2 className="size-4" />
+                              <Trash2 className="size-4" strokeWidth={1.75} />
                               {text.fileops.delete}
                             </ContextMenuItem>
                           </ContextMenuContent>
@@ -3795,12 +3799,12 @@ function LibraryView({
                               )
                             }
                           >
-                            <Pencil className="size-4" />
+                            <Pencil className="size-4" strokeWidth={1.75} />
                             {text.fileops.rename}
                           </ContextMenuItem>
                           {managedLibrary && selectedVols.size > 1 && selectedVols.has(vol.path) ? (
                             <ContextMenuItem onSelect={() => deferOpen(() => openBatchRename())}>
-                              <Pencil className="size-4" />
+                              <Pencil className="size-4" strokeWidth={1.75} />
                               {text.fileops.batchRename(selectedVols.size)}
                             </ContextMenuItem>
                           ) : null}
@@ -3810,7 +3814,7 @@ function LibraryView({
                               deferOpen(() => setMoveReq({ sources: volTargets(vol), busy: false }))
                             }
                           >
-                            <FolderInput className="size-4" />
+                            <FolderInput className="size-4" strokeWidth={1.75} />
                             {text.fileops.move}
                           </ContextMenuItem>
                           {renderSortItems(currentVolumeIds, vol.id, (delta) =>
@@ -3829,7 +3833,7 @@ function LibraryView({
                               )
                             }
                           >
-                            <Trash2 className="size-4" />
+                            <Trash2 className="size-4" strokeWidth={1.75} />
                             {text.fileops.delete}
                           </ContextMenuItem>
                         </ContextMenuContent>
@@ -3988,14 +3992,14 @@ function LibraryView({
                               )
                             }
                           >
-                            <Pencil className="size-4" />
+                            <Pencil className="size-4" strokeWidth={1.75} />
                             {text.fileops.rename}
                           </ContextMenuItem>
                           {managedLibrary &&
                           selectedVols.size > 1 &&
                           selectedVols.has(item.path) ? (
                             <ContextMenuItem onSelect={() => deferOpen(() => openBatchRename())}>
-                              <Pencil className="size-4" />
+                              <Pencil className="size-4" strokeWidth={1.75} />
                               {text.fileops.batchRename(selectedVols.size)}
                             </ContextMenuItem>
                           ) : null}
@@ -4007,7 +4011,7 @@ function LibraryView({
                               )
                             }
                           >
-                            <FolderInput className="size-4" />
+                            <FolderInput className="size-4" strokeWidth={1.75} />
                             {text.fileops.move}
                           </ContextMenuItem>
                           {renderSortItems(topBookIds, item.id, (delta) =>
@@ -4026,7 +4030,7 @@ function LibraryView({
                               )
                             }
                           >
-                            <Trash2 className="size-4" />
+                            <Trash2 className="size-4" strokeWidth={1.75} />
                             {text.fileops.delete}
                           </ContextMenuItem>
                         </ContextMenuContent>
@@ -4086,7 +4090,7 @@ function LibraryView({
                       </ContextMenuTrigger>
                       <ContextMenuContent>
                         <ContextMenuItem onSelect={() => deferOpen(() => openSeriesMeta(item))}>
-                          <Pencil className="size-4" />
+                          <Pencil className="size-4" strokeWidth={1.75} />
                           {text.seriesMeta.edit}
                         </ContextMenuItem>
                         <ContextMenuItem
@@ -4102,7 +4106,7 @@ function LibraryView({
                             )
                           }
                         >
-                          <FolderInput className="size-4" />
+                          <FolderInput className="size-4" strokeWidth={1.75} />
                           {text.fileops.rename}
                         </ContextMenuItem>
                         {renderSortItems(topSeriesIds, item.id, (delta) =>
@@ -4121,7 +4125,7 @@ function LibraryView({
                             )
                           }
                         >
-                          <Trash2 className="size-4" />
+                          <Trash2 className="size-4" strokeWidth={1.75} />
                           {text.fileops.delete}
                         </ContextMenuItem>
                       </ContextMenuContent>
@@ -4632,7 +4636,7 @@ function ArchiveView({ locale }: { locale: LanguageMode }): React.JSX.Element {
                     className="text-destructive hover:text-destructive"
                     onClick={() => remove(a.id)}
                   >
-                    <Trash2 className="size-4" />
+                    <Trash2 className="size-4" strokeWidth={1.75} />
                   </Button>
                 </div>
               </div>

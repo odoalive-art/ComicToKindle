@@ -345,6 +345,7 @@ webpush:reveal      兜底：在 Finder 定位产物，方便手动拖入
   **双击进入**：双击部卡逐级下钻、双击卷卡进 VolumeReader（单页/双页、左右方向、续读、相邻页预加载）。
   **按下即选中**：内容区卡片在 pointerdown 时高亮（封面 ring 描边 + 标题/作者浅色反白底 bg-accent，整卡为选中单位）；
   普通点击只保留单选高亮，Cmd/Ctrl 点累加、空白拖动框选（marquee，pointer capture）、Cmd·Ctrl+A 全选；
+  顶层「所有漫画」框选只选择散卷卡，不把部文件夹纳入批量卷册操作；
   选中 2 个及以上后顶栏切为「已选计数 + 全选 + 转换所选 + 退出」，拖动已选多选组时不先打散选择。
   **空白单击取消选择**；ESC 退出多选。全程 `select-none` 禁原生文本选区（拖动只框选不选文本）。
   网格用原生 `overflow-y-auto` 容器（非 Radix ScrollArea，后者 Viewport `display:table` 使 min-h-full
@@ -475,6 +476,8 @@ renderer alias：
 顶栏的深浅模式按钮会切换 `document.documentElement` 上的 `.dark` class，并把用户选择保存到 `localStorage` 的 `comic-to-kindle-theme`。新增 UI 应优先使用语义 token，以便跟随该全局主题切换。
 
 顶栏的中英切换会设置 `document.documentElement.lang`，并把用户选择保存到 `localStorage` 的 `comic-to-kindle-language`。当前应用壳、开发期页面和 shadcn 镜像文档会跟随切换。shadcn 镜像数据使用可本地化文本结构保留英文原文和中文译文；代码块、命令、API、prop、className、路径、组件名、示例名和复制值保持英文源值。
+
+顶栏工具按钮与库网格右键菜单中的 Lucide 图标统一使用 `strokeWidth={1.75}`；顶栏图标默认用 `text-muted-foreground`，让工具区视觉重量与说明文案保持一致，状态性警示图标可保留语义色。
 
 ## 计划中的领域边界
 
