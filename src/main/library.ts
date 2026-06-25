@@ -1,6 +1,7 @@
 import { app, dialog, ipcMain, protocol, BrowserWindow } from 'electron'
 import { join, extname, resolve, dirname, basename, sep } from 'path'
-import { promises as fs } from 'fs'
+import { promises as fs, createReadStream, createWriteStream } from 'fs'
+import { pipeline } from 'stream/promises'
 import { createHash, randomUUID } from 'crypto'
 import sharp from 'sharp'
 import {
@@ -485,7 +486,17 @@ async function scanImportSource(srcRoot: string): Promise<ImportScanResult> {
   return result
 }
 
-async function copyImageTree(srcDir: string, destDir: string): Promise<void> {
+// onBytes：每拷一块回传该块字节数，供导入按字节算整体进度（单个大卷也能平滑推进）。
+type OnBytes = (chunk: number) => void
+
+async function copyFileWithProgress(src: string, dest: string, onBytes?: OnBytes): Promise<void> {
+  if (!onBytes) return fs.copyFile(src, dest)
+  const rs = createReadStream(src)
+  rs.on('data', (chunk) => onBytes(chunk.length))
+  await pipeline(rs, createWriteStream(dest))
+}
+
+async function copyImageTree(srcDir: string, destDir: string, onBytes?: OnBytes): Promise<void> {
   await fs.mkdir(destDir, { recursive: true })
   const entries = await readDirSafe(srcDir)
   for (const entry of entries) {
@@ -493,11 +504,39 @@ async function copyImageTree(srcDir: string, destDir: string): Promise<void> {
     const src = join(srcDir, entry.name)
     const dest = join(destDir, entry.name)
     if (entry.isDirectory()) {
-      await copyImageTree(src, dest)
+      await copyImageTree(src, dest, onBytes)
     } else if (entry.isFile() && isImage(entry.name)) {
       await fs.mkdir(dirname(dest), { recursive: true })
-      await fs.copyFile(src, dest)
+      await copyFileWithProgress(src, dest, onBytes)
     }
+  }
+}
+
+// 一个候选要拷多少字节（folder=树内图片之和，archive=各分卷之和，单文件=自身）——用于算整体进度分母
+async function imageTreeBytes(dir: string): Promise<number> {
+  let total = 0
+  const entries = await readDirSafe(dir)
+  for (const entry of entries) {
+    if (isHidden(entry.name)) continue
+    const p = join(dir, entry.name)
+    if (entry.isDirectory()) total += await imageTreeBytes(p)
+    else if (entry.isFile() && isImage(entry.name)) total += (await fs.stat(p)).size
+  }
+  return total
+}
+
+async function candidateCopyBytes(candidate: ImportCandidate): Promise<number> {
+  try {
+    if (candidate.sourceType === 'folder') return await imageTreeBytes(candidate.sourcePath)
+    if (candidate.sourceType === 'archive') {
+      const parts = await splitSiblings(candidate.sourcePath)
+      let total = 0
+      for (const part of parts) total += (await fs.stat(part)).size
+      return total
+    }
+    return (await fs.stat(candidate.sourcePath)).size
+  } catch {
+    return 0
   }
 }
 
@@ -528,14 +567,33 @@ function managedSourceName(originalName: string): string {
 async function importBooks(
   candidates: ImportCandidate[],
   opts: ImportOptions,
-  onProgress: (done: number, total: number, name: string) => void
+  onProgress: (p: { done: number; total: number; name: string; fraction: number }) => void
 ): Promise<string[]> {
   if (!isManagedLibraryPath(currentRoot)) throw new Error('NO_LIBRARY')
   const manifest = await readLibraryManifest()
   const imported: string[] = []
   await fs.mkdir(booksDir(), { recursive: true })
 
+  // 预算总字节，按拷贝字节数回传整体进度（节流 ~80ms，避免 IPC 刷屏）
+  let totalBytes = 0
+  for (const c of candidates) totalBytes += await candidateCopyBytes(c)
+  let copiedBytes = 0
+  let lastEmit = 0
+  const emit = (name: string, force = false): void => {
+    const now = Date.now()
+    if (!force && now - lastEmit < 80) return
+    lastEmit = now
+    const fraction =
+      totalBytes > 0 ? Math.min(1, copiedBytes / totalBytes) : imported.length / candidates.length
+    onProgress({ done: imported.length, total: candidates.length, name, fraction })
+  }
+  emit(candidates[0]?.displayName ?? '', true)
+
   for (const candidate of candidates) {
+    const onBytes: OnBytes = (n) => {
+      copiedBytes += n
+      emit(candidate.displayName)
+    }
     const id = shortId()
     const finalDir = bucketDir(id)
     const tmpDir = `${finalDir}.tmp`
@@ -549,7 +607,7 @@ async function importBooks(
     try {
       if (candidate.sourceType === 'folder') {
         const imagesDir = join(tmpDir, 'images')
-        await copyImageTree(candidate.sourcePath, imagesDir)
+        await copyImageTree(candidate.sourcePath, imagesDir, onBytes)
         pageCount = await countImages(imagesDir)
         firstImage = await findFirstImage(imagesDir)
       } else {
@@ -558,10 +616,14 @@ async function importBooks(
         if (candidate.sourceType === 'archive') {
           const parts = await splitSiblings(candidate.sourcePath)
           for (const part of parts) {
-            await fs.copyFile(part, join(tmpDir, managedSourceName(basename(part))))
+            await copyFileWithProgress(
+              part,
+              join(tmpDir, managedSourceName(basename(part))),
+              onBytes
+            )
           }
         } else {
-          await fs.copyFile(candidate.sourcePath, dest)
+          await copyFileWithProgress(candidate.sourcePath, dest, onBytes)
         }
         const info = await inspectFileVolume(dest, sourceFile).catch(() => null)
         pageCount = info?.pageCount ?? 0
@@ -602,7 +664,7 @@ async function importBooks(
       if (opts.deleteSourceAfter) {
         await fs.rm(candidate.sourcePath, { recursive: true, force: true }).catch(() => {})
       }
-      onProgress(imported.length, candidates.length, candidate.displayName)
+      emit(candidate.displayName, true)
     } catch (error) {
       await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {})
       throw error
@@ -1340,8 +1402,8 @@ export function setupLibrary(): void {
     'library:import',
     async (event, candidates: ImportCandidate[], opts: ImportOptions = {}): Promise<string[]> => {
       if (!isManagedLibraryPath(currentRoot)) throw new Error('NO_LIBRARY')
-      return importBooks(candidates, opts, (done, total, name) => {
-        event.sender.send('library:importProgress', { done, total, name })
+      return importBooks(candidates, opts, (p) => {
+        event.sender.send('library:importProgress', p)
       })
     }
   )

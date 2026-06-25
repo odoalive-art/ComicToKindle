@@ -77,9 +77,10 @@ export interface ImportScanResult {
 }
 
 export interface ImportProgress {
-  done: number
-  total: number
-  name: string
+  done: number // 已完成的卷数
+  total: number // 总卷数
+  name: string // 当前正在导入的卷名
+  fraction: number // 整体字节进度 0..1（按拷贝字节数算，单个大卷也能平滑推进）
 }
 
 export interface LibraryAPI {

@@ -73,6 +73,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Slider } from '@/components/ui/slider'
 import { Switch } from '@/components/ui/switch'
+import { Progress } from '@/components/ui/progress'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Sidebar,
@@ -1444,6 +1445,7 @@ function LibraryView({
     scan: ImportScanResult
     deleteSourceAfter: boolean
     busy: boolean
+    progress?: { done: number; total: number; name: string; fraction: number }
   } | null>(null)
   const [trashReq, setTrashReq] = useState<{
     items: TrashBookView[]
@@ -1468,10 +1470,10 @@ function LibraryView({
   }, [text])
 
   React.useEffect(() => {
-    return window.api.library.onImportProgress(({ done, total, name }) => {
-      toast.loading(text.library.importProgress(done, total, name), { id: 'library-import' })
+    return window.api.library.onImportProgress((p) => {
+      setImportReq((s) => (s ? { ...s, progress: p } : s))
     })
-  }, [text])
+  }, [])
 
   const refreshVolumes = React.useCallback(async () => {
     if (!selected) return
@@ -2149,11 +2151,17 @@ function LibraryView({
 
   const submitImport = async (): Promise<void> => {
     if (!root || !importReq || importReq.busy) return
-    setImportReq((s) => (s ? { ...s, busy: true } : s))
+    // 进度条在弹窗内显示，初值 0；不再用 toast 刷进度
+    setImportReq((s) =>
+      s
+        ? {
+            ...s,
+            busy: true,
+            progress: { done: 0, total: s.scan.candidates.length, name: '', fraction: 0 }
+          }
+        : s
+    )
     try {
-      toast.loading(text.library.importPreparing(importReq.scan.candidates.length), {
-        id: 'library-import'
-      })
       await window.api.library.importBooks(importReq.scan.candidates, {
         deleteSourceAfter: importReq.deleteSourceAfter
       })
@@ -3008,7 +3016,23 @@ function LibraryView({
           }
         ]}
       >
-        {importReq ? (
+        {importReq?.busy ? (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span className="min-w-0 truncate">
+                {text.library.importProgress(
+                  importReq.progress?.done ?? 0,
+                  importReq.progress?.total ?? importReq.scan.candidates.length,
+                  importReq.progress?.name ?? ''
+                )}
+              </span>
+              <span className="shrink-0 tabular-nums">
+                {Math.round((importReq.progress?.fraction ?? 0) * 100)}%
+              </span>
+            </div>
+            <Progress value={(importReq.progress?.fraction ?? 0) * 100} />
+          </div>
+        ) : importReq ? (
           <label className="flex items-start gap-2 rounded-md border border-destructive/25 bg-destructive/5 p-3 text-sm">
             <Checkbox
               checked={importReq.deleteSourceAfter}
