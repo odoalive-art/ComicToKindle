@@ -27,6 +27,8 @@ const api = {
       ipcRenderer.invoke('library:reorderBooks', seriesId, orderedBookIds),
     renameBook: (id: string, displayName: string) =>
       ipcRenderer.invoke('library:renameBook', id, displayName),
+    renameBooks: (updates: { id: string; displayName: string }[]) =>
+      ipcRenderer.invoke('library:renameBooks', updates),
     trashBooks: (ids: string[]) => ipcRenderer.invoke('library:trashBooks', ids),
     listTrash: () => ipcRenderer.invoke('library:listTrash'),
     restoreTrashBooks: (trashIds: string[]) =>

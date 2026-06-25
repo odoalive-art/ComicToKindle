@@ -106,6 +106,7 @@ export interface LibraryAPI {
   reorderSeries: (orderedSeriesIds: string[]) => Promise<void>
   reorderBooks: (seriesId: string | null, orderedBookIds: string[]) => Promise<void>
   renameBook: (id: string, displayName: string) => Promise<void>
+  renameBooks: (updates: { id: string; displayName: string }[]) => Promise<void>
   trashBooks: (ids: string[]) => Promise<void>
   listTrash: () => Promise<TrashBookView[]>
   restoreTrashBooks: (trashIds: string[]) => Promise<void>

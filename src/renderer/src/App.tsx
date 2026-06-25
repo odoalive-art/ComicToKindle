@@ -1432,6 +1432,13 @@ function LibraryView({
     name: string
     busy: boolean
   } | null>(null)
+  // 批量重命名（托管库 manifest 级，只改卷册 displayName）：序号模板 + 实时预览
+  const [batchRenameReq, setBatchRenameReq] = useState<{
+    items: { id: string; oldName: string }[]
+    template: string
+    start: number
+    busy: boolean
+  } | null>(null)
   const [moveReq, setMoveReq] = useState<{ sources: string[]; busy: boolean } | null>(null)
   const [moveNewFolderName, setMoveNewFolderName] = useState<string | null>(null)
   const [deleteReq, setDeleteReq] = useState<{
@@ -1779,6 +1786,45 @@ function LibraryView({
     } catch (e) {
       toast.error(fileopErr(e))
       setRenameReq((s) => (s ? { ...s, busy: false } : s))
+    }
+  }
+
+  // 序号模板渲染：含 {n} 则替换，否则在末尾补空格 + 序号
+  const renderBatchName = (template: string, num: number): string =>
+    template.includes('{n}') ? template.replaceAll('{n}', String(num)) : `${template} ${num}`.trim()
+
+  // 当前层按显示顺序取出被多选的卷册（批量重命名只作用卷册）
+  const buildBatchItems = (): { id: string; oldName: string }[] =>
+    (selected !== null ? volumes : series)
+      .filter((v): v is LibraryVolume => v.type === 'book' && selectedVols.has(v.path))
+      .map((v) => ({ id: v.id, oldName: v.name }))
+
+  const openBatchRename = (): void => {
+    const items = buildBatchItems()
+    if (items.length === 0) return
+    setBatchRenameReq({ items, template: text.fileops.batchDefaultTemplate, start: 1, busy: false })
+  }
+
+  const submitBatchRename = async (): Promise<void> => {
+    if (!batchRenameReq || batchRenameReq.busy) return
+    const { items, template, start } = batchRenameReq
+    if (!template.trim() || items.length === 0) return
+    const updates = items.map((it, i) => ({
+      id: it.id,
+      displayName: renderBatchName(template, start + i)
+    }))
+    if (updates.some((u) => !u.displayName.trim())) return
+    setBatchRenameReq((s) => (s ? { ...s, busy: true } : s))
+    try {
+      await window.api.library.renameBooks(updates)
+      const n = updates.length
+      setBatchRenameReq(null)
+      exitSelect()
+      toast.success(text.fileops.batchRenamed(n))
+      await refreshAfterFileop()
+    } catch (e) {
+      toast.error(fileopErr(e))
+      setBatchRenameReq((s) => (s ? { ...s, busy: false } : s))
     }
   }
 
@@ -2385,10 +2431,25 @@ function LibraryView({
   // Cmd/Ctrl+R（主进程已拦掉刷新并转发为 IPC）：单选「卷」→重命名弹窗；单选「部」→编辑信息
   useEffect(() => {
     const off = window.api?.onRenameShortcut?.(() => {
-      if (readingVolume || renameReq) return
+      if (readingVolume || renameReq || batchRenameReq) return
       const ae = document.activeElement as HTMLElement | null
       if (ae && (ae.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))) return
       const layer = selected !== null ? volumes : series
+      // 多选多个卷 → 批量重命名弹窗
+      if (managedLibrary && selectedVols.size > 1) {
+        const items = layer
+          .filter((v): v is LibraryVolume => v.type === 'book' && selectedVols.has(v.path))
+          .map((v) => ({ id: v.id, oldName: v.name }))
+        if (items.length > 1) {
+          setBatchRenameReq({
+            items,
+            template: text.fileops.batchDefaultTemplate,
+            start: 1,
+            busy: false
+          })
+        }
+        return
+      }
       // 单选一个卷 → 重命名弹窗
       if (selectedVols.size === 1) {
         const path = [...selectedVols][0]
@@ -2410,6 +2471,8 @@ function LibraryView({
   }, [
     readingVolume,
     renameReq,
+    batchRenameReq,
+    managedLibrary,
     selectedVols,
     selectedSeriesPath,
     selected,
@@ -2748,7 +2811,7 @@ function LibraryView({
           ) : null}
         </DialogContent>
       </Dialog>
-      {/* 文件整理：重命名（真·改本地文件名） */}
+      {/* 库整理：重命名（托管库只改卷册 displayName，不动源文件） */}
       <Dialog
         open={renameReq !== null}
         onOpenChange={(o) => (!o && !renameReq?.busy ? setRenameReq(null) : undefined)}
@@ -2782,6 +2845,90 @@ function LibraryView({
                   {text.fileops.cancel}
                 </Button>
                 <Button type="submit" disabled={!renameReq.name.trim() || renameReq.busy}>
+                  {text.fileops.confirm}
+                </Button>
+              </DialogFooter>
+            </form>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+      {/* 库整理：批量重命名（序号模板 + 实时预览，只改卷册 displayName） */}
+      <Dialog
+        open={batchRenameReq !== null}
+        onOpenChange={(o) => (!o && !batchRenameReq?.busy ? setBatchRenameReq(null) : undefined)}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{text.fileops.batchRenameTitle}</DialogTitle>
+            <DialogDescription>
+              {batchRenameReq ? text.fileops.batchRenameDesc(batchRenameReq.items.length) : ''}
+            </DialogDescription>
+          </DialogHeader>
+          {batchRenameReq ? (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                void submitBatchRename()
+              }}
+              className="space-y-3"
+            >
+              <div className="flex gap-2">
+                <div className="flex-1 space-y-1">
+                  <div className="text-xs text-muted-foreground">
+                    {text.fileops.batchTemplateLabel}
+                  </div>
+                  <Input
+                    autoFocus
+                    value={batchRenameReq.template}
+                    placeholder={text.fileops.batchTemplatePlaceholder}
+                    onChange={(e) =>
+                      setBatchRenameReq((s) => (s ? { ...s, template: e.target.value } : s))
+                    }
+                  />
+                </div>
+                <div className="w-24 space-y-1">
+                  <div className="text-xs text-muted-foreground">
+                    {text.fileops.batchStartLabel}
+                  </div>
+                  <Input
+                    type="number"
+                    value={batchRenameReq.start}
+                    onChange={(e) =>
+                      setBatchRenameReq((s) =>
+                        s ? { ...s, start: Math.trunc(Number(e.target.value) || 0) } : s
+                      )
+                    }
+                  />
+                </div>
+              </div>
+              <div className="text-xs text-muted-foreground">{text.fileops.batchTemplateHint}</div>
+              <div className="space-y-1">
+                <div className="text-xs font-medium">{text.fileops.batchPreviewTitle}</div>
+                <div className="max-h-48 space-y-0.5 overflow-auto rounded-md border bg-muted/30 p-2 text-sm">
+                  {batchRenameReq.items.map((it, i) => (
+                    <div key={it.id} className="flex items-center gap-2">
+                      <span className="flex-1 truncate text-muted-foreground">{it.oldName}</span>
+                      <span className="shrink-0 text-muted-foreground">→</span>
+                      <span className="flex-1 truncate font-medium">
+                        {renderBatchName(batchRenameReq.template, batchRenameReq.start + i)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setBatchRenameReq(null)}
+                  disabled={batchRenameReq.busy}
+                >
+                  {text.fileops.cancel}
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={!batchRenameReq.template.trim() || batchRenameReq.busy}
+                >
                   {text.fileops.confirm}
                 </Button>
               </DialogFooter>
@@ -3584,6 +3731,12 @@ function LibraryView({
                             <Pencil className="size-4" />
                             {text.fileops.rename}
                           </ContextMenuItem>
+                          {managedLibrary && selectedVols.size > 1 && selectedVols.has(vol.path) ? (
+                            <ContextMenuItem onSelect={() => deferOpen(() => openBatchRename())}>
+                              <Pencil className="size-4" />
+                              {text.fileops.batchRename(selectedVols.size)}
+                            </ContextMenuItem>
+                          ) : null}
                           <ContextMenuItem
                             disabled={!managedLibrary && moveTargets().length === 0}
                             onSelect={() =>
@@ -3695,6 +3848,14 @@ function LibraryView({
                             <Pencil className="size-4" />
                             {text.fileops.rename}
                           </ContextMenuItem>
+                          {managedLibrary &&
+                          selectedVols.size > 1 &&
+                          selectedVols.has(item.path) ? (
+                            <ContextMenuItem onSelect={() => deferOpen(() => openBatchRename())}>
+                              <Pencil className="size-4" />
+                              {text.fileops.batchRename(selectedVols.size)}
+                            </ContextMenuItem>
+                          ) : null}
                           <ContextMenuItem
                             disabled={!managedLibrary && moveTargets().length === 0}
                             onSelect={() =>
@@ -3959,6 +4120,16 @@ function LibraryView({
                                       <Pencil className="size-4" />
                                       {text.fileops.rename}
                                     </ContextMenuItem>
+                                    {managedLibrary &&
+                                    selectedVols.size > 1 &&
+                                    selectedVols.has(v.path) ? (
+                                      <ContextMenuItem
+                                        onSelect={() => deferOpen(() => openBatchRename())}
+                                      >
+                                        <Pencil className="size-4" />
+                                        {text.fileops.batchRename(selectedVols.size)}
+                                      </ContextMenuItem>
+                                    ) : null}
                                     <ContextMenuItem
                                       disabled={!managedLibrary && moveTargets().length === 0}
                                       onSelect={() =>
@@ -4143,6 +4314,14 @@ function LibraryView({
                             <Pencil className="size-4" />
                             {text.fileops.rename}
                           </ContextMenuItem>
+                          {managedLibrary &&
+                          selectedVols.size > 1 &&
+                          selectedVols.has(item.path) ? (
+                            <ContextMenuItem onSelect={() => deferOpen(() => openBatchRename())}>
+                              <Pencil className="size-4" />
+                              {text.fileops.batchRename(selectedVols.size)}
+                            </ContextMenuItem>
+                          ) : null}
                           <ContextMenuItem
                             disabled={!managedLibrary && moveTargets().length === 0}
                             onSelect={() =>

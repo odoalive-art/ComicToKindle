@@ -1045,6 +1045,17 @@ async function renameBook(id: string, displayNameRaw: string): Promise<void> {
   await writeBookRecord(rec)
 }
 
+async function renameBooks(updates: { id: string; displayName: string }[]): Promise<void> {
+  // 先全量校验再逐个落盘：任一名称非法则整批不写，避免改了一半。
+  const normalized = updates.map((u) => ({ id: u.id, displayName: u.displayName.trim() }))
+  if (normalized.some((u) => !u.id || !u.displayName)) throw new Error('INVALID_NAME')
+  for (const u of normalized) {
+    const rec = await readBookRecord(u.id)
+    rec.displayName = u.displayName
+    await writeBookRecord(rec)
+  }
+}
+
 async function trashBooks(idsRaw: string[]): Promise<void> {
   const root = libraryRoot()
   if (!root || !isManagedLibraryPath(root)) throw new Error('NO_LIBRARY')
@@ -1450,6 +1461,12 @@ export function setupLibrary(): void {
   ipcMain.handle(
     'library:renameBook',
     async (_event, id: string, displayName: string): Promise<void> => renameBook(id, displayName)
+  )
+
+  ipcMain.handle(
+    'library:renameBooks',
+    async (_event, updates: { id: string; displayName: string }[]): Promise<void> =>
+      renameBooks(updates)
   )
 
   ipcMain.handle(
