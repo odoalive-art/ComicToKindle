@@ -42,7 +42,7 @@
    - 散卷：什么都不做。
    - 已有部：`await window.api.library.assignBooks(ids, targetSeriesId)`。
    - 新建部：`await window.api.library.createSeries(newTitle, null, ids)`（`createSeries(title, author, bookIds)` 已支持直接带 bookIds）。
-3. 然后刷新顶层 manifest；若当前页面在某一部里，同步刷新当前部卷册列表和已展开部缓存。
+3. 然后刷新顶层 manifest；若当前页面在某一部里，同步刷新当前部卷册列表。
 
 > 备选方案（更原子但要改 main）：给 `ImportOptions` 加 `targetSeriesId?: string|null`，`runImport` 直接 push 到对应 series 节点而非 ungrouped；新建部仍由 renderer 先 `createSeries(title,null,[])` 拿 id。**首版用后置组合即可**，除非实测发现「先入散卷再移」会让书架闪一下中间态——若闪，再升级为原子方案。
 

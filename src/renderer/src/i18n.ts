@@ -83,10 +83,6 @@ export const uiText = {
       fileVolume: '压缩包',
       pdfVolume: 'PDF',
       epubVolume: 'EPUB',
-      viewList: '列表视图',
-      viewIcon: '图标视图',
-      viewFile: '文件视图',
-      viewShelf: '书架视图',
       volumeUnit: (n: number) => `${n} 卷`,
       pageUnit: (n: number) => `${n} 页`
     },
@@ -475,10 +471,6 @@ export const uiText = {
       fileVolume: 'Archive',
       pdfVolume: 'PDF',
       epubVolume: 'EPUB',
-      viewList: 'List view',
-      viewIcon: 'Icon view',
-      viewFile: 'File view',
-      viewShelf: 'Shelf view',
       volumeUnit: (n: number) => `${n} vol${n === 1 ? '' : 's'}`,
       pageUnit: (n: number) => `${n} page${n === 1 ? '' : 's'}`
     },

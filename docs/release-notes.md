@@ -23,6 +23,7 @@
 
 - `library:scanImport` 支持接收多个路径并合并候选与跳过项，按钮导入和拖放导入共用同一套预览管线。
 - preload 暴露 Electron `webUtils.getPathForFile(file)`，用于在 renderer 拖放事件中安全取得真实磁盘路径。
+- 漫画库移除列表模式和视图切换入口，保留单一书架网格浏览方式。
 
 ### 修复
 
