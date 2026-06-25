@@ -433,7 +433,11 @@ async function scanImportPath(srcPath: string, result: ImportScanResult): Promis
   if (isHidden(name)) return
 
   if (stat.isFile()) {
-    if (isVolumeFile(name) && !isSplitContinuation(name)) {
+    if (isSplitContinuation(name)) {
+      return
+    }
+
+    if (isVolumeFile(name)) {
       result.candidates.push({
         sourcePath: srcPath,
         sourceType: (isArchiveFile(name)

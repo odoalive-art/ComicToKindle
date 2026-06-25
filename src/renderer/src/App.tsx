@@ -3308,6 +3308,15 @@ function LibraryView({
                     </TooltipTrigger>
                     <TooltipContent>{text.library.changeFolder}</TooltipContent>
                   </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" onClick={createManagedLibrary}>
+                        <FolderPlus className="size-4" />
+                        <span className="sr-only">{text.library.createLibrary}</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{text.library.createLibrary}</TooltipContent>
+                  </Tooltip>
                 </>
               )}
             </div>
