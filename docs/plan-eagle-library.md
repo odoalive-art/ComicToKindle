@@ -2,7 +2,7 @@
 
 > 状态：阶段 1-3 + §4.2 旧代码移除均已完成（typecheck/build 通过）。4 项交互实测已通过：多分卷导入读/转、manifest 损坏重建、导入中断无残桶、分组改名后用户漫画内容未动且 bookId 桶路径稳定。
 >
-> 历史状态（阶段 3 执行中时）：2026-06-24 已完成 `.ctklib` 库包骨架、导入扫描/复制、manifest 原子写、兼容旧 `scan/listVolumes/listPages` 的最小 renderer 接线；随后补齐部 CRUD / 归属 / 改名 / 排序 IPC，并在现有 UI 上接入新建部、编辑部名/作者、卷册改名、移入已有部/新建部、解散部。阶段 3 已补导入预览、导入后删除源选项、卷册软删除到库内 `trash/`、回收站列表/还原/清空、右键上移/下移排序 UI；移除旧文件视图仍待做。
+> 历史状态（阶段 3 执行中时）：2026-06-24 已完成 `.ctklib` 库包骨架、导入扫描/复制、manifest 原子写、兼容旧 `scan/listVolumes/listPages` 的最小 renderer 接线；随后补齐部 CRUD / 归属 / 改名 / 排序 IPC，并在现有 UI 上接入新建部、编辑部名/作者、卷册改名、移入已有部/新建部、解散部。阶段 3 已补导入预览、导入后删除源选项、卷册软删除到库内 `trash/`、回收站列表/还原/清空、右键上移/下移排序 UI；2026-06-25 已完成旧文件视图与本地文件操作 IPC 清理。
 > 分支：`feat/scan-managed-volumes`。语言：中文优先。
 > 拍板日期：2026-06-24。
 
@@ -310,22 +310,22 @@ async function trashBooks(ids: string[]): Promise<void>        // 移桶到 <roo
 ## 9. 质检清单（计划作者复查时逐条核对）
 
 代码层：
-- [ ] §4.2 列出的磁盘镜像 / seriesMeta / 文件视图代码确实删干净，无残留死代码与未用 IPC。
+- [x] §4.2 列出的磁盘镜像 / seriesMeta / 文件视图代码确实删干净，无残留死代码与未用 IPC。
 - [ ] 所有 manifest/book.json/桶写入均为原子（grep 确认无裸 `writeFile(library.json)` / 无非 tmp 的桶 rename）。
 - [ ] comic:// 校验已切到 `books/` 根，旧 `currentRoot` 越权口子已关。
 - [ ] 下游 `collectVolumeImagePaths` / `listPages` / `artifacts` 未被改坏，转换+阅读对 archive/pdf/epub/folder 四类桶都通。
 
 行为层（手测）：
-- [ ] 阶段 1/2/3 各自「验收」项全过。
-- [ ] 分组/改名/排序操作后，用 `stat` 确认卷内 `images/` 与 `source.*` 内容 mtime 不变，且 bookId 桶路径（目录名）稳定；桶目录自身 mtime 会因 `book.json` 重写而变化，属正常，不作判据。
-- [ ] 损坏 `library.json` 后能重建（阶段 3 验收）。
+- [x] 阶段 1/2/3 各自「验收」项全过。
+- [x] 分组/改名/排序操作后，用 `stat` 确认卷内 `images/` 与 `source.*` 内容 mtime 不变，且 bookId 桶路径（目录名）稳定；桶目录自身 mtime 会因 `book.json` 重写而变化，属正常，不作判据。
+- [x] 损坏 `library.json` 后能重建（阶段 3 验收）。
 - [ ] 导入混杂源：杂物不入库、原文件无改动（除非显式勾选删源）。
 - [ ] 库默认不落在 iCloud/CloudDocs 路径。
 
 文档层：
-- [ ] `docs/architecture.md` 同步新库模型，移除文件视图/磁盘镜像描述。
-- [ ] 记忆 `managed-volume-scan-direction.md` 标记为「已实现」并指向最终代码位置。
-- [ ] `docs/handoff.md` 更新交接状态。
+- [x] `docs/architecture.md` 同步新库模型，移除文件视图/磁盘镜像描述。
+- [x] 未发现独立 agent 记忆文件；托管库最终状态已同步到 `AGENTS.md`、`README.md`、`docs/architecture.md` 与 `docs/handoff.md`。
+- [x] `docs/handoff.md` 更新交接状态。
 
 ---
 

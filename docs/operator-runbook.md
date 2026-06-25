@@ -41,11 +41,11 @@ npm run dev
 - 侧边栏包含 `漫画库`、`设计组件`、`基础规范` 等工作区。
 - 顶栏深浅模式按钮可以切换整个 renderer 的主题。
 - 顶栏中英切换按钮可以切换应用壳、开发期页面和 shadcn 镜像文档阅读语言。
-- `所有漫画` 视图首次进入显示空状态，点「选择漫画库文件夹」选目录后显示部封面网格；**双击**某部看卷册、**双击**卷册进入阅读器（单页/双页、左右方向、续读）；单击为选中（文件管理器式交互）。库根目录会被记住。
+- `所有漫画` 视图首次进入显示空状态，可「新建库」或「打开库」选择 `.ctklib` 托管库包；打开后显示 manifest 投影的部/散卷书架。**双击**某部逐级下钻、**双击**卷册进入阅读器（单页/双页、左右方向、续读）；单击为选中（桌面书架式交互）。库包路径会被记住。
 - 压缩包卷册（CBZ/ZIP/CBR/RAR/7z，含分卷 `name.7z.001` 等——只显示入口卷）显示压缩包/锁占位图标；点开阅读或转换时先解压到缓存并显示进度条/进度 toast；加密包弹密码框（可输中文，勾「记住」加入共享密码池，后续同密码包自动解）。
 - PDF 单文件卷册显示 `PDF` 类型文字；首次打开或转换时会渲染为页面缓存并显示“准备页面/处理中”进度，之后复用缓存。
 - 图片型 EPUB 显示 `EPUB` 类型文字；首次准备时会按 OPF spine / XHTML 图片引用抽取页面。纯文本/重排 EPUB 没有本地图片页时，应提示没有可用页面图片。
-- 转换某一卷会先弹「确认书籍信息」框（预填漫画名/卷册名/作者，可改）；产物书名 = 「漫画名 + 卷册」、作者写入元数据。库网格右键某部 / 进入后顶栏铅笔可编辑该部名称/作者（持久化，不改本地文件夹）。
+- 转换某一卷会先弹「确认书籍信息」框（预填漫画名/卷册名/作者，可改）；产物书名 = 「漫画名 + 卷册」、作者写入元数据。库网格右键某部 / 进入后顶栏铅笔可编辑该部名称/作者；卷册显示名、归属和排序写入 `.ctklib` manifest，不改用户导入源。
 - `设计组件` 中的示例复制按钮仍复制英文示例名，例如 `button-with-icon`。
 - `网页推送`（或归档条目的「网页推送」入口）打开内嵌 Amazon 网页窗口；首次需在该窗口登录 Amazon（登录态存在独立 `persist:amazon-stk` partition、重启保留）。带产物推送时会盖黑色蒙层并自动填入文件，最后由用户在网页里点 Send。
 
@@ -144,14 +144,14 @@ Send to Kindle 网页通道有一项可配置项：STK 站点 URL，存 `userDat
 
 ## 本地状态与重置
 
-- **库根目录**：`app.getPath('userData')/settings.json` 的 `libraryRoot`（macOS 通常在 `~/Library/Application Support/comic-to-kindle/`）。删除该文件或在应用内「切换文件夹」可重选库。
+- **托管库包路径**：`app.getPath('userData')/settings.json` 的 `libraryPackagePath`（macOS 通常在 `~/Library/Application Support/comic-to-kindle/` 的 `settings.json` 内）。删除该字段或在应用内「打开库」可重选库包；「新建库」会创建新的 `.ctklib`。
+- **库包内容**：`.ctklib/library.json` 保存分组、归属和排序；`.ctklib/books/<bookId>/book.json` 保存卷册显示名和来源 hints；`.ctklib/trash/` 保存库内软删除卷册。导入源文件不再作为库结构真相。
 - **renderer 偏好（localStorage）**：`comic-to-kindle-theme`、`comic-to-kindle-language`、`comic-to-kindle-reading-direction`、`comic-to-kindle-reading-mode`、`comic-to-kindle-reading-progress`（每卷续读进度）。清掉对应键即可重置。
 - **压缩包解压缓存**：`app.getPath('userData')/extracted/<hash>/`（图片 + `.manifest.json`，按所有分卷的 路径+mtime+size 哈希）。删除整个 `extracted/` 目录即可清空，下次打开会重新解压。
 - **文档页面缓存**：`app.getPath('userData')/documents/<hash>/`（PDF 渲染页或图片型 EPUB 抽出的页面 + `.manifest.json`，按源文件 路径+mtime+size 哈希）。删除整个 `documents/` 目录即可清空，下次打开 PDF/EPUB 会重新准备页面。
 - **封面缩略图缓存**：`app.getPath('userData')/thumbs/<hash>.webp`。可随时整目录删除，下次进库自动重建。
 - **压缩包密码池**：`settings.json` 的 `archivePasswords`（safeStorage 加密的 base64 数组）。删除该字段可清空已记住的解压密码。
-- **每部名称/作者覆盖**：`settings.json` 的 `seriesMeta`（`{ <部文件夹名>: { title, author } }`）。删除该字段或对应键可恢复按 `[作者]标题` 解析。
-- 漫画库本身无数据库/索引，每次进入实时扫描目录。
+- 漫画库本身无数据库/索引；书架由 `.ctklib` manifest 实时投影。删除或损坏 `library.json` 时，打开库包会尽量从各桶 `book.json` 重建。
 
 ## 已知工具链说明
 

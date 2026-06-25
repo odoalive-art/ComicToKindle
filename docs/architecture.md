@@ -1,6 +1,6 @@
 # 架构说明
 
-本文描述 2026-06-24 时点的应用架构。
+本文描述 2026-06-25 时点的应用架构。
 
 ## 当前范围
 
@@ -32,7 +32,7 @@ ComicToKindle 目前是一个桌面应用工作台，已打通核心闭环:**本
 
 未实现：
 
-- 元数据持久化（数据库 / 索引；漫画库当前每次进入实时扫描）
+- 元数据持久化（数据库 / 索引；当前书架由 `.ctklib` manifest 实时投影）
 - 纯文本/重排 EPUB 解析（当前 EPUB 首版仅支持图片型）
 - 图像处理或 AI 放大
 - 本地 AZW3 导出（原型曾用 Calibre，已移除；无线投递发 EPUB）
@@ -119,7 +119,7 @@ Renderer process
 library:create           选择父目录 + 名称 → 新建 .ctklib
 library:open             选择 .ctklib 打开
 library:getSaved         读取 settings.json 的 libraryPackagePath
-library:view             读取 manifest 视图（阶段 1 renderer 暂以 scan 兼容层为主）
+library:view             读取 manifest 视图
 library:seriesBooks      读取某部卷册
 library:inspectBook      懒补单个桶卷册信息
 library:scanImport       选择或传入导入源 → 只识别候选，不复制
@@ -166,7 +166,7 @@ library:trashBooks    把卷册桶移入库内 trash/
 
 **应用内整理**：整理动作只作用于 `.ctklib` 托管库。改名、归属、排序写 `library.json` / `book.json`；删除卷册把桶移动到库内 `trash/`，删除部默认解散并让卷册回散卷，也可勾选连内部卷册一并移入回收站。renderer 端入口在库网格右键菜单、顶栏操作和库内回收站弹窗；错误经稳定码→`uiText.fileops` 翻译。
 
-**comic:// 协议**：`registerComicScheme()` 在 app ready 前注册为 privileged scheme，`setupLibrary()` 内 `protocol.handle('comic', …)` 服务图片。URL 形如 `comic://img/?p=<encodeURIComponent(绝对路径)>`；返回前做**越权校验**——必须是图片扩展名且位于当前库根目录、压缩包解压缓存目录或文档页面缓存目录内，否则 403。带 `&thumb=1` 走**封面缩略图通道**：sharp 把原图降到 480px webp、按 路径+mtime+size 缓存到 `userData/thumbs/`（网格封面用，避免解全图卡顿；阅读器仍走原图）。`src/renderer/index.html` 的 CSP `img-src` 已放行 `comic:`。
+**comic:// 协议**：`registerComicScheme()` 在 app ready 前注册为 privileged scheme，`setupLibrary()` 内 `protocol.handle('comic', …)` 服务图片。URL 形如 `comic://img/?p=<encodeURIComponent(绝对路径)>`；返回前做**越权校验**——必须是图片扩展名且位于当前 `.ctklib/books/`、压缩包解压缓存目录或文档页面缓存目录内，否则 403。带 `&thumb=1` 走**封面缩略图通道**：sharp 把原图降到 480px webp、按 路径+mtime+size 缓存到 `userData/thumbs/`（网格封面用，避免解全图卡顿；阅读器仍走原图）。`src/renderer/index.html` 的 CSP `img-src` 已放行 `comic:`。
 
 **数据模型**（`src/preload/index.d.ts` 为单一事实来源）：
 
@@ -482,7 +482,7 @@ renderer alias：
 
 ```txt
 漫画库领域（浏览/阅读已实现，元数据存储待做）
-  扫描本地目录、图片文件夹、压缩包卷册（archive.ts）、PDF/图片型 EPUB（document.ts）已实现；元数据存储待做。
+  `.ctklib` 托管库包、manifest 投影书架、图片文件夹桶、压缩包卷册（archive.ts）、PDF/图片型 EPUB（document.ts）已实现；元数据存储待做。
 
 转换领域（已实现首切）
   规范化页面、处理图像、生成固定版式 EPUB（convert.ts）；产物由 artifacts.ts 托管编排。
@@ -509,7 +509,7 @@ Electron main 或专门的服务模块应负责本地文件系统和进程执行
 - **转换队列**：`app.getPath('userData')/queue.json`（`{ version, jobs: PersistedConvertJob[] }`）。每次队列结构变化由 renderer 经 `queue:save` 推送；启动时 `queue.ts` 把未完成任务（queued/converting）标为 `'interrupted'`（不自动跑，等用户在 UI 确认继续/不继续），并扫 `userData/converted/<部>/tmp_<id>/` 清孤儿临时目录。详见「转换队列持久化层」。
 - **投递配置**：`settings.json` 的 `delivery` 字段（host/port/user/kindleEmail + `passEncrypted` 或 `passPlain`）。密码经 `safeStorage` 系统钥匙串加密，不明文落盘。
 - **压缩包解压缓存**：`app.getPath('userData')/extracted/<hash>/`（图片 + `.manifest.json`），按所有分卷的 路径+mtime+size 哈希。
-- **文档页面缓存**：`app.getPath('userData')/documents/<hash>/`（PDF 渲染页或图片型 EPUB 抽出的页面 + `.manifest.json`），按源文件 路径+mtime+size + `document-v1` 哈希。
+- **文档页面缓存**：`app.getPath('userData')/documents/<hash>/`（PDF 渲染页或图片型 EPUB 抽出的页面 + `.manifest.json`），按源文件 路径+mtime+size + `document-v2` 哈希。
 - **封面缩略图缓存**：`app.getPath('userData')/thumbs/<hash>.webp`（480px），按封面源图 路径+mtime+size 哈希；可安全清空（再开自动重建）。
 - **压缩包密码池**：`settings.json` 的 `archivePasswords`（`safeStorage` 加密的 base64 数组），不明文落盘、不回传 renderer。
 - **renderer localStorage 键**：
@@ -527,5 +527,5 @@ Electron main 或专门的服务模块应负责本地文件系统和进程执行
 - 主 BrowserWindow 设置了 `sandbox: false`。本地文件访问已落地（漫画库），但全部走 main 进程 + preload IPC，renderer 不直接用 Node API。
 - **网页推送窗口**（`webpush.ts`）加载 Amazon 外站，单独用 `sandbox:true` + `contextIsolation:true` + 独立持久 `partition`，无 preload/Node 集成；登录态隔离在该 partition、不进主窗口。CDP 调试器仅附加到该窗口用于拦截文件框，不触碰主窗口。
 - **SMTP 凭据**：密码经 `safeStorage`（macOS 钥匙串）加密存 `settings.json`，main 进程持有；`deliver:getConfig` 只回传 `hasPassword` 布尔、绝不回传密码明文给 renderer。
-- `comic://` 协议服务图片时做越权校验：只允许图片扩展名且路径位于当前库根目录内，否则返回 403。
+- `comic://` 协议服务图片时做越权校验：只允许图片扩展名且路径位于当前 `.ctklib/books/`、压缩包解压缓存目录或文档页面缓存目录内，否则返回 403。
 - 外部链接通过 `shell.openExternal` 打开，应用窗口拒绝 new-window 导航。

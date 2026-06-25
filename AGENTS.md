@@ -113,7 +113,7 @@ src/renderer/src/data/design-tokens.ts
 
 应用尚未实现：
 
-- 漫画元数据存储 / 索引（当前每次进入实时扫描，无数据库）
+- 漫画元数据存储 / 索引（当前书架由 `.ctklib` manifest 实时投影，无数据库）
 - 纯文本/重排 EPUB 解析（当前只支持图片型 EPUB）
 - 图像增强或 AI 放大
 - 转换后自动投递
