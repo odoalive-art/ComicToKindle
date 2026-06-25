@@ -1410,7 +1410,7 @@ export function setupLibrary(): void {
 
   ipcMain.handle(
     'library:scanImport',
-    async (event, srcRoot?: string): Promise<ImportScanResult> => {
+    async (event, srcRoot?: string | string[]): Promise<ImportScanResult> => {
       const target = srcRoot
       if (!target) {
         const win = BrowserWindow.fromWebContents(event.sender)
@@ -1424,6 +1424,15 @@ export function setupLibrary(): void {
         if (canceled || filePaths.length === 0) return { candidates: [], skipped: [] }
         const combined: ImportScanResult = { candidates: [], skipped: [] }
         for (const filePath of filePaths) {
+          const next = await scanImportSource(filePath)
+          combined.candidates.push(...next.candidates)
+          combined.skipped.push(...next.skipped)
+        }
+        return combined
+      }
+      if (Array.isArray(target)) {
+        const combined: ImportScanResult = { candidates: [], skipped: [] }
+        for (const filePath of target) {
           const next = await scanImportSource(filePath)
           combined.candidates.push(...next.candidates)
           combined.skipped.push(...next.skipped)

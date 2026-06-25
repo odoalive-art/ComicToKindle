@@ -62,6 +62,7 @@ import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue
@@ -123,6 +124,8 @@ import {
   BreadcrumbSeparator
 } from '@/components/ui/breadcrumb'
 import { ButtonGroup } from '@/components/ui/button-group'
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
+import { cn } from '@/lib/utils'
 import { uiText, type LanguageMode } from './i18n'
 
 // 开发期组件/规范演示页：仅 dev 构建载入，生产包里整段不存在（含 recharts 等重依赖）
@@ -322,6 +325,10 @@ type LibraryDirEntry = Awaited<ReturnType<Window['api']['library']['listVolumes'
 type LibraryVolume = Extract<LibraryDirEntry, { type: 'book' }>
 type Artifact = Awaited<ReturnType<Window['api']['artifacts']['list']>>[number]
 type ImportScanResult = Awaited<ReturnType<Window['api']['library']['scanImport']>>
+type ImportTarget =
+  | { kind: 'ungrouped' }
+  | { kind: 'series'; seriesId: string }
+  | { kind: 'new'; title: string }
 type TrashBookView = Awaited<ReturnType<Window['api']['library']['listTrash']>>[number]
 
 function CoverImage({
@@ -1361,6 +1368,7 @@ function LibraryView({
   const [volCache, setVolCache] = useState<Map<string, LibraryDirEntry[]>>(new Map())
   // 框选（橡皮筋）：在空白处按下拖动进入多选
   const gridWrapRef = React.useRef<HTMLDivElement>(null)
+  const dragImportDepthRef = React.useRef(0)
   const [marquee, setMarquee] = useState<{
     left: number
     top: number
@@ -1451,9 +1459,11 @@ function LibraryView({
   const [importReq, setImportReq] = useState<{
     scan: ImportScanResult
     deleteSourceAfter: boolean
+    target: ImportTarget
     busy: boolean
     progress?: { done: number; total: number; name: string; fraction: number }
   } | null>(null)
+  const [dragImportActive, setDragImportActive] = useState(false)
   const [trashReq, setTrashReq] = useState<{
     items: TrashBookView[]
     busy: boolean
@@ -1972,6 +1982,17 @@ function LibraryView({
   const topSeriesIds = series.filter((item) => item.type === 'folder').map((item) => item.id)
   const topBookIds = series.filter((item) => item.type === 'book').map((item) => item.id)
   const currentVolumeIds = bookVolumes.map((item) => item.id)
+  const topImportTargetSeries = series.filter(
+    (item): item is LibrarySeries => item.type === 'folder'
+  )
+  const importTargetSeries =
+    selected && !topImportTargetSeries.some((item) => item.id === selected.id)
+      ? [selected, ...topImportTargetSeries]
+      : topImportTargetSeries
+  const importTargetValue =
+    importReq?.target.kind === 'series'
+      ? `series:${importReq.target.seriesId}`
+      : (importReq?.target.kind ?? 'ungrouped')
   const selectedConvertCount = selectedVols.size
   const allSelected = bookVolumes.length > 0 && selectedVols.size === bookVolumes.length
   const toggleAll = (): void => {
@@ -2181,22 +2202,75 @@ function LibraryView({
     }
   }
 
-  const importIntoLibrary = async (): Promise<void> => {
+  const openImportPreview = async (srcRoot?: string | string[]): Promise<void> => {
     if (!root) return
     try {
-      const scan = await window.api.library.scanImport()
+      const scan = await window.api.library.scanImport(srcRoot)
       if (scan.candidates.length === 0) {
         toast.info(text.library.importEmpty)
         return
       }
-      setImportReq({ scan, deleteSourceAfter: false, busy: false })
+      const defaultTarget: ImportTarget = selected
+        ? { kind: 'series', seriesId: selected.id }
+        : { kind: 'ungrouped' }
+      setImportReq({
+        scan,
+        deleteSourceAfter: false,
+        target: defaultTarget,
+        busy: false
+      })
     } catch (err) {
       toast.error(`${err}`, { id: 'library-import' })
     }
   }
 
+  const importIntoLibrary = async (): Promise<void> => {
+    await openImportPreview()
+  }
+
+  const onImportDragEnter = (e: React.DragEvent<HTMLDivElement>): void => {
+    if (!managedLibrary || !root || !e.dataTransfer.types.includes('Files')) return
+    e.preventDefault()
+    dragImportDepthRef.current += 1
+    setDragImportActive(true)
+  }
+
+  const onImportDragOver = (e: React.DragEvent<HTMLDivElement>): void => {
+    if (!managedLibrary || !root || !e.dataTransfer.types.includes('Files')) return
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'copy'
+    setDragImportActive(true)
+  }
+
+  const onImportDragLeave = (e: React.DragEvent<HTMLDivElement>): void => {
+    if (!managedLibrary || !root || !e.dataTransfer.types.includes('Files')) return
+    e.preventDefault()
+    dragImportDepthRef.current = Math.max(0, dragImportDepthRef.current - 1)
+    if (dragImportDepthRef.current === 0) setDragImportActive(false)
+  }
+
+  const onImportDrop = async (e: React.DragEvent<HTMLDivElement>): Promise<void> => {
+    if (!managedLibrary || !root) return
+    e.preventDefault()
+    dragImportDepthRef.current = 0
+    setDragImportActive(false)
+    const paths = [...e.dataTransfer.files]
+      .map((file) => window.api.library.getPathForFile(file))
+      .filter((path) => path.length > 0)
+    if (paths.length === 0) {
+      toast.error(text.library.importDropNoPath, { id: 'library-import' })
+      return
+    }
+    await openImportPreview(paths)
+  }
+
   const submitImport = async (): Promise<void> => {
     if (!root || !importReq || importReq.busy) return
+    const target = importReq.target
+    if (target.kind === 'new' && target.title.trim().length === 0) {
+      toast.error(text.fileops.errInvalidName, { id: 'library-import' })
+      return
+    }
     // 进度条在弹窗内显示，初值 0；不再用 toast 刷进度
     setImportReq((s) =>
       s
@@ -2208,14 +2282,19 @@ function LibraryView({
         : s
     )
     try {
-      await window.api.library.importBooks(importReq.scan.candidates, {
+      const ids = await window.api.library.importBooks(importReq.scan.candidates, {
         deleteSourceAfter: importReq.deleteSourceAfter
       })
+      if (target.kind === 'series') {
+        await window.api.library.assignBooks(ids, target.seriesId)
+      } else if (target.kind === 'new') {
+        await window.api.library.createSeries(target.title.trim(), null, ids)
+      }
       toast.success(text.library.importDone(importReq.scan.candidates.length), {
         id: 'library-import'
       })
       setImportReq(null)
-      await loadSeries(root)
+      await refreshAfterFileop()
     } catch (err) {
       toast.error(`${err}`, { id: 'library-import' })
       setImportReq((s) => (s ? { ...s, busy: false } : s))
@@ -3180,18 +3259,81 @@ function LibraryView({
             <Progress value={(importReq.progress?.fraction ?? 0) * 100} />
           </div>
         ) : importReq ? (
-          <label className="flex items-start gap-2 rounded-md border border-destructive/25 bg-destructive/5 p-3 text-sm">
-            <Checkbox
-              checked={importReq.deleteSourceAfter}
-              disabled={importReq.busy}
-              onCheckedChange={(checked) =>
-                setImportReq((s) => (s ? { ...s, deleteSourceAfter: checked === true } : s))
-              }
-            />
-            <span className="leading-5 text-muted-foreground">
-              {text.library.deleteSourceAfterImport}
-            </span>
-          </label>
+          <FieldGroup className="gap-4">
+            <Field className="gap-2">
+              <FieldLabel>{text.library.importTarget}</FieldLabel>
+              <Select
+                value={importTargetValue}
+                disabled={importReq.busy}
+                onValueChange={(value) =>
+                  setImportReq((s) => {
+                    if (!s) return s
+                    if (value === 'ungrouped') {
+                      return { ...s, target: { kind: 'ungrouped' } }
+                    }
+                    if (value === 'new') {
+                      return { ...s, target: { kind: 'new', title: '' } }
+                    }
+                    return {
+                      ...s,
+                      target: { kind: 'series', seriesId: value.replace(/^series:/, '') }
+                    }
+                  })
+                }
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="ungrouped">{text.library.ungrouped}</SelectItem>
+                    {importTargetSeries.map((item) => (
+                      <SelectItem key={item.id} value={`series:${item.id}`}>
+                        {item.title}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="new">{text.library.importTargetNew}</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </Field>
+            {importReq.target.kind === 'new' ? (
+              <Field className="gap-2">
+                <FieldLabel htmlFor="import-new-series-name">
+                  {text.library.importNewSeriesName}
+                </FieldLabel>
+                <Input
+                  id="import-new-series-name"
+                  autoFocus
+                  value={importReq.target.title}
+                  disabled={importReq.busy}
+                  placeholder={text.fileops.newFolderPlaceholder}
+                  onChange={(e) =>
+                    setImportReq((s) =>
+                      s && s.target.kind === 'new'
+                        ? { ...s, target: { ...s.target, title: e.target.value } }
+                        : s
+                    )
+                  }
+                />
+              </Field>
+            ) : null}
+            <Field
+              orientation="horizontal"
+              className="rounded-md border border-destructive/25 bg-destructive/5 p-3"
+            >
+              <Checkbox
+                checked={importReq.deleteSourceAfter}
+                disabled={importReq.busy}
+                onCheckedChange={(checked) =>
+                  setImportReq((s) => (s ? { ...s, deleteSourceAfter: checked === true } : s))
+                }
+              />
+              <span className="leading-5 text-muted-foreground">
+                {text.library.deleteSourceAfterImport}
+              </span>
+            </Field>
+          </FieldGroup>
         ) : null}
       </EntityListDialog>
       <EntityListDialog
@@ -3493,8 +3635,23 @@ function LibraryView({
             onPointerDown={onWrapPointerDown}
             onPointerMove={onWrapPointerMove}
             onPointerUp={onWrapPointerUp}
-            className="relative min-h-0 flex-1 overflow-y-auto p-4 select-none lg:p-6"
+            onDragEnter={onImportDragEnter}
+            onDragOver={onImportDragOver}
+            onDragLeave={onImportDragLeave}
+            onDrop={(e) => void onImportDrop(e)}
+            className={cn(
+              'relative min-h-0 flex-1 overflow-y-auto p-4 select-none lg:p-6',
+              dragImportActive ? 'ring-2 ring-primary ring-inset' : ''
+            )}
           >
+            {dragImportActive ? (
+              <div className="pointer-events-none absolute inset-3 z-30 flex items-center justify-center rounded-lg border border-dashed border-primary bg-background/80 backdrop-blur-sm">
+                <div className="flex items-center gap-3 rounded-md bg-background px-4 py-3 text-sm font-medium shadow-sm">
+                  <FileDown className="size-5 text-primary" />
+                  <span>{text.library.importDropHere}</span>
+                </div>
+              </div>
+            ) : null}
             {marquee ? (
               <div
                 className="pointer-events-none absolute z-10 rounded-sm border border-primary bg-primary/15"

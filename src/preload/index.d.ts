@@ -94,7 +94,8 @@ export interface LibraryAPI {
     locked: boolean
     coverUrl: string | null
   }>
-  scanImport: (srcRoot?: string) => Promise<ImportScanResult>
+  scanImport: (srcRoot?: string | string[]) => Promise<ImportScanResult>
+  getPathForFile: (file: File) => string
   importBooks: (
     candidates: ImportCandidate[],
     opts: { deleteSourceAfter?: boolean }

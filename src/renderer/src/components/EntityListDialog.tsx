@@ -9,7 +9,6 @@ import {
   DialogHeader,
   DialogTitle
 } from '@/components/ui/dialog'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
 
 // 列表里的一条：图标 + 主文案 +（可选）次文案 +（可选）尾部操作（如「恢复」按钮）。
@@ -66,10 +65,14 @@ export function EntityListDialog({
 }: EntityListDialogProps): React.JSX.Element {
   return (
     <Dialog open={open} onOpenChange={(o) => (!o && !busy ? onClose() : undefined)}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          {description ? <DialogDescription>{description}</DialogDescription> : null}
+      <DialogContent className="max-w-[calc(100vw-2rem)] min-w-0 overflow-hidden sm:max-w-md">
+        <DialogHeader className="min-w-0">
+          <DialogTitle className="min-w-0 truncate pr-8">{title}</DialogTitle>
+          {description ? (
+            <DialogDescription className="min-w-0 text-pretty break-words pr-8">
+              {description}
+            </DialogDescription>
+          ) : null}
         </DialogHeader>
 
         {items.length === 0 && emptyText ? (
@@ -77,12 +80,17 @@ export function EntityListDialog({
             {emptyText}
           </p>
         ) : (
-          <ScrollArea className={cn('rounded-md border', scrollClassName ?? 'h-72')}>
-            <div className="divide-y">
+          <div
+            className={cn(
+              'w-full min-w-0 overflow-x-hidden overflow-y-auto rounded-md border',
+              scrollClassName ?? 'h-72'
+            )}
+          >
+            <div className="w-full min-w-0 divide-y">
               {items.map((item) => {
                 const Icon = item.icon
                 return (
-                  <div key={item.key} className="flex items-center gap-2 px-3 py-2">
+                  <div key={item.key} className="flex w-full min-w-0 items-center gap-2 px-3 py-2">
                     {Icon ? <Icon className="size-4 shrink-0 text-muted-foreground" /> : null}
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-sm font-medium" title={item.primaryTitle}>
@@ -94,17 +102,19 @@ export function EntityListDialog({
                         </div>
                       ) : null}
                     </div>
-                    {item.action ?? null}
+                    {item.action ? (
+                      <div className="ml-2 flex shrink-0 justify-end">{item.action}</div>
+                    ) : null}
                   </div>
                 )
               })}
             </div>
-          </ScrollArea>
+          </div>
         )}
 
         {children}
 
-        <DialogFooter>
+        <DialogFooter className="min-w-0 flex-wrap">
           {actions.map((action, i) => (
             <Button
               key={i}

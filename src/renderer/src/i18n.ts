@@ -35,7 +35,8 @@ export const uiText = {
       chooseFolder: '选择漫画库文件夹',
       createLibrary: '新建漫画库',
       openLibrary: '打开其他库',
-      openInvalid: '这不是 ComicToKindle 库包（.ctklib）。请先「新建库包」，再用「导入卷册」把漫画加进来。',
+      openInvalid:
+        '这不是 ComicToKindle 库包（.ctklib）。请先「新建库包」，再用「导入卷册」把漫画加进来。',
       importBooks: '导入卷册',
       changeFolder: '切换库包',
       ungrouped: '散卷',
@@ -43,7 +44,8 @@ export const uiText = {
       trashDesc: '这里保存从当前库包移除的卷册桶；还原会尽量回到原来的部。',
       trashEmpty: '库内回收站是空的',
       trashBooksTitle: '移入库内回收站',
-      trashBooksDesc: (n: number) => `将 ${n} 个卷册移入当前库包的回收站，不会删除导入前的原始来源。`,
+      trashBooksDesc: (n: number) =>
+        `将 ${n} 个卷册移入当前库包的回收站，不会删除导入前的原始来源。`,
       deleteSeriesTitle: '删除文件夹',
       deleteSeriesDesc: '删除后文件夹内的卷册会移到「未分组」，卷册本身保留。',
       deleteSeriesWithBooks: '同时删除文件夹内的卷册（移入库内回收站）',
@@ -57,14 +59,21 @@ export const uiText = {
       importEmpty: '没有找到可导入的卷册',
       importConfirm: (found: number, skipped: number) =>
         `将导入 ${found} 卷，跳过 ${skipped} 个无法识别的项目。`,
-      deleteSourceAfterImport: '导入完成后删除源文件或源文件夹。原始文件会被移除，请只在确认已备份时勾选。',
+      importTarget: '导入目标',
+      importTargetNew: '＋ 新建部…',
+      importNewSeriesName: '部名',
+      importDropHere: '拖放到此处导入',
+      importDropNoPath: '无法读取拖放文件路径，请完全重启应用后再试。',
+      deleteSourceAfterImport:
+        '导入完成后删除源文件或源文件夹。原始文件会被移除，请只在确认已备份时勾选。',
       importPreparing: (found: number) => `准备导入 ${found} 卷…`,
       importProgress: (done: number, total: number, name: string) =>
         `正在导入 ${done}/${total}：${name}`,
       importDone: (found: number) => `已导入 ${found} 卷`,
       rescan: '重新扫描',
       emptyTitle: '还没有漫画库',
-      emptyDescription: '新建一个漫画库，再用「导入卷册」把漫画文件夹或压缩包加进来，开始整理你的漫画。',
+      emptyDescription:
+        '新建一个漫画库，再用「导入卷册」把漫画文件夹或压缩包加进来，开始整理你的漫画。',
       emptyLibraryTitle: '这个库还是空的',
       emptyLibraryDesc: '点下面的按钮，把漫画文件夹或压缩包导入进来。',
       loading: '正在扫描漫画库…',
@@ -440,6 +449,12 @@ export const uiText = {
       importEmpty: 'No importable volumes found',
       importConfirm: (found: number, skipped: number) =>
         `Import ${found} volume${found === 1 ? '' : 's'} and skip ${skipped} unrecognized item${skipped === 1 ? '' : 's'}.`,
+      importTarget: 'Import target',
+      importTargetNew: '+ New series…',
+      importNewSeriesName: 'Series name',
+      importDropHere: 'Drop here to import',
+      importDropNoPath:
+        'Could not read the dropped file path. Fully restart the app and try again.',
       deleteSourceAfterImport:
         'Delete source files or folders after import. The originals will be removed, so use this only after backing them up.',
       importPreparing: (found: number) =>

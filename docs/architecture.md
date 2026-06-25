@@ -107,7 +107,7 @@ Renderer process
 
 - 库包目录为 `<库名>.ctklib/`，包含根 manifest `library.json`、卷册桶 `books/<bookId>/` 和库内回收站 `trash/`。
 - 单文件卷册（CBZ/ZIP/CBR/RAR/7z/PDF/图片型 EPUB）导入为 `books/<bookId>/source.<ext>`；散图文件夹导入为 `books/<bookId>/images/`。分卷压缩包会把入口卷和续卷一起复制进同一桶。
-- `books/<bookId>/book.json` 记录源类型、显示名、原始来源、页数和可重建 hints。`library.json` 目前维护 `series` 与 `ungrouped` 有序数组；阶段 1 导入全部进入 `ungrouped`。
+- `books/<bookId>/book.json` 记录源类型、显示名、原始来源、页数和可重建 hints。`library.json` 目前维护 `series` 与 `ungrouped` 有序数组；导入复制阶段先进入 `ungrouped`，renderer 可在导入完成后用 `assignBooks` 或 `createSeries(..., bookIds)` 后置归属到目标部。
 - `library.json`、`book.json` 均采用 `*.tmp` 写入后 rename 的原子写；导入桶先复制到 `books/<id>.tmp/`，完成后 rename 成 `books/<id>/`。
 - 启动/打开库包时会清理残留 `.tmp` 桶；`library.json` 缺失或损坏时会遍历 `book.json` 重建。
 - renderer 调用 `scan/listVolumes` 获取 `.ctklib` 的 manifest 投影：顶层返回部与散卷，下钻返回子部与部内卷册；卷册 `path` 是桶内 `source.*` 或 `images/`，因此阅读器、`archive:prepare` 和 `convert:volume` 无需改转换引擎。
@@ -122,7 +122,7 @@ library:getSaved         读取 settings.json 的 libraryPackagePath
 library:view             读取 manifest 视图
 library:seriesBooks      读取某部卷册
 library:inspectBook      懒补单个桶卷册信息
-library:scanImport       选择或传入导入源 → 只识别候选，不复制
+library:scanImport       选择或传入单个/多个导入源 → 只识别候选，不复制
 library:import           复制候选进桶，进度事件 library:importProgress
 library:createSeries     新建部，并可同时把若干 bookId 归入该部
 library:renameSeries     改部名/作者，并同步桶 book.json hints
@@ -137,7 +137,7 @@ library:restoreTrashBooks  把 trash/ 中的卷册桶还原回 books/，并按 b
 library:emptyTrash       永久清空库内 trash/
 ```
 
-**当前 UI 接入状态**：现有库视图已能新建部、编辑部名/作者、改卷册显示名、把卷册移入已有部或“新建部并移入”、解散部（卷册回散卷）、删除卷册到库内 `trash/`，并通过顶栏打开库内回收站来还原或清空。导入流程已有预览弹窗，可勾选“导入完成后删除源文件或源文件夹”。排序通过右键菜单的“上移 / 下移”完成，分别调用 `reorderSeries` 或 `reorderBooks` 写 manifest。
+**当前 UI 接入状态**：现有库视图已能新建部、编辑部名/作者、改卷册显示名、把卷册移入已有部或“新建部并移入”、解散部（卷册回散卷）、删除卷册到库内 `trash/`，并通过顶栏打开库内回收站来还原或清空。导入流程已有预览弹窗，可勾选“导入完成后删除源文件或源文件夹”，并可选择导入目标（散卷 / 已有部 / 新建部）。库内容区支持外部拖放导入，renderer 通过 preload 暴露的 `webUtils.getPathForFile(file)` 获取真实路径后调用 `scanImport(paths)`。排序通过右键菜单的“上移 / 下移”完成，分别调用 `reorderSeries` 或 `reorderBooks` 写 manifest。
 
 **manifest 投影模型**：
 

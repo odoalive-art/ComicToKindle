@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
 // Custom APIs for renderer
@@ -10,7 +10,8 @@ const api = {
     view: () => ipcRenderer.invoke('library:view'),
     seriesBooks: (seriesId: string) => ipcRenderer.invoke('library:seriesBooks', seriesId),
     inspectBook: (id: string) => ipcRenderer.invoke('library:inspectBook', id),
-    scanImport: (srcRoot?: string) => ipcRenderer.invoke('library:scanImport', srcRoot),
+    scanImport: (srcRoot?: string | string[]) => ipcRenderer.invoke('library:scanImport', srcRoot),
+    getPathForFile: (file: File): string => webUtils.getPathForFile(file),
     importBooks: (candidates: unknown, opts: unknown) =>
       ipcRenderer.invoke('library:import', candidates, opts),
     createSeries: (title: string, author: string | null, bookIds: string[]) =>
