@@ -206,12 +206,8 @@ function App(): React.JSX.Element {
   // 转换活动队列上提到 App 层，切换视图时不中断
   const convertActivity = useConvertActivity(languageMode)
 
-  // ---- 当前库根（经 Context 在 App ↔ LibraryView ↔ 边栏间共享）----
+  // ---- 当前托管库包路径，上提到 App 层以便切换视图后保持选择 ----
   const [libRoot, setLibRoot] = useState<string | null>(null)
-  const fileNav: FileNavValue = {
-    root: libRoot,
-    setRoot: setLibRoot
-  }
 
   const isShowcaseView =
     activeView === 'design-components' ||
@@ -233,60 +229,57 @@ function App(): React.JSX.Element {
   }, [languageMode])
 
   return (
-    <FileNavContext.Provider value={fileNav}>
-      <SidebarProvider>
-        <div className="flex h-dvh w-full bg-muted/50 text-foreground">
-          <AppSidebar
-            activeView={activeView}
-            locale={languageMode}
-            onSelect={setActiveView}
-            themeMode={themeMode}
-            setThemeMode={setThemeMode}
-            languageMode={languageMode}
-            setLanguageMode={setLanguageMode}
-          />
-          <SidebarInset className="flex min-w-0 flex-col overflow-hidden">
-            {activeView === 'library' ? (
-              // 库视图自带合并后的顶栏（标题/面包屑 + 操作），不再叠加 AppHeader
-              <LibraryView
-                locale={languageMode}
-                activity={convertActivity}
-                onOpenArchive={() => setActiveView('archive')}
-              />
-            ) : DevShowcase && isShowcaseView ? (
-              <React.Suspense fallback={<div className="flex-1 bg-background" />}>
-                <DevShowcase activeView={activeView} locale={languageMode} />
-              </React.Suspense>
-            ) : (
-              <>
-                <AppHeader languageMode={languageMode} activeNavItemId={activeView} />
+    <SidebarProvider>
+      <div className="flex h-dvh w-full bg-muted/50 text-foreground">
+        <AppSidebar
+          activeView={activeView}
+          locale={languageMode}
+          onSelect={setActiveView}
+          themeMode={themeMode}
+          setThemeMode={setThemeMode}
+          languageMode={languageMode}
+          setLanguageMode={setLanguageMode}
+        />
+        <SidebarInset className="flex min-w-0 flex-col overflow-hidden">
+          {activeView === 'library' ? (
+            // 库视图自带合并后的顶栏（标题/面包屑 + 操作），不再叠加 AppHeader
+            <LibraryView
+              locale={languageMode}
+              activity={convertActivity}
+              root={libRoot}
+              setRoot={setLibRoot}
+              onOpenArchive={() => setActiveView('archive')}
+            />
+          ) : DevShowcase && isShowcaseView ? (
+            <React.Suspense fallback={<div className="flex-1 bg-background" />}>
+              <DevShowcase activeView={activeView} locale={languageMode} />
+            </React.Suspense>
+          ) : (
+            <>
+              <AppHeader languageMode={languageMode} activeNavItemId={activeView} />
 
-                {activeView === 'archive' ? (
-                  <ArchiveView locale={languageMode} />
-                ) : activeView === 'web-push' ? (
-                  <WebPushView
-                    locale={languageMode}
-                    onGotoArchive={() => setActiveView('archive')}
-                  />
-                ) : activeView === 'devices-emails' ? (
-                  <DeliverySettingsView locale={languageMode} />
-                ) : activeView === 'convert-settings' ? (
-                  <ConvertSettingsView locale={languageMode} />
-                ) : activeView === 'extensions' ? (
-                  <PageEmpty
-                    icon={Puzzle}
-                    label={languageMode === 'zh' ? '暂无可用扩展' : 'No extensions available yet'}
-                  />
-                ) : (
-                  <div className="flex-1 bg-background" />
-                )}
-              </>
-            )}
-          </SidebarInset>
-        </div>
-        <Toaster theme={themeMode} />
-      </SidebarProvider>
-    </FileNavContext.Provider>
+              {activeView === 'archive' ? (
+                <ArchiveView locale={languageMode} />
+              ) : activeView === 'web-push' ? (
+                <WebPushView locale={languageMode} onGotoArchive={() => setActiveView('archive')} />
+              ) : activeView === 'devices-emails' ? (
+                <DeliverySettingsView locale={languageMode} />
+              ) : activeView === 'convert-settings' ? (
+                <ConvertSettingsView locale={languageMode} />
+              ) : activeView === 'extensions' ? (
+                <PageEmpty
+                  icon={Puzzle}
+                  label={languageMode === 'zh' ? '暂无可用扩展' : 'No extensions available yet'}
+                />
+              ) : (
+                <div className="flex-1 bg-background" />
+              )}
+            </>
+          )}
+        </SidebarInset>
+      </div>
+      <Toaster theme={themeMode} />
+    </SidebarProvider>
   )
 }
 
@@ -329,18 +322,6 @@ type LibraryVolume = Extract<LibraryDirEntry, { type: 'book' }>
 type Artifact = Awaited<ReturnType<Window['api']['artifacts']['list']>>[number]
 type ImportScanResult = Awaited<ReturnType<Window['api']['library']['scanImport']>>
 type TrashBookView = Awaited<ReturnType<Window['api']['library']['listTrash']>>[number]
-
-// ============ 当前库根（经 Context 在 App ↔ LibraryView ↔ 边栏间共享）============
-interface FileNavValue {
-  root: string | null
-  setRoot: (r: string | null) => void
-}
-const FileNavContext = React.createContext<FileNavValue | null>(null)
-const useFileNav = (): FileNavValue => {
-  const v = React.useContext(FileNavContext)
-  if (!v) throw new Error('FileNavContext missing')
-  return v
-}
 
 function CoverImage({
   src,
@@ -434,9 +415,6 @@ function FolderStackCard({
     </button>
   )
 }
-
-// ============ 左侧文件夹树导航（内容区仍使用统一网格）============
-// 树只负责定位目录；右侧网格负责选中、右键、拖拽、打开等交互。
 
 const LIBRARY_GRID =
   'grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'
@@ -1349,18 +1327,18 @@ function ConvertActivityPopover({
 function LibraryView({
   locale,
   activity,
+  root,
+  setRoot,
   onOpenArchive
 }: {
   locale: LanguageMode
   activity: ConvertActivity
+  root: string | null
+  setRoot: (r: string | null) => void
   onOpenArchive: () => void
 }): React.JSX.Element {
   const text = uiText[locale]
   const { isMobile } = useSidebar()
-  // 库根目录提升到 App 层（边栏文件夹树与内容区共享）；此处复用同一份
-  const fileNav = useFileNav()
-  const root = fileNav.root
-  const setRoot = fileNav.setRoot
   const managedLibrary = root?.toLowerCase().endsWith('.ctklib') ?? false
   const [series, setSeries] = useState<LibraryEntry[]>([])
   const [selected, setSelected] = useState<LibrarySeries | null>(null)

@@ -2,11 +2,23 @@
 
 ## 快照
 
-日期：2026-06-24
+日期：2026-06-25
 
-ComicToKindle **核心闭环已打通**，且**已可打包内测**（macOS dmg，ad-hoc 签名，`npm run release:mac` 一键出包，当前 `0.1.0-beta.2`）：漫画库浏览 → 阅读器 → 卷册转 Kindle 固定版式 EPUB → 归档 → 投递到 Kindle（SMTP 邮件 / Send to Kindle 网页通道二选一）。最新一轮（2026-06-24）把漫画库入口收敛为 **左侧文件夹树 + 库根目录网格**，移除默认智能书架根，并统一内容区卡片的选中、右键、框选、拖拽整理语义；同日修复 PDF 封面首次不渲染。2026-06-23 新增 **PDF 单文件来源 + 图片型 EPUB 来源**，并把 macOS 内测打包改为 **dmg-only + 构建时间戳防覆盖 + dmg 内置版本说明.txt + 自动清理非 dmg 产物**；2026-06-22 完成打包内测准备、包体瘦身、开发期演示页移出生产包、移动框「＋新建文件夹并移入」、UI 清理和窗口缩放白边修复。更早一轮（2026-06-21）补齐应用内文件整理、转换队列持久化 + 中断恢复、漫画库文件管理器式交互、压缩包来源、封面缩略图缓存、书籍元数据与每部信息编辑。
+ComicToKindle **核心闭环已打通**，且**已可打包内测**（macOS dmg，ad-hoc 签名，`npm run release:mac` 一键出包，当前 `0.1.0-beta.2`）：漫画库浏览 → 阅读器 → 卷册转 Kindle 固定版式 EPUB → 归档 → 投递到 Kindle（SMTP 邮件 / Send to Kindle 网页通道二选一）。最新一轮（2026-06-25，分支 `feat/scan-managed-volumes` / PR #2）对库交互做桌面化打磨：Shift 范围多选、Cmd/Ctrl+A 只全选漫画、Delete 删卷/部、删文件夹可选连内部卷册一并删；并把网页式快捷键（刷新/缩放/打印）在主进程收敛、Cmd/Ctrl+R 复用为「重命名选中项」。2026-06-24 把漫画库入口收敛为 **左侧文件夹树 + 库根目录网格**，移除默认智能书架根，并统一内容区卡片的选中、右键、框选、拖拽整理语义；同日修复 PDF 封面首次不渲染。2026-06-23 新增 **PDF 单文件来源 + 图片型 EPUB 来源**，并把 macOS 内测打包改为 **dmg-only + 构建时间戳防覆盖 + dmg 内置版本说明.txt + 自动清理非 dmg 产物**；2026-06-22 完成打包内测准备、包体瘦身、开发期演示页移出生产包、移动框「＋新建文件夹并移入」、UI 清理和窗口缩放白边修复。更早一轮（2026-06-21）补齐应用内文件整理、转换队列持久化 + 中断恢复、漫画库文件管理器式交互、压缩包来源、封面缩略图缓存、书籍元数据与每部信息编辑。
 
 ## 已完成
+
+### 2026-06-25 阶段（库交互打磨 + 桌面化快捷键收敛）
+
+分支 `feat/scan-managed-volumes`（已 push，PR #2 → main）。本轮均经 `npm run typecheck` + eslint，建议合并前真机过一遍。
+
+- **多选**：卷卡支持 Shift+单击范围选择（锚点可反复收放，Cmd/Ctrl 叠加）；Cmd/Ctrl+A 顶层散卷与部内卷册都只全选漫画卷、不再整页全选；Delete/Backspace 删除选中卷（macOS 退格适配）。
+- **桌面化收敛**：全局 `user-select: none`（输入框/textarea/contenteditable 例外，个别处用 Tailwind `select-text` 放开）；主进程 before-input-event 拦掉刷新/缩放/打印（详见 architecture「运行层」）。
+- **Ctrl/Cmd+R 复用为重命名**：主进程拦截刷新后转发 `app:rename-selected` IPC（preload 加 `onRenameShortcut`），渲染层按单选项映射——单选「卷」→重命名弹窗、单选「部」→编辑信息；未选/多选/输入聚焦/阅读中不触发。兜底图闪现随重载禁用一并消失。
+- **删除文件夹可选删内部**：`deleteSeries(seriesId, deleteBooks)` 新增第二参；删除「部」弹窗加勾选「同时删除文件夹内的卷册」——默认仍解散（卷册回散卷），勾选则 trashBooks 移入库内回收站。Delete 键现也能删单选的「部」。
+- **空状态/弹窗组件沉淀**：空状态统一为可配置 `PageEmpty`（icon/title/label/actions 按需）；导入卷册与回收站弹窗沉淀为通用 `components/EntityListDialog.tsx`（标题/描述/条目列表/附加模块/按钮组全可配）。
+- **性能**：多选未选中项压暗由 `filter: brightness` 改半透明遮罩 + `transition-opacity duration-300`，消除首次进入多选时逐张封面建合成层的卡顿。
+- **修复**：部卡片 `<button>` 加 `outline-none` 去掉点击后框住图文且不消失的原生焦点描边；submitDelete 成功后清掉多选态与部选中态，避免残留已删 path 让计数变脏。
 
 ### 2026-06-24 阶段（Eagle 式 `.ctklib` 托管库包阶段 1）
 

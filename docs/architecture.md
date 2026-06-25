@@ -15,12 +15,12 @@ ComicToKindle 目前是一个桌面应用工作台，已打通核心闭环:**本
 - shadcn/ui 组件体系
 - 构建和打包脚本
 - `src/renderer/src/App.tsx` 中的侧边栏工作台壳
-- **漫画库浏览阶段 1 改造**：已接入 App 独占 `.ctklib` 库包（`library.json` + `books/<bookId>/book.json` + `source.*`/`images/`），支持新建/打开库包、扫描导入源、把卷册复制进库包并在 manifest 中作为散卷展示；阅读器与转换仍复用原有取图链路（详见「漫画库数据层」）。旧左侧文件夹树 + 忠实磁盘目录网格代码仍保留为过渡兼容层，后续阶段会移除。
+- **Eagle 式 `.ctklib` 托管漫画库**：已接入 App 独占库包（`library.json` + `books/<bookId>/book.json` + `source.*`/`images/`），支持新建/打开库包、扫描导入源、把卷册复制进库包、manifest 投影的部/散卷书架、多级下钻、部名/作者与卷册显示名编辑、归属和排序管理、库内 `trash/` 回收站；阅读器与转换仍复用现有取图链路（详见「漫画库数据层」）。
 - **压缩包来源**：CBZ/ZIP/CBR/RAR/7z 卷册（含加密 zip、多卷分卷，共享密码池，解压进度）解出图片供阅读 + 转换（详见「压缩包来源层」）
 - **文档来源**：PDF 单文件卷册渲染为页面图片；图片型 EPUB 按 OPF spine / XHTML 图片引用抽成页面（详见「文档来源层」）
 - **卷册阅读器**：单页 / 双页、左右阅读方向、记住每卷续读进度；网格封面走缩略图缓存
 - **转换流水线**：图片目录、压缩包、PDF、图片型 EPUB → Kindle 固定版式 EPUB3，书名「漫画名 + 卷册」+ 作者元数据、转换前确认弹窗（详见「转换与产物层」）
-- **漫画信息编辑**：在应用内改每部的名称/作者（持久化覆盖，不改本地文件夹名）
+- **漫画信息编辑**：在应用内改部名/作者和卷册显示名，写入托管库 manifest，不改用户导入源
 - **归档视图**：列出转换产物，支持在 Finder 显示 / 导出副本 / 删除 / 投递到 Kindle
 - **Kindle 投递**：SMTP 配置页（设备与邮箱）+ 归档手动投递（详见「投递层」）
 - **Send to Kindle 网页推送**：应用内嵌 Amazon 网页通道（≤200MB 单文件），自动填入产物、半自动发送（详见「网页推送层」）
@@ -49,11 +49,13 @@ Electron main process
   app ready 前调用 registerComicScheme()，ready 后调用 setupLibrary() / setupArchive() / setupArtifacts() / setupQueue() / setupDelivery() / setupWebPush()。
   **窗口缩放背景色**：用 nativeTheme.shouldUseDarkColors 在创建窗口时设置 backgroundColor（深色 #09090b / 浅色 #ffffff），
   同时注册 set-background-color IPC 供 renderer 在用户切换主题时同步。
+  **桌面化快捷键收敛**：before-input-event 拦掉网页式快捷键（刷新 Cmd/Ctrl+R·Shift+R·F5、缩放 Cmd/Ctrl +/-/0、打印 Cmd/Ctrl+P），dev 与 prod 一致。
+  注意 before-input-event 的 preventDefault 会连页面 keydown 一并吞掉，故不带 Shift 的 Cmd/Ctrl+R 不交给渲染层，而是直接转成 app:rename-selected IPC（复用为「重命名选中项」）。
 
   src/main/library.ts
   漫画库数据层：comic:// 协议（含封面缩略图通道）、`.ctklib` 托管库包生命周期、
-  导入扫描与复制、library.json/book.json manifest 读写、散卷库视图，以及过渡期保留的旧目录扫描/文件整理兼容代码。
-  导出 collectVolumeImagePaths() 供转换流水线按阅读顺序取图（支持桶内 source.* / images/ 与旧目录卷）。
+  导入扫描与复制、library.json/book.json manifest 读写、部/散卷书架投影、库内回收站。
+  导出 collectVolumeImagePaths() 供转换流水线按阅读顺序取图（支持桶内 source.* / images/）。
 
   src/main/archive.ts
   压缩包来源层：内置 7-Zip（7zip-bin）解 CBZ/ZIP/CBR/RAR/7z（含加密 zip、多卷分卷）到
@@ -101,14 +103,14 @@ Renderer process
 
 漫画库的文件系统访问全部在 main 进程，renderer 通过 preload 暴露的 `window.api.library.*` 调用，不直接用 Node API。
 
-**托管库包阶段 1（2026-06-24 接入）**：
+**托管库包模型（2026-06-24 接入，2026-06-25 收敛）**：
 
 - 库包目录为 `<库名>.ctklib/`，包含根 manifest `library.json`、卷册桶 `books/<bookId>/` 和库内回收站 `trash/`。
 - 单文件卷册（CBZ/ZIP/CBR/RAR/7z/PDF/图片型 EPUB）导入为 `books/<bookId>/source.<ext>`；散图文件夹导入为 `books/<bookId>/images/`。分卷压缩包会把入口卷和续卷一起复制进同一桶。
 - `books/<bookId>/book.json` 记录源类型、显示名、原始来源、页数和可重建 hints。`library.json` 目前维护 `series` 与 `ungrouped` 有序数组；阶段 1 导入全部进入 `ungrouped`。
 - `library.json`、`book.json` 均采用 `*.tmp` 写入后 rename 的原子写；导入桶先复制到 `books/<id>.tmp/`，完成后 rename 成 `books/<id>/`。
 - 启动/打开库包时会清理残留 `.tmp` 桶；`library.json` 缺失或损坏时会遍历 `book.json` 重建。
-- renderer 当前用兼容层调用旧 `scan/listVolumes`：`.ctklib` 下 `scan` 返回 manifest 投影的部与散卷，卷册 `path` 是桶内 `source.*` 或 `images/`，因此阅读器、`archive:prepare` 和 `convert:volume` 无需改转换引擎。
+- renderer 调用 `scan/listVolumes` 获取 `.ctklib` 的 manifest 投影：顶层返回部与散卷，下钻返回子部与部内卷册；卷册 `path` 是桶内 `source.*` 或 `images/`，因此阅读器、`archive:prepare` 和 `convert:volume` 无需改转换引擎。
 - `comic://` 托管库白名单只放行库包内 `books/`、解压缓存 `userData/extracted/` 和文档缓存 `userData/documents/`，不再放行整个库包根。
 
 **托管库 IPC**：
@@ -135,35 +137,34 @@ library:restoreTrashBooks  把 trash/ 中的卷册桶还原回 books/，并按 b
 library:emptyTrash       永久清空库内 trash/
 ```
 
-**当前 UI 接入状态**：现有库视图已能新建部、编辑部名/作者、改卷册显示名、把卷册移入已有部或“新建部并移入”、解散部（卷册回散卷）、删除卷册到库内 `trash/`，并通过顶栏打开库内回收站来还原或清空。导入流程已有预览弹窗，可勾选“导入完成后删除源文件或源文件夹”。排序通过右键菜单的“上移 / 下移”完成，分别调用 `reorderSeries` 或 `reorderBooks` 写 manifest；移除旧文件视图与本地文件整理 IPC 仍待后续阶段。
+**当前 UI 接入状态**：现有库视图已能新建部、编辑部名/作者、改卷册显示名、把卷册移入已有部或“新建部并移入”、解散部（卷册回散卷）、删除卷册到库内 `trash/`，并通过顶栏打开库内回收站来还原或清空。导入流程已有预览弹窗，可勾选“导入完成后删除源文件或源文件夹”。排序通过右键菜单的“上移 / 下移”完成，分别调用 `reorderSeries` 或 `reorderBooks` 写 manifest。
 
-**扫描模型**（`classifyDir` / `listChildren`，递归判定，不预设固定层级）：
+**manifest 投影模型**：
 
-- **卷（volume / book）**= 目录**直接**含图片，或直接放着 cbz/pdf/epub 单文件；其下「单话」子文件夹由 collectPages 递归收图。`kind: 'folder' | 'file'`，`sourceType: 'folder' | 'archive' | 'pdf' | 'epub'`；file 卷可为压缩包、PDF 或图片型 EPUB，分卷只展示入口卷。
-- **部（series）**= 目录自身无漫画、但**子树里**递归地有 → 可下钻容器，**支持任意深度嵌套**（部里可再有子部）。命名通常为 `[作者] 标题`，解析出作者与标题。
-- **空目录**（整棵子树都没有漫画资源）→ **不展示**（只识别含真实漫画资源的目录）。
-- 顶层书架与「部」下钻共用 `listChildren`，每级返回同构的 `LibraryEntry[]`（书/卷 或 可继续下钻的部）；前端用路径栈 + 面包屑做多级导航。
-- **每部名称/作者覆盖**：默认从 `[作者] 标题` 解析；用户可在应用内改写，覆盖存 `settings.json` 的 `seriesMeta`（按部文件夹名为键），扫描时叠加，**不改本地文件夹名**。
-- 文件名一律按**自然排序**（`2.jpg` 在 `10.jpg` 前）。
+- **卷（volume / book）**= 托管库桶 `books/<bookId>/`，桶内保存 `book.json` 以及 `source.*` 或 `images/`；`kind: 'folder' | 'file'`，`sourceType: 'folder' | 'archive' | 'pdf' | 'epub'`。分卷压缩包的入口卷与续卷一起复制到同一桶，书架只展示一个 book。
+- **部（series）**= `library.json` 中的分组节点，可包含子部和卷册，支持任意深度嵌套。部名、作者、排序和归属都来自 manifest。
+- **散卷（ungrouped）**= `library.json` 中未归入部的 bookId 有序数组，直接显示在「所有漫画」书架。
+- `scan`/`listVolumes` 每级返回同构的 `LibraryEntry[]`（部或卷）；前端用路径栈 + 面包屑做多级导航。
+- 排序以 `library.json` 中的数组顺序为准；导入时按候选自然排序写入，后续上移/下移只改 manifest。
 
 **IPC 频道**（`ipcMain.handle` ↔ `ipcRenderer.invoke`）：
 
 ```txt
-library:pickFolder    系统目录选择器，选中后写入 settings.json 并返回路径
-library:getSavedRoot  读取已保存的库根目录（不存在/失效则返回 null）
-library:scan          扫描库根 → LibraryEntry[]（书/卷 或 部，含封面 URL、卷数/页数）
+library:create        选择父目录 + 名称 → 新建 .ctklib
+library:open          选择 .ctklib 打开
+library:getSaved      读取已保存的库包路径（不存在/失效则返回 null）
+library:scan          读取 manifest 投影 → LibraryEntry[]（书/卷 或 部，含封面 URL、卷数/页数）
 library:listVolumes   列某部下条目 → LibraryEntry[]（可含可继续下钻的子部）
-library:listSubdirs   目录树导航：某目录的直接子文件夹（忠实磁盘含空目录）→ DirNode[]
-library:listDirRaw    目录网格数据：某目录完整直接内容（子文件夹 + 可读单文件 + 普通文件 + 自身可读）→ RawListing
 library:listPages     按阅读顺序递归收集一卷所有页 → comic:// URL[]
-library:setSeriesMeta 写某部名称/作者覆盖到 settings.json 的 seriesMeta → 叠加后的 {title, author}
-library:rename        重命名部/卷（真改本地文件名）→ 新绝对路径；顶层部改名时迁移 seriesMeta 键
-library:move          把若干部/卷移动到目标文件夹（同库内）
-library:createFolder  在父目录下新建文件夹 → 新绝对路径
-library:trash         把若干部/卷移入系统废纸篓（shell.trashItem，可还原）
+library:renameBook    改卷册显示名，只写 book.json
+library:renameSeries  改部名/作者，只写 library.json 并同步 book hints
+library:deleteSeries  解散部，或按参数连内部卷册一并移入库内 trash/
+library:reorderSeries 更新部顺序
+library:reorderBooks  更新散卷或部内卷册顺序
+library:trashBooks    把卷册桶移入库内 trash/
 ```
 
-**应用内文件整理**：`library:rename/move/createFolder/trash` 都先经 `assertWithinRoot`（规范化后必须落在当前库根内，防路径穿越）+ `sanitizeName`（禁分隔符/`.`/`..`/超长，空格放行）。删除走 `shell.trashItem` 进系统废纸篓。renderer 端入口在库网格右键菜单（卷：重命名/移动到/删除；部：重命名/删除）+ 顶栏「新建文件夹」；错误经稳定码→`uiText.fileops` 翻译。注意「编辑信息」(seriesMeta 覆盖、不动文件) 与「重命名」(真改文件夹) 并存。
+**应用内整理**：整理动作只作用于 `.ctklib` 托管库。改名、归属、排序写 `library.json` / `book.json`；删除卷册把桶移动到库内 `trash/`，删除部默认解散并让卷册回散卷，也可勾选连内部卷册一并移入回收站。renderer 端入口在库网格右键菜单、顶栏操作和库内回收站弹窗；错误经稳定码→`uiText.fileops` 翻译。
 
 **comic:// 协议**：`registerComicScheme()` 在 app ready 前注册为 privileged scheme，`setupLibrary()` 内 `protocol.handle('comic', …)` 服务图片。URL 形如 `comic://img/?p=<encodeURIComponent(绝对路径)>`；返回前做**越权校验**——必须是图片扩展名且位于当前库根目录、压缩包解压缓存目录或文档页面缓存目录内，否则 403。带 `&thumb=1` 走**封面缩略图通道**：sharp 把原图降到 480px webp、按 路径+mtime+size 缓存到 `userData/thumbs/`（网格封面用，避免解全图卡顿；阅读器仍走原图）。`src/renderer/index.html` 的 CSP `img-src` 已放行 `comic:`。
 
@@ -173,15 +174,13 @@ library:trash         把若干部/卷移入系统废纸篓（shell.trashItem，
 LibrarySeries  id, path, name, title, author, volumeCount, coverUrl
 LibraryVolume  id, path, name, title, kind('folder'|'file'), sourceType('folder'|'archive'|'pdf'|'epub'), pageCount, coverUrl
 LibraryEntry   (LibrarySeries & {type:'folder'}) | (LibraryVolume & {type:'book', author})
-DirNode        id, path, name, hasSubfolders                 // 目录树节点
-RawPlainFile   id, path, name, ext, sizeBytes, coverUrl
-RawListing     folders[]（DirNode + childCount/coverUrl）, files(LibraryVolume[]), plainFiles(RawPlainFile[]), self{readable,pageCount,coverUrl}
+TrashBookView  id, bookId, title, author, sourceType, deletedAt, coverUrl
 ```
 
-**浏览与目录导航**（同一份库根，内容区统一网格）：
+**浏览与书架导航**（同一份托管库包，内容区统一网格）：
 
-- **目录网格**：走 `listSubdirs`/`listDirRaw`，**1:1 映射磁盘**（不隐藏空目录、不折叠、不强分部/卷）。文件夹树常驻左侧边栏（「所有漫画」即树根），`所有漫画` 与面包屑根都落到库根目录网格；点文件夹相当于切换面包屑定位。内容区复用统一网格的选中、右键、框选、空白取消和卡片样式，并忠实展示该目录的直接子文件夹、可读漫画单文件、普通文件和图片文件。拖卡片到树节点/文件夹卡=移动（复用 `library:move`），导航状态（库根/当前目录/树展开/拖拽源/版本）由 App 层 `FileNavContext` 跨边栏与内容区共享，文件操作后用 version 自增触发两侧重载。
-- **递归识别**：`scan`/`listVolumes` 仍用于识别可读卷册、封面、作者/标题覆盖和转换元信息，但不再作为 `所有漫画` 的默认智能书架页面。
+- **书架网格**：走 `scan`/`listVolumes` 的 manifest 投影，展示「所有漫画」下的部与散卷，以及下钻后的子部和部内卷册。内容区复用统一网格的选中、右键、框选、空白取消和卡片样式。
+- **多级导航**：前端维护部路径栈与面包屑；双击部进入下一层，双击卷打开阅读器。所有整理动作完成后重新拉取 manifest 投影。
 
 ## 压缩包来源层
 
@@ -338,11 +337,11 @@ webpush:reveal      兜底：在 Finder 定位产物，方便手动拖入
 
 ```txt
 漫画库（所有漫画）
-  真实本地漫画库浏览，采用桌面「文件管理器」式交互（对标 Eagle）。LibraryView 自带合并顶栏
+  Eagle 式 `.ctklib` 托管库浏览，采用桌面书架式交互。LibraryView 自带合并顶栏
   （面包屑 + 操作图标按钮：编辑 / 转换活动 / 重新扫描 / 切换文件夹）。
   侧栏开合按钮在桌面态位于边栏顶部（不在内容顶栏，使面包屑与网格左缘对齐）；
   仅窄屏（侧栏切 offcanvas，isMobile）时内容顶栏左侧才出现开合入口。
-  未设库 → 空状态选目录；已设库 → 「所有漫画」直接显示库根目录网格，面包屑根与边栏入口一致。
+  未设库 → 空状态新建/打开库包；已设库 → 「所有漫画」显示 manifest 投影的部与散卷，面包屑根与边栏入口一致。
   **双击进入**：双击部卡逐级下钻、双击卷卡进 VolumeReader（单页/双页、左右方向、续读、相邻页预加载）。
   **按下即选中**：内容区卡片在 pointerdown 时高亮（封面 ring 描边 + 标题/作者浅色反白底 bg-accent，整卡为选中单位）；
   普通点击只保留单选高亮，Cmd/Ctrl 点累加、空白拖动框选（marquee，pointer capture）、Cmd·Ctrl+A 全选；
@@ -352,15 +351,8 @@ webpush:reveal      兜底：在 Finder 定位产物，方便手动拖入
   失效、内容下方空白命不中）。封面经 comic:// 加载、内描边，卡片封面不显示普通信息标签；
   队列中/中断/失败显示状态角标，已转换显示「已转换」图标角标（封面不再放单独转换按钮）。
   转换入口：选中 → 顶栏「转换所选」——单本走单本确认弹窗（含封面预览），多本走批量确认弹窗。
-
-左侧文件夹树导航（忠实磁盘整理）
-  左侧边栏「所有漫画」即文件夹树根（shadcn Collapsible + SidebarMenuButton + SidebarMenuSub 范式，
-  单击选中库根目录、双击行或点右侧箭头展开/收起其下文件夹；可展开行禁文本选区并使用默认光标）。
-  点任一文件夹相当于切换面包屑定位，
-  内容区仍是统一网格（子文件夹 + 可读单文件 + 普通文件/图片文件）。
-  1:1 忠实磁盘（不隐藏空目录、不折叠、不强分部/卷）。所有直接文件/文件夹都可点击、选中、
-  右键；**拖卡片到树节点/文件夹卡 = 移动**（封面 <img> 设 draggable=false 防其劫持拖拽手势）。
-  状态由 App 层 `FileNavContext` 跨边栏与内容区共享（见「漫画库数据层 · 浏览与目录导航」）。
+  整理入口：右键或顶栏触发托管库 IPC，支持改卷册显示名、编辑部名/作者、移入已有部、新建部并移入、
+  解散部、删除到库内回收站、上移/下移排序；这些动作只写 manifest 或移动库内桶。
 
 转换活动（队列）
   转换状态由 App 层 hook `useConvertActivity` 管理（队列顺序处理、进度订阅、产物刷新），
@@ -508,10 +500,11 @@ Electron main 或专门的服务模块应负责本地文件系统和进程执行
 
 ## 存储
 
-漫画库本身没有数据库 / 索引（每次进入实时扫描目录）。已有的持久化：
+漫画库本身没有数据库 / 索引（书架由 `.ctklib` manifest 实时投影）。已有的持久化：
 
-- **库根目录**：main 进程写入 `app.getPath('userData')/settings.json` 的 `libraryRoot` 字段。
-- **每部名称/作者覆盖**：`settings.json` 的 `seriesMeta`（`{ <部文件夹名>: { title, author } }`），覆盖 `[作者]标题` 解析，不改本地文件夹名。
+- **托管库包路径**：main 进程写入 `app.getPath('userData')/settings.json` 的 `libraryPackagePath` 字段。
+- **库 manifest**：`.ctklib/library.json` 保存部、散卷、归属和排序；`.ctklib/books/<bookId>/book.json` 保存卷册显示名、来源类型、页数和重建 hints。
+- **库内回收站**：`.ctklib/trash/` 保存软删除的卷册桶，可还原或永久清空。
 - **转换产物**：EPUB 文件落在 `app.getPath('userData')/converted/<部>/`；清单 `app.getPath('userData')/artifacts.json`（`{ version, artifacts: Artifact[] }`）。同一源卷重转会覆盖旧清单条目，删除产物会同时删文件和条目。
 - **转换队列**：`app.getPath('userData')/queue.json`（`{ version, jobs: PersistedConvertJob[] }`）。每次队列结构变化由 renderer 经 `queue:save` 推送；启动时 `queue.ts` 把未完成任务（queued/converting）标为 `'interrupted'`（不自动跑，等用户在 UI 确认继续/不继续），并扫 `userData/converted/<部>/tmp_<id>/` 清孤儿临时目录。详见「转换队列持久化层」。
 - **投递配置**：`settings.json` 的 `delivery` 字段（host/port/user/kindleEmail + `passEncrypted` 或 `passPlain`）。密码经 `safeStorage` 系统钥匙串加密，不明文落盘。
