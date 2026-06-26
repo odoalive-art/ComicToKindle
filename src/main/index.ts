@@ -8,6 +8,7 @@ import { setupArtifacts } from './artifacts'
 import { setupQueue } from './queue'
 import { setupDelivery } from './deliver'
 import { setupWebPush } from './webpush'
+import { disposeConvertHost } from './convert-host'
 
 // 自定义 comic:// 协议必须在 app ready 之前注册
 registerComicScheme()
@@ -166,6 +167,11 @@ app.whenReady().then(() => {
 // 孤儿转换 + 重复入队，故这里统一退出。
 app.on('window-all-closed', () => {
   app.quit()
+})
+
+// 退出前杀掉转换子进程，避免遗留孤儿进程续跑转换
+app.on('before-quit', () => {
+  disposeConvertHost()
 })
 
 // In this file you can include the rest of your app's specific main process

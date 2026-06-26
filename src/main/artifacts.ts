@@ -1,13 +1,8 @@
 import { app, ipcMain, shell, dialog, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { promises as fs } from 'fs'
-import {
-  convertMangaToEPUB,
-  previewConvertPage,
-  type ConvertOptions,
-  type ConvertOutput,
-  type PreviewPageResult
-} from './convert'
+import type { ConvertOptions, ConvertOutput, PreviewPageResult } from './convert'
+import { runConvert, runPreview, cancelConvert } from './convert-host'
 import { collectVolumeImagePaths } from './library'
 
 /**
@@ -91,9 +86,6 @@ export interface ConvertRequest {
   options?: ConvertOptions
 }
 
-// 进行中转换的取消标记：sourceVolumePath → 已请求取消
-const cancelledPaths = new Set<string>()
-
 // 供投递层（deliver.ts）读取产物与更新投递状态
 export async function getArtifactById(id: string): Promise<Artifact | undefined> {
   return (await readManifest()).artifacts.find((a) => a.id === id)
@@ -120,7 +112,7 @@ export function setupArtifacts(): void {
     // 续跑到完成、写出产物，重开窗口时与重新入队的同卷形成双跑。引擎在下一张图/
     // 下一卷边界处通过 checkCancelled 中止。
     const onSenderGone = (): void => {
-      cancelledPaths.add(req.sourceVolumePath)
+      cancelConvert(req.sourceVolumePath)
     }
     sender.once('destroyed', onSenderGone)
     const emitProgress = (percent: number, message: string): void => {
@@ -139,24 +131,23 @@ export function setupArtifacts(): void {
     const outputDir = join(convertedRoot(), sanitize(req.seriesName))
     await fs.mkdir(outputDir, { recursive: true })
 
-    cancelledPaths.delete(req.sourceVolumePath)
     let result: { outputs: ConvertOutput[]; pageCount: number }
     try {
-      result = await convertMangaToEPUB({
-        imagePaths,
-        outputDir,
-        title: composeBookTitle(req.seriesTitle, req.volumeTitle),
-        author: req.author ?? 'Unknown',
-        options: req.options,
-        onProgress: emitProgress,
-        onLog: (m) => console.log('[convert]', m),
-        checkCancelled: () => cancelledPaths.has(req.sourceVolumePath)
-      })
+      result = await runConvert(
+        req.sourceVolumePath,
+        {
+          imagePaths,
+          outputDir,
+          title: composeBookTitle(req.seriesTitle, req.volumeTitle),
+          author: req.author ?? 'Unknown',
+          options: req.options
+        },
+        emitProgress
+      )
     } catch (err) {
       emitProgress(-1, `转换失败：${(err as Error).message}`)
       throw err
     } finally {
-      cancelledPaths.delete(req.sourceVolumePath)
       if (!sender.isDestroyed()) sender.off('destroyed', onSenderGone)
     }
 
@@ -188,14 +179,14 @@ export function setupArtifacts(): void {
       const imagePaths = await collectVolumeImagePaths(req.sourceVolumePath)
       if (imagePaths.length === 0) throw new Error('这一卷里没有可转换的图片。')
       const idx = Math.max(0, Math.min(req.pageIndex, imagePaths.length - 1))
-      const result = await previewConvertPage(imagePaths[idx], idx, req.options)
+      const result = await runPreview(imagePaths[idx], idx, req.options)
       return { ...result, pageIndex: idx, pageCount: imagePaths.length }
     }
   )
 
   // 请求取消某卷的进行中转换；引擎在下一张图/下一卷边界处中止
   ipcMain.handle('convert:cancel', (_event, sourceVolumePath: string): void => {
-    cancelledPaths.add(sourceVolumePath)
+    cancelConvert(sourceVolumePath)
   })
 
   ipcMain.handle('artifacts:reveal', async (_event, id: string): Promise<void> => {

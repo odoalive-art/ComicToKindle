@@ -7,6 +7,7 @@ import { createRequire } from 'module'
 import { XMLParser } from 'fast-xml-parser'
 import { createCanvas } from '@napi-rs/canvas'
 import sevenBin from '7zip-bin'
+import { runRenderPdf } from './convert-host'
 
 /**
  * 文档来源层：把 PDF / 图片型 EPUB 转成图片页缓存，供阅读器与 Kindle 转换流水线复用。
@@ -126,47 +127,11 @@ async function inspectPdf(filePath: string): Promise<DocumentInfo> {
   return { pageCount }
 }
 
+// PDF 整本光栅化：缓存目录/manifest 留在主进程，逐页 render（pdfjs CPU 重活）委托给
+// 转换子进程（convert-host.runRenderPdf），避免大 PDF 准备期堵死主进程 event loop。
 async function renderPdf(filePath: string, onProgress?: DocumentProgressCb): Promise<string[]> {
   const dir = await cacheDirFor(filePath)
-  await fs.rm(dir, { recursive: true, force: true }).catch(() => {})
-  const pagesDir = join(dir, 'pages')
-  await fs.mkdir(pagesDir, { recursive: true })
-
-  const pdfjs = await loadPdfJs()
-  const data = new Uint8Array(await fs.readFile(filePath))
-  const task = pdfjs.getDocument({
-    data,
-    disableWorker: true,
-    useSystemFonts: true,
-    standardFontDataUrl: pdfAssetDir('standard_fonts'),
-    cMapUrl: pdfAssetDir('cmaps'),
-    cMapPacked: true,
-    wasmUrl: pdfAssetDir('wasm')
-  } as never)
-  const doc = await task.promise
-  const relImages: string[] = []
-
-  try {
-    for (let i = 1; i <= doc.numPages; i++) {
-      const page = await doc.getPage(i)
-      const viewport = page.getViewport({ scale: 2 })
-      const canvas = createCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height))
-      const canvasContext = canvas.getContext('2d')
-      // pdfjs v6：用 node canvas 的 2D context 渲染时必须显式传 canvas:null，
-      // 否则 pdfjs 会把 canvasContext.canvas 当 DOM canvas 处理而报错。
-      await page.render({ canvas: null, canvasContext, viewport } as never).promise
-      const rel = join('pages', `${String(i).padStart(4, '0')}.png`)
-      await fs.writeFile(join(dir, rel), canvas.toBuffer('image/png'))
-      relImages.push(rel)
-      onProgress?.(Math.round((i / doc.numPages) * 100))
-    }
-  } catch (err) {
-    await fs.rm(dir, { recursive: true, force: true }).catch(() => {})
-    throw err
-  } finally {
-    await task.destroy() // pdfjs v6：销毁在 loadingTask 上（doc 无 destroy），否则 finally 抛错吞掉结果
-  }
-
+  const relImages = await runRenderPdf(filePath, dir, (percent) => onProgress?.(percent))
   return writeManifest(dir, relImages)
 }
 
