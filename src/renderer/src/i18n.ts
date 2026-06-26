@@ -175,14 +175,18 @@ export const uiText = {
       bigger: (pct: number) => `体积 +${pct}%`
     },
     seriesMeta: {
-      edit: '编辑漫画信息',
-      desc: '改名称与作者用于应用内显示和转换默认值，不会改动本地文件夹。',
-      name: '漫画名',
+      edit: '编辑信息',
+      bookEdit: '编辑书籍信息',
+      bookDesc: '改书名与作者，用于应用内显示和转换时的默认书名/作者。',
+      folderEdit: '重命名文件夹',
+      folderDesc: '文件夹只是收纳容器，只有一个名字。',
+      bookName: '书名',
+      folderName: '文件夹名',
       author: '作者',
       authorPlaceholder: '未知作者',
       save: '保存',
       cancel: '取消',
-      saved: '已更新漫画信息'
+      saved: '已更新'
     },
     fileops: {
       rename: '重命名',
@@ -199,6 +203,10 @@ export const uiText = {
       batchStartLabel: '起始序号',
       batchPreviewTitle: '预览',
       batchRenamed: (n: number) => `已重命名 ${n} 卷`,
+      batchAuthor: (n: number) => `批量设置作者（${n} 本）`,
+      batchAuthorTitle: '批量设置作者',
+      batchAuthorDesc: (n: number) => `把所选 ${n} 本书的作者统一设为：`,
+      batchAuthorDone: (n: number) => `已为 ${n} 本设置作者`,
       move: '移动到…',
       moveTitle: '移动到',
       moveDesc: (n: number) => `将所选 ${n} 项移动到另一部。`,
@@ -601,14 +609,18 @@ export const uiText = {
       bigger: (pct: number) => `${pct}% larger`
     },
     seriesMeta: {
-      edit: 'Edit series info',
-      desc: 'Used for in-app display and conversion defaults. Does not rename the local folder.',
-      name: 'Series',
+      edit: 'Edit info',
+      bookEdit: 'Edit book info',
+      bookDesc: 'Title and author — used for in-app display and conversion defaults.',
+      folderEdit: 'Rename folder',
+      folderDesc: 'A folder is just a container with a name.',
+      bookName: 'Title',
+      folderName: 'Folder name',
       author: 'Author',
       authorPlaceholder: 'Unknown author',
       save: 'Save',
       cancel: 'Cancel',
-      saved: 'Series info updated'
+      saved: 'Updated'
     },
     fileops: {
       rename: 'Rename',
@@ -626,6 +638,10 @@ export const uiText = {
       batchStartLabel: 'Start number',
       batchPreviewTitle: 'Preview',
       batchRenamed: (n: number) => `Renamed ${n} volume${n === 1 ? '' : 's'}`,
+      batchAuthor: (n: number) => `Set author (${n})`,
+      batchAuthorTitle: 'Set author',
+      batchAuthorDesc: (n: number) => `Set the author of the ${n} selected book(s) to:`,
+      batchAuthorDone: (n: number) => `Author set for ${n} book${n === 1 ? '' : 's'}`,
       move: 'Move to…',
       moveTitle: 'Move to',
       moveDesc: (n: number) => `Move ${n} selected item${n === 1 ? '' : 's'} into another series.`,

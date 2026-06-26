@@ -364,19 +364,17 @@ function CoverImage({
   )
 }
 
-/** 「部」书摞卡的可点击视觉（错位卡片 + 卷数角标 + 标题/作者），下钻容器复用。 */
+/** 文件夹卡的可点击视觉（错位书摞 + 册数角标 + 文件夹名），下钻容器复用。纯收纳，无作者。 */
 function FolderStackCard({
   item,
   picked,
   volumeUnitLabel,
-  unknownAuthor,
   onClick,
   onDoubleClick
 }: {
   item: LibrarySeries
   picked: boolean
   volumeUnitLabel: string
-  unknownAuthor: string
   onClick: () => void
   onDoubleClick: () => void
 }): React.JSX.Element {
@@ -404,13 +402,6 @@ function FolderStackCard({
           <CoverImage src={item.coverUrl} alt={item.title} />
           <div className="pointer-events-none absolute inset-0 rounded-lg border border-foreground/10" />
         </AspectRatio>
-        <Badge
-          variant="secondary"
-          className="absolute top-1.5 right-1.5 max-w-[calc(100%-0.75rem)] gap-1 truncate bg-background/85 backdrop-blur"
-        >
-          <Library className="size-3" />
-          {volumeUnitLabel}
-        </Badge>
       </div>
       <div
         className={`min-w-0 rounded-md px-1.5 py-0.5 ${
@@ -420,7 +411,7 @@ function FolderStackCard({
         <div className="truncate text-sm font-medium" title={item.title}>
           {item.title}
         </div>
-        <div className="truncate text-xs text-muted-foreground">{item.author ?? unknownAuthor}</div>
+        <div className="truncate text-xs text-muted-foreground">{volumeUnitLabel}</div>
       </div>
     </button>
   )
@@ -428,15 +419,6 @@ function FolderStackCard({
 
 const LIBRARY_GRID =
   'grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'
-
-/** 打开工作台时，用「漫画名 + 卷册」拼出可编辑的单一书名初值（之后只剩一个 title 字段） */
-function composeBookTitle(seriesTitle: string, volumeTitle: string): string {
-  const s = seriesTitle.trim()
-  const v = volumeTitle.trim()
-  if (!s) return v || 'Untitled'
-  if (!v || v === s || v.startsWith(s)) return v || s
-  return `${s} ${v}`
-}
 
 // ---------- 阅读偏好与进度（持久化于 localStorage） ----------
 type ReadingDirection = 'ltr' | 'rtl'
@@ -1366,13 +1348,6 @@ function LibraryView({
   const isUnsupportedVol = (v: LibraryVolume): boolean =>
     v.kind === 'file' && !['archive', 'pdf', 'epub'].includes(v.sourceType)
 
-  const volumeTypeLabel = (v: LibraryVolume): string => {
-    if (v.sourceType === 'pdf') return text.library.pdfVolume
-    if (v.sourceType === 'epub') return text.library.epubVolume
-    if (v.sourceType === 'archive') return text.library.fileVolume
-    return text.library.pageUnit(v.pageCount)
-  }
-
   // 解锁对话框：用 Promise + ref 让阅读/转换流程能 await 用户输入密码
   const [unlockReq, setUnlockReq] = useState<{
     vol: LibraryVolume
@@ -1393,8 +1368,10 @@ function LibraryView({
   // null = 关闭；非空数组 = 本次要转换的卷（每卷可独立改系列名/卷册名/作者）。
   const [workbench, setWorkbench] = useState<WorkbenchItem[] | null>(null)
 
-  // 编辑某部漫画的名称/作者（持久化覆盖，不改本地文件夹名）
+  // 编辑「书籍信息」（名称 + 作者）。kind='series' 改部（renameSeries），
+  // kind='book' 改单本散卷/卷册（setBookMeta，作者跟书走）。持久化覆盖，不改本地文件夹名。
   const [seriesMetaReq, setSeriesMetaReq] = useState<{
+    kind: 'series' | 'book'
     id?: string
     name: string
     title: string
@@ -1415,6 +1392,12 @@ function LibraryView({
     items: { id: string; oldName: string }[]
     template: string
     start: number
+    busy: boolean
+  } | null>(null)
+  // 批量设置作者（多选 → 同一作者）：文件夹不再持有作者，作者一律按书设
+  const [batchAuthorReq, setBatchAuthorReq] = useState<{
+    ids: string[]
+    author: string
     busy: boolean
   } | null>(null)
   const [moveReq, setMoveReq] = useState<{ sources: string[]; busy: boolean } | null>(null)
@@ -1572,8 +1555,8 @@ function LibraryView({
       {
         vol,
         seriesPathName: selected.name,
-        title: composeBookTitle(selected.title, vol.title),
-        author: selected.author ?? ''
+        title: vol.title,
+        author: (vol as LibraryBook).author ?? ''
       }
     ])
   }
@@ -1598,37 +1581,46 @@ function LibraryView({
     if (ready.length > 0) toast.success(text.activity.enqueued(ready.length))
   }
 
+  // 文件夹「重命名」：纯收纳容器只有名字，没有作者
   const openSeriesMeta = React.useCallback((item: LibrarySeries | null): void => {
     if (!item) return
     setSeriesMetaReq({
+      kind: 'series',
       id: item.id,
       name: item.name,
       title: item.title,
-      author: item.author ?? '',
+      author: '',
+      busy: false
+    })
+  }, [])
+
+  // 编辑单本散卷/卷册的书籍信息（书名 + 作者）——跟文件夹同款弹窗
+  const openBookMeta = React.useCallback((book: LibraryBook): void => {
+    setSeriesMetaReq({
+      kind: 'book',
+      id: book.id,
+      name: book.name,
+      title: book.title,
+      author: book.author ?? '',
       busy: false
     })
   }, [])
 
   const submitSeriesMeta = async (): Promise<void> => {
-    if (!seriesMetaReq || seriesMetaReq.busy) return
-    if (!seriesMetaReq.id) return
+    if (!seriesMetaReq || seriesMetaReq.busy || !seriesMetaReq.id) return
+    const author = seriesMetaReq.author.trim() || null
     setSeriesMetaReq({ ...seriesMetaReq, busy: true })
     try {
-      await window.api.library.renameSeries(
-        seriesMetaReq.id,
-        seriesMetaReq.title,
-        seriesMetaReq.author.trim() || null
-      )
-      setSelected((prev) =>
-        prev && prev.id === seriesMetaReq.id
-          ? {
-              ...prev,
-              name: seriesMetaReq.title,
-              title: seriesMetaReq.title,
-              author: seriesMetaReq.author.trim() || null
-            }
-          : prev
-      )
+      if (seriesMetaReq.kind === 'book') {
+        await window.api.library.setBookMeta(seriesMetaReq.id, seriesMetaReq.title, author)
+      } else {
+        await window.api.library.renameSeries(seriesMetaReq.id, seriesMetaReq.title)
+        setSelected((prev) =>
+          prev && prev.id === seriesMetaReq.id
+            ? { ...prev, name: seriesMetaReq.title, title: seriesMetaReq.title }
+            : prev
+        )
+      }
       setSeriesMetaReq(null)
       toast.success(text.seriesMeta.saved)
       await refreshAfterFileop()
@@ -1809,6 +1801,33 @@ function LibraryView({
     }
   }
 
+  const openBatchAuthor = (): void => {
+    const ids = (selected !== null ? volumes : series)
+      .filter((v): v is LibraryVolume => v.type === 'book' && selectedVols.has(v.path))
+      .map((v) => v.id)
+    if (ids.length === 0) return
+    setBatchAuthorReq({ ids, author: '', busy: false })
+  }
+
+  const submitBatchAuthor = async (): Promise<void> => {
+    if (!batchAuthorReq || batchAuthorReq.busy) return
+    setBatchAuthorReq((s) => (s ? { ...s, busy: true } : s))
+    try {
+      await window.api.library.setBooksAuthor(
+        batchAuthorReq.ids,
+        batchAuthorReq.author.trim() || null
+      )
+      const n = batchAuthorReq.ids.length
+      setBatchAuthorReq(null)
+      exitSelect()
+      toast.success(text.fileops.batchAuthorDone(n))
+      await refreshAfterFileop()
+    } catch (e) {
+      toast.error(fileopErr(e))
+      setBatchAuthorReq((s) => (s ? { ...s, busy: false } : s))
+    }
+  }
+
   const submitMove = async (destDir: string): Promise<void> => {
     if (!moveReq || moveReq.busy) return
     setMoveReq((s) => (s ? { ...s, busy: true } : s))
@@ -1837,7 +1856,7 @@ function LibraryView({
       return
     setMoveReq((s) => (s ? { ...s, busy: true } : s))
     try {
-      await window.api.library.createSeries(moveNewFolderName, null, moveReq.sources)
+      await window.api.library.createSeries(moveNewFolderName, moveReq.sources)
       const n = moveReq.sources.length
       setMoveReq(null)
       setMoveNewFolderName(null)
@@ -1883,7 +1902,7 @@ function LibraryView({
     if (!newFolderReq || newFolderReq.busy || !newFolderReq.name.trim()) return
     setNewFolderReq((s) => (s ? { ...s, busy: true } : s))
     try {
-      await window.api.library.createSeries(newFolderReq.name, null, [])
+      await window.api.library.createSeries(newFolderReq.name, [])
       setNewFolderReq(null)
       toast.success(text.fileops.created)
       await refreshAfterFileop()
@@ -1972,28 +1991,18 @@ function LibraryView({
     setSelectMode(!allSelected && shouldUseSelectMode(paths.length))
   }
 
-  // 转换所选：单本走单本确认弹窗（含封面预览），多本走批量确认弹窗。
-  // 部内：书名预填「部名 + 卷名」；顶层散卷：书名即卷名。输出目录名(seriesPathName)各自归属，不可编辑。
+  // 转换所选：书名/作者一律用书自带的（都是单册）；seriesPathName 用于输出目录分组，
+  // 文件夹内用文件夹名、顶层散卷用书自己的名。打开工作台逐本可改。
   const convertSelected = (): void => {
     if (selectedVols.size === 0) return
     const picked = bookVolumes.filter((v) => selectedVols.has(v.path))
     if (picked.length === 0) return
-    // 部内：书名预填「部名 + 卷名」；顶层散卷：书名即卷名。打开工作台逐卷可改。
-    const items: WorkbenchItem[] = picked.map((v) =>
-      selected
-        ? {
-            vol: v,
-            seriesPathName: selected.name,
-            title: composeBookTitle(selected.title, v.title),
-            author: selected.author ?? ''
-          }
-        : {
-            vol: v,
-            seriesPathName: (v as LibraryBook).name,
-            title: (v as LibraryBook).title,
-            author: (v as LibraryBook).author ?? ''
-          }
-    )
+    const items: WorkbenchItem[] = picked.map((v) => ({
+      vol: v,
+      seriesPathName: selected ? selected.name : (v as LibraryBook).name,
+      title: v.title,
+      author: (v as LibraryBook).author ?? ''
+    }))
     setWorkbench(items)
   }
 
@@ -2239,7 +2248,7 @@ function LibraryView({
       if (target.kind === 'series') {
         await window.api.library.assignBooks(ids, target.seriesId)
       } else if (target.kind === 'new') {
-        await window.api.library.createSeries(target.title.trim(), null, ids)
+        await window.api.library.createSeries(target.title.trim(), ids)
       }
       toast.success(text.library.importDone(importReq.scan.candidates.length), {
         id: 'library-import'
@@ -2445,12 +2454,13 @@ function LibraryView({
         }
         return
       }
-      // 单选一个卷 → 重命名弹窗
+      // 单选一个卷：顶层散卷 → 编辑书籍信息（书名+作者）；部内卷册 → 重命名弹窗
       if (selectedVols.size === 1) {
         const path = [...selectedVols][0]
         const vol = layer.find((v): v is LibraryVolume => v.type === 'book' && v.path === path)
         if (vol) {
-          setRenameReq({ path: vol.path, id: vol.id, kind: 'book', name: vol.name, busy: false })
+          if (selected === null) openBookMeta(vol as LibraryBook)
+          else setRenameReq({ path: vol.path, id: vol.id, kind: 'book', name: vol.name, busy: false })
         }
         return
       }
@@ -2473,7 +2483,8 @@ function LibraryView({
     selected,
     volumes,
     series,
-    openSeriesMeta
+    openSeriesMeta,
+    openBookMeta
   ])
 
   const showVolumes = selected !== null
@@ -2606,8 +2617,12 @@ function LibraryView({
       >
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>{text.seriesMeta.edit}</DialogTitle>
-            <DialogDescription>{text.seriesMeta.desc}</DialogDescription>
+            <DialogTitle>
+              {seriesMetaReq?.kind === 'book' ? text.seriesMeta.bookEdit : text.seriesMeta.folderEdit}
+            </DialogTitle>
+            <DialogDescription>
+              {seriesMetaReq?.kind === 'book' ? text.seriesMeta.bookDesc : text.seriesMeta.folderDesc}
+            </DialogDescription>
           </DialogHeader>
           {seriesMetaReq ? (
             <form
@@ -2618,7 +2633,11 @@ function LibraryView({
               className="space-y-3"
             >
               <div className="space-y-1.5">
-                <label className="text-xs text-muted-foreground">{text.seriesMeta.name}</label>
+                <label className="text-xs text-muted-foreground">
+                  {seriesMetaReq.kind === 'book'
+                    ? text.seriesMeta.bookName
+                    : text.seriesMeta.folderName}
+                </label>
                 <Input
                   autoFocus
                   value={seriesMetaReq.title}
@@ -2627,16 +2646,18 @@ function LibraryView({
                   }
                 />
               </div>
-              <div className="space-y-1.5">
-                <label className="text-xs text-muted-foreground">{text.seriesMeta.author}</label>
-                <Input
-                  value={seriesMetaReq.author}
-                  placeholder={text.seriesMeta.authorPlaceholder}
-                  onChange={(e) =>
-                    setSeriesMetaReq((s) => (s ? { ...s, author: e.target.value } : s))
-                  }
-                />
-              </div>
+              {seriesMetaReq.kind === 'book' ? (
+                <div className="space-y-1.5">
+                  <label className="text-xs text-muted-foreground">{text.seriesMeta.author}</label>
+                  <Input
+                    value={seriesMetaReq.author}
+                    placeholder={text.seriesMeta.authorPlaceholder}
+                    onChange={(e) =>
+                      setSeriesMetaReq((s) => (s ? { ...s, author: e.target.value } : s))
+                    }
+                  />
+                </div>
+              ) : null}
               <DialogFooter>
                 <Button
                   type="button"
@@ -2772,6 +2793,51 @@ function LibraryView({
                   type="submit"
                   disabled={!batchRenameReq.template.trim() || batchRenameReq.busy}
                 >
+                  {text.fileops.confirm}
+                </Button>
+              </DialogFooter>
+            </form>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+      {/* 库整理：批量设置作者（多选 → 同一作者） */}
+      <Dialog
+        open={batchAuthorReq !== null}
+        onOpenChange={(o) => (!o && !batchAuthorReq?.busy ? setBatchAuthorReq(null) : undefined)}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{text.fileops.batchAuthorTitle}</DialogTitle>
+            <DialogDescription>
+              {batchAuthorReq ? text.fileops.batchAuthorDesc(batchAuthorReq.ids.length) : ''}
+            </DialogDescription>
+          </DialogHeader>
+          {batchAuthorReq ? (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                void submitBatchAuthor()
+              }}
+              className="space-y-3"
+            >
+              <Input
+                autoFocus
+                value={batchAuthorReq.author}
+                placeholder={text.seriesMeta.authorPlaceholder}
+                onChange={(e) =>
+                  setBatchAuthorReq((s) => (s ? { ...s, author: e.target.value } : s))
+                }
+              />
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setBatchAuthorReq(null)}
+                  disabled={batchAuthorReq.busy}
+                >
+                  {text.fileops.cancel}
+                </Button>
+                <Button type="submit" disabled={batchAuthorReq.busy}>
                   {text.fileops.confirm}
                 </Button>
               </DialogFooter>
@@ -3268,10 +3334,10 @@ function LibraryView({
                           onClick={() => openSeriesMeta(selected)}
                         >
                           <Pencil className="size-4 text-muted-foreground" strokeWidth={1.75} />
-                          <span className="sr-only">{text.seriesMeta.edit}</span>
+                          <span className="sr-only">{text.fileops.rename}</span>
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent>{text.seriesMeta.edit}</TooltipContent>
+                      <TooltipContent>{text.fileops.rename}</TooltipContent>
                     </Tooltip>
                   ) : null}
                   {managedLibrary ? (
@@ -3437,7 +3503,6 @@ function LibraryView({
                               item={vol}
                               picked={selectedSeriesPath === vol.path}
                               volumeUnitLabel={text.library.volumeUnit(vol.volumeCount)}
-                              unknownAuthor={text.library.unknownAuthor}
                               onClick={() => onSeriesClick(vol)}
                               onDoubleClick={() => void openSeries(vol)}
                             />
@@ -3445,22 +3510,6 @@ function LibraryView({
                           <ContextMenuContent>
                             <ContextMenuItem onSelect={() => deferOpen(() => openSeriesMeta(vol))}>
                               <Pencil className="size-4" strokeWidth={1.75} />
-                              {text.seriesMeta.edit}
-                            </ContextMenuItem>
-                            <ContextMenuItem
-                              onSelect={() =>
-                                deferOpen(() =>
-                                  setRenameReq({
-                                    path: vol.path,
-                                    id: vol.id,
-                                    kind: 'series',
-                                    name: vol.name,
-                                    busy: false
-                                  })
-                                )
-                              }
-                            >
-                              <FolderInput className="size-4" strokeWidth={1.75} />
                               {text.fileops.rename}
                             </ContextMenuItem>
                             <ContextMenuSeparator />
@@ -3588,6 +3637,14 @@ function LibraryView({
                                   </Badge>
                                 </div>
                               ) : null}
+                              {vol.pageCount > 0 ? (
+                                <Badge
+                                  variant="secondary"
+                                  className="pointer-events-none absolute right-1.5 bottom-1.5 bg-background/85 px-1.5 py-0 text-[10px] backdrop-blur"
+                                >
+                                  {text.library.pageUnit(vol.pageCount)}
+                                </Badge>
+                              ) : null}
                             </div>
                             <div
                               className={`min-w-0 rounded-md px-1.5 py-0.5 ${
@@ -3603,7 +3660,7 @@ function LibraryView({
                                   if (prog > 0 && vol.pageCount > 0) {
                                     return `${text.reader.resume} · ${text.reader.pageOf(prog + 1, vol.pageCount)}`
                                   }
-                                  return volumeTypeLabel(vol)
+                                  return vol.author ?? text.library.unknownAuthor
                                 })()}
                               </div>
                             </div>
@@ -3640,10 +3697,16 @@ function LibraryView({
                             {text.fileops.rename}
                           </ContextMenuItem>
                           {managedLibrary && selectedVols.size > 1 && selectedVols.has(vol.path) ? (
-                            <ContextMenuItem onSelect={() => deferOpen(() => openBatchRename())}>
-                              <Pencil className="size-4" strokeWidth={1.75} />
-                              {text.fileops.batchRename(selectedVols.size)}
-                            </ContextMenuItem>
+                            <>
+                              <ContextMenuItem onSelect={() => deferOpen(() => openBatchRename())}>
+                                <Pencil className="size-4" strokeWidth={1.75} />
+                                {text.fileops.batchRename(selectedVols.size)}
+                              </ContextMenuItem>
+                              <ContextMenuItem onSelect={() => deferOpen(() => openBatchAuthor())}>
+                                <Pencil className="size-4" strokeWidth={1.75} />
+                                {text.fileops.batchAuthor(selectedVols.size)}
+                              </ContextMenuItem>
+                            </>
                           ) : null}
                           <ContextMenuItem
                             disabled={!managedLibrary && moveTargets().length === 0}
@@ -3793,6 +3856,14 @@ function LibraryView({
                                   </Badge>
                                 </div>
                               ) : null}
+                              {item.pageCount > 0 ? (
+                                <Badge
+                                  variant="secondary"
+                                  className="pointer-events-none absolute right-1.5 bottom-1.5 bg-background/85 px-1.5 py-0 text-[10px] backdrop-blur"
+                                >
+                                  {text.library.pageUnit(item.pageCount)}
+                                </Badge>
+                              ) : null}
                             </div>
                             <div
                               className={`min-w-0 rounded-md px-1.5 py-0.5 ${
@@ -3822,29 +3893,23 @@ function LibraryView({
                             {text.convertPreview.open}
                           </ContextMenuItem>
                           <ContextMenuSeparator />
-                          <ContextMenuItem
-                            onSelect={() =>
-                              deferOpen(() =>
-                                setRenameReq({
-                                  path: item.path,
-                                  id: item.id,
-                                  kind: 'book',
-                                  name: item.name,
-                                  busy: false
-                                })
-                              )
-                            }
-                          >
+                          <ContextMenuItem onSelect={() => deferOpen(() => openBookMeta(item))}>
                             <Pencil className="size-4" strokeWidth={1.75} />
-                            {text.fileops.rename}
+                            {text.seriesMeta.edit}
                           </ContextMenuItem>
                           {managedLibrary &&
                           selectedVols.size > 1 &&
                           selectedVols.has(item.path) ? (
-                            <ContextMenuItem onSelect={() => deferOpen(() => openBatchRename())}>
-                              <Pencil className="size-4" strokeWidth={1.75} />
-                              {text.fileops.batchRename(selectedVols.size)}
-                            </ContextMenuItem>
+                            <>
+                              <ContextMenuItem onSelect={() => deferOpen(() => openBatchRename())}>
+                                <Pencil className="size-4" strokeWidth={1.75} />
+                                {text.fileops.batchRename(selectedVols.size)}
+                              </ContextMenuItem>
+                              <ContextMenuItem onSelect={() => deferOpen(() => openBatchAuthor())}>
+                                <Pencil className="size-4" strokeWidth={1.75} />
+                                {text.fileops.batchAuthor(selectedVols.size)}
+                              </ContextMenuItem>
+                            </>
                           ) : null}
                           <ContextMenuItem
                             disabled={!managedLibrary && moveTargets().length === 0}
@@ -3909,13 +3974,6 @@ function LibraryView({
                               <CoverImage src={item.coverUrl} alt={item.title} />
                               <div className="pointer-events-none absolute inset-0 rounded-lg border border-foreground/10" />
                             </AspectRatio>
-                            <Badge
-                              variant="secondary"
-                              className="absolute top-1.5 right-1.5 max-w-[calc(100%-0.75rem)] gap-1 truncate bg-background/85 backdrop-blur"
-                            >
-                              <Library className="size-3" />
-                              {text.library.volumeUnit(item.volumeCount)}
-                            </Badge>
                           </div>
                           <div
                             className={`min-w-0 rounded-md px-1.5 py-0.5 ${
@@ -3926,7 +3984,7 @@ function LibraryView({
                               {item.title}
                             </div>
                             <div className="truncate text-xs text-muted-foreground">
-                              {item.author ?? text.library.unknownAuthor}
+                              {text.library.volumeUnit(item.volumeCount)}
                             </div>
                           </div>
                         </button>
@@ -3934,22 +3992,6 @@ function LibraryView({
                       <ContextMenuContent>
                         <ContextMenuItem onSelect={() => deferOpen(() => openSeriesMeta(item))}>
                           <Pencil className="size-4" strokeWidth={1.75} />
-                          {text.seriesMeta.edit}
-                        </ContextMenuItem>
-                        <ContextMenuItem
-                          onSelect={() =>
-                            deferOpen(() =>
-                              setRenameReq({
-                                path: item.path,
-                                id: item.id,
-                                kind: 'series',
-                                name: item.name,
-                                busy: false
-                              })
-                            )
-                          }
-                        >
-                          <FolderInput className="size-4" strokeWidth={1.75} />
                           {text.fileops.rename}
                         </ContextMenuItem>
                         {renderSortItems(topSeriesIds, item.id, (delta) =>

@@ -1,11 +1,11 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
 
+// 文件夹（纯收纳容器，只有名字；无作者）
 export interface LibrarySeries {
   id: string
   path: string
   name: string
   title: string
-  author: string | null
   volumeCount: number
   coverUrl: string | null
 }
@@ -34,7 +34,6 @@ export type LibraryEntry =
 export interface SeriesNode {
   id: string
   title: string
-  author: string | null
   bookIds: string[]
   createdAt: string
 }
@@ -100,13 +99,15 @@ export interface LibraryAPI {
     candidates: ImportCandidate[],
     opts: { deleteSourceAfter?: boolean }
   ) => Promise<string[]>
-  createSeries: (title: string, author: string | null, bookIds: string[]) => Promise<SeriesNode>
-  renameSeries: (seriesId: string, title: string, author: string | null) => Promise<void>
+  createSeries: (title: string, bookIds: string[]) => Promise<SeriesNode>
+  renameSeries: (seriesId: string, title: string) => Promise<void>
   deleteSeries: (seriesId: string, deleteBooks?: boolean) => Promise<void>
   assignBooks: (bookIds: string[], targetSeriesId: string | null) => Promise<void>
   reorderSeries: (orderedSeriesIds: string[]) => Promise<void>
   reorderBooks: (seriesId: string | null, orderedBookIds: string[]) => Promise<void>
   renameBook: (id: string, displayName: string) => Promise<void>
+  setBookMeta: (id: string, displayName: string, author: string | null) => Promise<void>
+  setBooksAuthor: (ids: string[], author: string | null) => Promise<void>
   renameBooks: (updates: { id: string; displayName: string }[]) => Promise<void>
   trashBooks: (ids: string[]) => Promise<void>
   listTrash: () => Promise<TrashBookView[]>

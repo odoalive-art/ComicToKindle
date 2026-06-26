@@ -41,12 +41,12 @@ const MIME: Record<string, string> = {
   '.bmp': 'image/bmp'
 }
 
+// 文件夹（纯收纳容器，只有名字；不再有"系列作者"这类身份）
 export interface LibrarySeries {
   id: string
   path: string
   name: string
   title: string
-  author: string | null
   volumeCount: number
   coverUrl: string | null
 }
@@ -100,10 +100,10 @@ export interface LibraryManifest {
   ungrouped: string[]
 }
 
+// 文件夹节点：名字 + 内含书 id 列表。纯收纳，无作者。
 export interface SeriesNode {
   id: string
   title: string
-  author: string | null
   bookIds: string[]
   createdAt: string
 }
@@ -140,6 +140,7 @@ export interface BookView {
   id: string
   sourceType: BookRecord['sourceType']
   displayName: string
+  author: string | null // 本书自带的作者（跟书走，不随归属的「部」变化）
   pageCount: number
   coverUrl: string | null
   locked: boolean
@@ -276,7 +277,6 @@ async function rebuildManifestFromBooks(root: string): Promise<LibraryManifest> 
       series = {
         id: shortId(),
         title,
-        author: rec.seriesAuthorHint ?? null,
         bookIds: [],
         createdAt: rec.addedAt || now
       }
@@ -852,6 +852,7 @@ async function bookRecordToView(rec: BookRecord): Promise<BookView> {
     id: rec.id,
     sourceType: rec.sourceType,
     displayName: rec.displayName,
+    author: rec.seriesAuthorHint,
     pageCount,
     coverUrl: await coverUrlForBook(rec.id),
     locked,
@@ -919,11 +920,10 @@ async function managedScanLibrary(root: string): Promise<LibraryEntry[]> {
     path: node.id,
     name: node.title,
     title: node.title,
-    author: node.author,
     volumeCount: node.volumeCount,
     coverUrl: node.coverUrl
   }))
-  const loose = view.ungrouped.map((book) => managedBookToEntry(book, null))
+  const loose = view.ungrouped.map((book) => managedBookToEntry(book, book.author))
   return [...groups, ...loose]
 }
 
@@ -931,7 +931,8 @@ async function managedListVolumes(seriesId: string): Promise<LibraryEntry[]> {
   const manifest = await readLibraryManifest()
   const node = manifest.series.find((s) => s.id === seriesId)
   if (!node) return []
-  return (await getSeriesBooks(seriesId)).map((book) => managedBookToEntry(book, node.author))
+  // 卡片显示每本自带的作者（跟书走）；node.author 仅作部级标签/批量默认值
+  return (await getSeriesBooks(seriesId)).map((book) => managedBookToEntry(book, book.author))
 }
 
 function removeBookIdsFromManifest(manifest: LibraryManifest, ids: Set<string>): void {
@@ -941,30 +942,28 @@ function removeBookIdsFromManifest(manifest: LibraryManifest, ids: Set<string>):
   }
 }
 
+// 改归属（属于哪个部，title=null 即散卷）。author 省略时不动作者——作者跟书走，
+// 仅建/改部时主动批量设置、或单本编辑时才写。移动/解散都不许偷偷改作者。
 async function updateBookHints(
   ids: string[],
   title: string | null,
-  author: string | null
+  author?: string | null
 ): Promise<void> {
   await Promise.all(
     ids.map(async (id) => {
       const rec = await readBookRecord(id)
       rec.seriesTitleHint = title
-      rec.seriesAuthorHint = author
+      if (author !== undefined) rec.seriesAuthorHint = author
       await writeBookRecord(rec)
     })
   )
 }
 
-async function createSeries(
-  titleRaw: string,
-  authorRaw: string | null,
-  bookIds: string[]
-): Promise<SeriesNode> {
+// 新建文件夹并把书放进去。文件夹纯收纳，无作者；书各自保留自带作者。
+async function createSeries(titleRaw: string, bookIds: string[]): Promise<SeriesNode> {
   if (!isManagedLibraryPath(currentRoot)) throw new Error('NO_LIBRARY')
   const title = titleRaw.trim()
   if (!title) throw new Error('INVALID_NAME')
-  const author = authorRaw?.trim() || null
   const manifest = await readLibraryManifest()
   const ids = [...new Set(bookIds)]
   const idSet = new Set(ids)
@@ -972,31 +971,25 @@ async function createSeries(
   const node: SeriesNode = {
     id: shortId(),
     title,
-    author,
     bookIds: ids,
     createdAt: new Date().toISOString()
   }
   manifest.series.push(node)
   await writeLibraryManifest(manifest)
-  await updateBookHints(ids, title, author)
+  await updateBookHints(ids, title) // 只设归属，不动作者
   return node
 }
 
-async function renameSeries(
-  seriesId: string,
-  titleRaw: string,
-  authorRaw: string | null
-): Promise<void> {
+// 重命名文件夹（同步成员归属 hint）。不碰作者。
+async function renameSeries(seriesId: string, titleRaw: string): Promise<void> {
   const title = titleRaw.trim()
   if (!title) throw new Error('INVALID_NAME')
-  const author = authorRaw?.trim() || null
   const manifest = await readLibraryManifest()
   const node = manifest.series.find((s) => s.id === seriesId)
   if (!node) throw new Error('NOT_FOUND')
   node.title = title
-  node.author = author
   await writeLibraryManifest(manifest)
-  await updateBookHints(node.bookIds, title, author)
+  await updateBookHints(node.bookIds, title)
 }
 
 async function deleteSeries(seriesId: string, deleteBooks = false): Promise<void> {
@@ -1012,11 +1005,11 @@ async function deleteSeries(seriesId: string, deleteBooks = false): Promise<void
     await writeLibraryManifest(fresh)
     return
   }
-  // 解散：部内卷册移到「未分组」，卷册本身保留。
+  // 解散：部内卷册移到「未分组」，卷册本身（含各自作者）保留。
   manifest.series = manifest.series.filter((s) => s.id !== seriesId)
   manifest.ungrouped.push(...node.bookIds)
   await writeLibraryManifest(manifest)
-  await updateBookHints(node.bookIds, null, null)
+  await updateBookHints(node.bookIds, null)
 }
 
 async function assignBooks(bookIds: string[], targetSeriesId: string | null): Promise<void> {
@@ -1028,14 +1021,15 @@ async function assignBooks(bookIds: string[], targetSeriesId: string | null): Pr
   if (targetSeriesId === null) {
     manifest.ungrouped.push(...ids)
     await writeLibraryManifest(manifest)
-    await updateBookHints(ids, null, null)
+    await updateBookHints(ids, null)
     return
   }
   const node = manifest.series.find((s) => s.id === targetSeriesId)
   if (!node) throw new Error('NOT_FOUND')
   node.bookIds.push(...ids)
   await writeLibraryManifest(manifest)
-  await updateBookHints(ids, node.title, node.author)
+  // 移入部只改归属，不动作者（作者跟书走）；想统一作者用部的「编辑信息」
+  await updateBookHints(ids, node.title)
 }
 
 async function reorderSeries(orderedSeriesIds: string[]): Promise<void> {
@@ -1064,6 +1058,30 @@ async function renameBook(id: string, displayNameRaw: string): Promise<void> {
   const rec = await readBookRecord(id)
   rec.displayName = displayName
   await writeBookRecord(rec)
+}
+
+// 编辑单本书的「书籍信息」= 书名(displayName) + 作者。作者跟书走，不动归属。
+async function setBookMeta(
+  id: string,
+  displayNameRaw: string,
+  authorRaw: string | null
+): Promise<void> {
+  const displayName = displayNameRaw.trim()
+  if (!displayName) throw new Error('INVALID_NAME')
+  const rec = await readBookRecord(id)
+  rec.displayName = displayName
+  rec.seriesAuthorHint = authorRaw?.trim() || null
+  await writeBookRecord(rec)
+}
+
+// 批量给多本书设同一作者（多选 →「批量设置作者」，替代旧的文件夹级作者）。
+async function setBooksAuthor(ids: string[], authorRaw: string | null): Promise<void> {
+  const author = authorRaw?.trim() || null
+  for (const id of [...new Set(ids)]) {
+    const rec = await readBookRecord(id)
+    rec.seriesAuthorHint = author
+    await writeBookRecord(rec)
+  }
 }
 
 async function renameBooks(updates: { id: string; displayName: string }[]): Promise<void> {
@@ -1143,13 +1161,11 @@ function restoreBookIntoManifest(manifest: LibraryManifest, rec: BookRecord): vo
     manifest.ungrouped.push(rec.id)
     return
   }
-  const author = rec.seriesAuthorHint ?? null
-  let node = manifest.series.find((s) => s.title === title && (s.author ?? null) === author)
+  let node = manifest.series.find((s) => s.title === title)
   if (!node) {
     node = {
       id: shortId(),
       title,
-      author,
       bookIds: [],
       createdAt: new Date().toISOString()
     }
@@ -1455,14 +1471,13 @@ export function setupLibrary(): void {
 
   ipcMain.handle(
     'library:createSeries',
-    async (_event, title: string, author: string | null, bookIds: string[]): Promise<SeriesNode> =>
-      createSeries(title, author, bookIds)
+    async (_event, title: string, bookIds: string[]): Promise<SeriesNode> =>
+      createSeries(title, bookIds)
   )
 
   ipcMain.handle(
     'library:renameSeries',
-    async (_event, seriesId: string, title: string, author: string | null): Promise<void> =>
-      renameSeries(seriesId, title, author)
+    async (_event, seriesId: string, title: string): Promise<void> => renameSeries(seriesId, title)
   )
 
   ipcMain.handle(
@@ -1491,6 +1506,18 @@ export function setupLibrary(): void {
   ipcMain.handle(
     'library:renameBook',
     async (_event, id: string, displayName: string): Promise<void> => renameBook(id, displayName)
+  )
+
+  ipcMain.handle(
+    'library:setBookMeta',
+    async (_event, id: string, displayName: string, author: string | null): Promise<void> =>
+      setBookMeta(id, displayName, author)
+  )
+
+  ipcMain.handle(
+    'library:setBooksAuthor',
+    async (_event, ids: string[], author: string | null): Promise<void> =>
+      setBooksAuthor(ids, author)
   )
 
   ipcMain.handle(

@@ -14,10 +14,10 @@ const api = {
     getPathForFile: (file: File): string => webUtils.getPathForFile(file),
     importBooks: (candidates: unknown, opts: unknown) =>
       ipcRenderer.invoke('library:import', candidates, opts),
-    createSeries: (title: string, author: string | null, bookIds: string[]) =>
-      ipcRenderer.invoke('library:createSeries', title, author, bookIds),
-    renameSeries: (seriesId: string, title: string, author: string | null) =>
-      ipcRenderer.invoke('library:renameSeries', seriesId, title, author),
+    createSeries: (title: string, bookIds: string[]) =>
+      ipcRenderer.invoke('library:createSeries', title, bookIds),
+    renameSeries: (seriesId: string, title: string) =>
+      ipcRenderer.invoke('library:renameSeries', seriesId, title),
     deleteSeries: (seriesId: string, deleteBooks?: boolean) =>
       ipcRenderer.invoke('library:deleteSeries', seriesId, deleteBooks),
     assignBooks: (bookIds: string[], targetSeriesId: string | null) =>
@@ -28,6 +28,10 @@ const api = {
       ipcRenderer.invoke('library:reorderBooks', seriesId, orderedBookIds),
     renameBook: (id: string, displayName: string) =>
       ipcRenderer.invoke('library:renameBook', id, displayName),
+    setBookMeta: (id: string, displayName: string, author: string | null) =>
+      ipcRenderer.invoke('library:setBookMeta', id, displayName, author),
+    setBooksAuthor: (ids: string[], author: string | null) =>
+      ipcRenderer.invoke('library:setBooksAuthor', ids, author),
     renameBooks: (updates: { id: string; displayName: string }[]) =>
       ipcRenderer.invoke('library:renameBooks', updates),
     trashBooks: (ids: string[]) => ipcRenderer.invoke('library:trashBooks', ids),
