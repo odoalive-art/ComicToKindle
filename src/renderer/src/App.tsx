@@ -73,6 +73,15 @@ import { Slider } from '@/components/ui/slider'
 import { Switch } from '@/components/ui/switch'
 import { Progress } from '@/components/ui/progress'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from '@/components/ui/table'
 import {
   Sidebar,
   SidebarContent,
@@ -130,7 +139,6 @@ const DevShowcase = import.meta.env.DEV ? React.lazy(() => import('./dev/Showcas
 
 type ViewId =
   | 'library'
-  | 'convert-settings'
   | 'web-push'
   | 'devices-emails'
   | 'extensions'
@@ -161,7 +169,6 @@ const sidebarGroups: SidebarGroupConfig[] = [
     titleKey: 'groupKindleSend',
     items: [
       { id: 'archive', icon: Archive },
-      { id: 'convert-settings', icon: Settings },
       { id: 'web-push', icon: Globe },
       { id: 'devices-emails', icon: Mail },
       { id: 'extensions', icon: Puzzle }
@@ -265,8 +272,6 @@ function App(): React.JSX.Element {
                 <WebPushView locale={languageMode} onGotoArchive={() => setActiveView('archive')} />
               ) : activeView === 'devices-emails' ? (
                 <DeliverySettingsView locale={languageMode} />
-              ) : activeView === 'convert-settings' ? (
-                <ConvertSettingsView locale={languageMode} />
               ) : activeView === 'extensions' ? (
                 <PageEmpty
                   icon={Puzzle}
@@ -1388,23 +1393,9 @@ function LibraryView({
   const extractNameRef = React.useRef<string>('') // 当前准备卷册名，供 toast/进度文案使用
   const extractStartedRef = React.useRef(false) // 是否真的开始处理（缓存命中则不触发，用于决定是否提示“完成”）
 
-  // 转换前确认书籍信息（单卷册）：预填漫画名/作者/卷册名，可改后再转
-  const [convertReq, setConvertReq] = useState<{
-    vol: LibraryVolume
-    seriesPathName: string
-    seriesTitle: string
-    author: string
-    volumeTitle: string
-  } | null>(null)
-
-  // 多选批量转换前确认：共享漫画名 + 作者（改一次对全部生效），列出各卷书名预览
-  const [batchConvertReq, setBatchConvertReq] = useState<{
-    seriesPathName: string
-    seriesTitle: string
-    author: string
-    vols: LibraryVolume[]
-    busy: boolean
-  } | null>(null)
+  // 转换工作台（格式转换）：整页三栏，逐卷编辑书籍信息 + 全局参数，替代旧的单卷/批量确认弹窗。
+  // null = 关闭；非空数组 = 本次要转换的卷（每卷可独立改系列名/卷册名/作者）。
+  const [workbench, setWorkbench] = useState<WorkbenchItem[] | null>(null)
 
   // 编辑某部漫画的名称/作者（持久化覆盖，不改本地文件夹名）
   const [seriesMetaReq, setSeriesMetaReq] = useState<{
@@ -1581,28 +1572,36 @@ function LibraryView({
 
   const enqueueVolume = (vol: LibraryVolume): void => {
     if (!selected) return
-    setConvertReq({
-      vol,
-      seriesPathName: selected.name,
-      seriesTitle: selected.title,
-      author: selected.author ?? '',
-      volumeTitle: vol.title
-    })
+    setWorkbench([
+      {
+        vol,
+        seriesPathName: selected.name,
+        seriesTitle: selected.title,
+        volumeTitle: vol.title,
+        author: selected.author ?? ''
+      }
+    ])
   }
 
-  const submitConvert = async (): Promise<void> => {
-    if (!convertReq) return
-    const { vol, seriesPathName, seriesTitle, author, volumeTitle } = convertReq
-    setConvertReq(null)
-    exitSelect() // 从选择态走单本转换后退出多选
-    if (!(await ensureArchiveReady(vol))) return
-    enqueue({
-      sourceVolumePath: vol.path,
-      seriesPathName,
-      seriesTitle: seriesTitle.trim(),
-      volumeTitle: volumeTitle.trim(),
-      author: author.trim() || null
-    })
+  // 工作台「开始转换」：右栏参数已即调即存为 localStorage 默认，enqueue 入队时会读它做快照。
+  // 逐卷确保源已准备（压缩包解出 / PDF 渲染）后入队，进度走 App 层队列 popover。
+  const startWorkbench = async (items: WorkbenchItem[]): Promise<void> => {
+    setWorkbench(null)
+    exitSelect()
+    const ready: WorkbenchItem[] = []
+    for (const it of items) {
+      if (await ensureArchiveReady(it.vol)) ready.push(it)
+    }
+    ready.forEach((it) =>
+      enqueue({
+        sourceVolumePath: it.vol.path,
+        seriesPathName: it.seriesPathName,
+        seriesTitle: it.seriesTitle.trim(),
+        volumeTitle: it.volumeTitle.trim(),
+        author: it.author.trim() || null
+      })
+    )
+    if (ready.length > 0) toast.success(text.activity.enqueued(ready.length))
   }
 
   const openSeriesMeta = React.useCallback((item: LibrarySeries | null): void => {
@@ -1985,18 +1984,25 @@ function LibraryView({
     if (selectedVols.size === 0) return
     const picked = bookVolumes.filter((v) => selectedVols.has(v.path))
     if (picked.length === 0) return
-    if (picked.length === 1) {
-      if (selected) enqueueVolume(picked[0])
-      else enqueueTopBook(picked[0] as LibraryBook)
-      return
-    }
-    setBatchConvertReq({
-      seriesPathName: selected?.name ?? '',
-      seriesTitle: selected?.title ?? '',
-      author: selected?.author ?? '',
-      vols: picked,
-      busy: false
-    })
+    // 部内：共用所属部的系列信息；顶层散卷：各自为系列（系列名=卷名）。打开工作台逐卷可改。
+    const items: WorkbenchItem[] = picked.map((v) =>
+      selected
+        ? {
+            vol: v,
+            seriesPathName: selected.name,
+            seriesTitle: selected.title,
+            volumeTitle: v.title,
+            author: selected.author ?? ''
+          }
+        : {
+            vol: v,
+            seriesPathName: (v as LibraryBook).name,
+            seriesTitle: (v as LibraryBook).title,
+            volumeTitle: (v as LibraryBook).title,
+            author: (v as LibraryBook).author ?? ''
+          }
+    )
+    setWorkbench(items)
   }
 
   // 把当前选中的散卷/卷册移入某部（成组）：打开移动弹窗选目标部或新建部
@@ -2004,29 +2010,6 @@ function LibraryView({
     const ids = bookVolumes.filter((v) => selectedVols.has(v.path)).map((v) => v.id)
     if (ids.length === 0) return
     setMoveReq({ sources: ids, busy: false })
-  }
-
-  const submitBatchConvert = async (): Promise<void> => {
-    if (!batchConvertReq || batchConvertReq.busy) return
-    const { seriesPathName, seriesTitle, author, vols } = batchConvertReq
-    setBatchConvertReq((s) => (s ? { ...s, busy: true } : s))
-    // 压缩包逐个确保解出（密码池命中或弹框；共享密码池下多为一次输入）
-    const ready: LibraryVolume[] = []
-    for (const vol of vols) {
-      if (await ensureArchiveReady(vol)) ready.push(vol)
-    }
-    ready.forEach((vol) =>
-      enqueue({
-        sourceVolumePath: vol.path,
-        seriesPathName,
-        seriesTitle: seriesTitle.trim(),
-        volumeTitle: vol.title,
-        author: author.trim() || null
-      })
-    )
-    if (ready.length > 0) toast.success(text.activity.enqueued(ready.length))
-    setBatchConvertReq(null)
-    exitSelect()
   }
 
   // 框选拖动态（用 ref 避免每次移动都触发重渲染）
@@ -2327,15 +2310,17 @@ function LibraryView({
     setSelectedSeriesPath((prev) => (prev === item.path ? prev : item.path))
   }
 
-  // 散卷/单行本书（顶层 book）转换：复用单卷册确认弹窗，系列名/标题就用书本身
+  // 散卷/单行本书（顶层 book）转换：打开工作台，系列名/标题就用书本身
   const enqueueTopBook = (book: LibraryBook): void => {
-    setConvertReq({
-      vol: book,
-      seriesPathName: book.name,
-      seriesTitle: book.title,
-      author: book.author ?? '',
-      volumeTitle: book.title
-    })
+    setWorkbench([
+      {
+        vol: book,
+        seriesPathName: book.name,
+        seriesTitle: book.title,
+        volumeTitle: book.title,
+        author: book.author ?? ''
+      }
+    ])
   }
 
   // 进入某「部」并设定下钻路径栈（栈顶恒为当前部）。从顶层进入与从部内继续下钻共用。
@@ -2613,184 +2598,16 @@ function LibraryView({
           onClose={() => setPreviewVol(null)}
         />
       ) : null}
-      {/* 单卷册转换前：确认书籍信息 */}
-      <Dialog
-        open={convertReq !== null}
-        onOpenChange={(o) => (!o ? setConvertReq(null) : undefined)}
-      >
-        <DialogContent className="sm:max-w-sm" aria-describedby={undefined}>
-          <DialogHeader>
-            <DialogTitle>{text.convertMeta.title}</DialogTitle>
-          </DialogHeader>
-          {convertReq ? (
-            <form
-              onSubmit={(e) => {
-                e.preventDefault()
-                void submitConvert()
-              }}
-              className="space-y-3"
-            >
-              <div className="space-y-1.5">
-                <label className="text-xs text-muted-foreground">{text.convertMeta.series}</label>
-                <Input
-                  autoFocus
-                  value={convertReq.seriesTitle}
-                  onChange={(e) =>
-                    setConvertReq((s) => (s ? { ...s, seriesTitle: e.target.value } : s))
-                  }
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs text-muted-foreground">{text.convertMeta.volume}</label>
-                <Input
-                  value={convertReq.volumeTitle}
-                  placeholder={text.convertMeta.volumePlaceholder}
-                  onChange={(e) =>
-                    setConvertReq((s) => (s ? { ...s, volumeTitle: e.target.value } : s))
-                  }
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs text-muted-foreground">{text.convertMeta.author}</label>
-                <Input
-                  value={convertReq.author}
-                  placeholder={text.convertMeta.authorPlaceholder}
-                  onChange={(e) => setConvertReq((s) => (s ? { ...s, author: e.target.value } : s))}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs text-muted-foreground">
-                  {text.convertMeta.previewLabel}
-                </label>
-                <div className="flex items-center gap-3 rounded-lg border bg-card p-3 shadow-sm">
-                  <div className="flex h-16 w-12 shrink-0 items-center justify-center overflow-hidden rounded bg-muted text-muted-foreground">
-                    {convertReq.vol.coverUrl ? (
-                      <CoverImage src={convertReq.vol.coverUrl} alt="" quiet />
-                    ) : (
-                      <BookText className="size-5" />
-                    )}
-                  </div>
-                  <div className="min-w-0 space-y-0.5">
-                    <div
-                      className="line-clamp-2 text-sm font-medium"
-                      title={composeBookTitle(convertReq.seriesTitle, convertReq.volumeTitle)}
-                    >
-                      {composeBookTitle(convertReq.seriesTitle, convertReq.volumeTitle)}
-                    </div>
-                    <div className="truncate text-xs text-muted-foreground">
-                      {convertReq.author.trim() || text.convertMeta.authorPlaceholder}
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="sm:mr-auto"
-                  onClick={() => void openConvertPreview(convertReq.vol)}
-                >
-                  <Eye className="size-4" strokeWidth={1.75} />
-                  {text.convertPreview.open}
-                </Button>
-                <Button type="button" variant="ghost" onClick={() => setConvertReq(null)}>
-                  {text.convertMeta.cancel}
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={!convertReq.volumeTitle.trim() && !convertReq.seriesTitle.trim()}
-                >
-                  {text.convertMeta.start}
-                </Button>
-              </DialogFooter>
-            </form>
-          ) : null}
-        </DialogContent>
-      </Dialog>
-      {/* 多选批量转换前：确认共享漫画名/作者 + 各卷书名预览 */}
-      <Dialog
-        open={batchConvertReq !== null}
-        onOpenChange={(o) => (!o && !batchConvertReq?.busy ? setBatchConvertReq(null) : undefined)}
-      >
-        <DialogContent className="sm:max-w-md" aria-describedby={undefined}>
-          <DialogHeader>
-            <DialogTitle>
-              {text.convertMeta.batchTitle}
-              {batchConvertReq ? (
-                <span className="ml-2 text-xs font-normal text-muted-foreground">
-                  {text.convertMeta.batchCount(batchConvertReq.vols.length)}
-                </span>
-              ) : null}
-            </DialogTitle>
-          </DialogHeader>
-          {batchConvertReq ? (
-            <form
-              onSubmit={(e) => {
-                e.preventDefault()
-                void submitBatchConvert()
-              }}
-              className="space-y-3"
-            >
-              <div className="space-y-1.5">
-                <label className="text-xs text-muted-foreground">{text.convertMeta.series}</label>
-                <Input
-                  autoFocus
-                  value={batchConvertReq.seriesTitle}
-                  disabled={batchConvertReq.busy}
-                  onChange={(e) =>
-                    setBatchConvertReq((s) => (s ? { ...s, seriesTitle: e.target.value } : s))
-                  }
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs text-muted-foreground">{text.convertMeta.author}</label>
-                <Input
-                  value={batchConvertReq.author}
-                  placeholder={text.convertMeta.authorPlaceholder}
-                  disabled={batchConvertReq.busy}
-                  onChange={(e) =>
-                    setBatchConvertReq((s) => (s ? { ...s, author: e.target.value } : s))
-                  }
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs text-muted-foreground">
-                  {text.convertMeta.batchVolumes}
-                </label>
-                <ScrollArea className="max-h-52 rounded-lg border bg-card">
-                  <div className="divide-y">
-                    {batchConvertReq.vols.map((vol) => (
-                      <div
-                        key={vol.path}
-                        className="truncate px-3 py-1.5 text-sm"
-                        title={composeBookTitle(batchConvertReq.seriesTitle, vol.title)}
-                      >
-                        {composeBookTitle(batchConvertReq.seriesTitle, vol.title)}
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-              </div>
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  disabled={batchConvertReq.busy}
-                  onClick={() => setBatchConvertReq(null)}
-                >
-                  {text.convertMeta.cancel}
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={batchConvertReq.busy || batchConvertReq.vols.length === 0}
-                >
-                  {text.convertMeta.start}
-                </Button>
-              </DialogFooter>
-            </form>
-          ) : null}
-        </DialogContent>
-      </Dialog>
+      {/* 格式转换工作台：整页三栏，替代旧的单卷/批量确认弹窗 */}
+      {workbench ? (
+        <ConvertWorkbench
+          initial={workbench}
+          locale={locale}
+          onClose={() => setWorkbench(null)}
+          onStart={(items) => void startWorkbench(items)}
+          onPreview={(vol) => void openConvertPreview(vol)}
+        />
+      ) : null}
       {/* 编辑某部漫画的名称/作者（持久化，不改本地文件夹） */}
       <Dialog
         open={seriesMetaReq !== null}
@@ -4311,7 +4128,10 @@ function ConvertPreviewDialog({
               </div>
               {loading ? (
                 <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-background/50 backdrop-blur-[1px]">
-                  <Loader2 className="size-5 animate-spin text-muted-foreground" strokeWidth={1.75} />
+                  <Loader2
+                    className="size-5 animate-spin text-muted-foreground"
+                    strokeWidth={1.75}
+                  />
                 </div>
               ) : null}
             </div>
@@ -4383,10 +4203,7 @@ function ConvertPreviewDialog({
           </div>
           <div className="flex items-center justify-between gap-2 rounded-md border px-3 py-2">
             <span className="text-xs">{t.grayscale}</span>
-            <Switch
-              checked={opts.grayscale}
-              onCheckedChange={(v) => set('grayscale', v)}
-            />
+            <Switch checked={opts.grayscale} onCheckedChange={(v) => set('grayscale', v)} />
           </div>
           <div className="flex items-center justify-between gap-2 rounded-md border px-3 py-2">
             <span className="text-xs">{t.splitDoublePages}</span>
@@ -4398,7 +4215,9 @@ function ConvertPreviewDialog({
           <div className="col-span-2 space-y-1.5">
             <div className="flex items-center justify-between">
               <Label className="text-xs">{t.quality}</Label>
-              <span className="text-xs tabular-nums text-muted-foreground">{opts.imageQuality}</span>
+              <span className="text-xs tabular-nums text-muted-foreground">
+                {opts.imageQuality}
+              </span>
             </div>
             <Slider
               min={45}
@@ -4421,19 +4240,124 @@ function ConvertPreviewDialog({
   )
 }
 
-function ConvertSettingsView({ locale }: { locale: LanguageMode }): React.JSX.Element {
+// 转换工作台里左栏「待转换列表」的一项：每卷可独立编辑系列名/卷册名/作者
+interface WorkbenchItem {
+  vol: LibraryVolume
+  seriesPathName: string
+  seriesTitle: string
+  volumeTitle: string
+  author: string
+}
+
+// 整页三栏「格式转换」工作台：左=待转换列表，中=逐卷书籍信息，右=全局转换参数。
+// 替代旧的单卷/批量确认弹窗；右栏参数即调即存为默认（删了独立设置页后这里是唯一入口）。
+function ConvertWorkbench({
+  initial,
+  locale,
+  onClose,
+  onStart,
+  onPreview
+}: {
+  initial: WorkbenchItem[]
+  locale: LanguageMode
+  onClose: () => void
+  onStart: (items: WorkbenchItem[]) => void
+  onPreview: (vol: LibraryVolume) => void
+}): React.JSX.Element {
   const text = uiText[locale]
-  const t = text.convertSettings
+  const t = text.workbench
+  const tm = text.convertMeta
+  const ts = text.convertSettings
+  const [items, setItems] = useState<WorkbenchItem[]>(initial)
+  const [activeIdx, setActiveIdx] = useState(0)
   const [opts, setOpts] = useState<ConvertOptionsState>(loadConvertOptions)
 
-  const set = <K extends keyof ConvertOptionsState>(key: K, value: ConvertOptionsState[K]): void =>
-    setOpts((prev) => ({ ...prev, [key]: value }))
+  const setOpt = <K extends keyof ConvertOptionsState>(
+    key: K,
+    value: ConvertOptionsState[K]
+  ): void =>
+    setOpts((prev) => {
+      const next = { ...prev, [key]: value }
+      window.localStorage.setItem(CONVERT_OPTIONS_KEY, JSON.stringify(next))
+      return next
+    })
 
-  const save = (): void => {
-    window.localStorage.setItem(CONVERT_OPTIONS_KEY, JSON.stringify(opts))
-    toast.success(t.saved)
+  const active = items[activeIdx] ?? null
+
+  // 移除某卷：保留至少 1 卷；删的是当前/前面的项时回拨高亮索引
+  const removeAt = (idx: number): void => {
+    if (items.length <= 1) return
+    setItems((prev) => prev.filter((_, i) => i !== idx))
+    setActiveIdx((cur) => (idx < cur ? cur - 1 : Math.min(cur, items.length - 2)))
   }
-  const reset = (): void => setOpts({ ...DEFAULT_CONVERT_OPTIONS })
+
+  // 左表行内编辑：双击单元格进入，Enter/失焦提交，Esc 取消
+  type EditField = 'seriesTitle' | 'volumeTitle' | 'author'
+  const [editing, setEditing] = useState<{ row: number; field: EditField } | null>(null)
+  const [draft, setDraft] = useState('')
+  const beginEdit = (row: number, field: EditField, current: string): void => {
+    setActiveIdx(row)
+    setEditing({ row, field })
+    setDraft(current)
+  }
+  const commitEdit = (): void => {
+    setEditing((cur) => {
+      if (cur)
+        setItems((prev) =>
+          prev.map((it, i) => (i === cur.row ? { ...it, [cur.field]: draft } : it))
+        )
+      return null
+    })
+  }
+  const editCell = (
+    row: number,
+    field: EditField,
+    value: string,
+    placeholder?: string
+  ): React.JSX.Element => {
+    if (editing?.row === row && editing.field === field) {
+      return (
+        <Input
+          autoFocus
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commitEdit}
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              commitEdit()
+            } else if (e.key === 'Escape') {
+              e.preventDefault()
+              setEditing(null)
+            }
+          }}
+          className="h-7 px-1.5 py-0 text-sm"
+        />
+      )
+    }
+    return (
+      <div
+        className="min-h-7 truncate py-1"
+        title={value || placeholder}
+        onDoubleClick={(e) => {
+          e.stopPropagation()
+          beginEdit(row, field, value)
+        }}
+      >
+        {value || <span className="text-muted-foreground">{placeholder ?? ''}</span>}
+      </div>
+    )
+  }
+
+  // Esc 关闭工作台
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
 
   const SwitchRow = ({
     label,
@@ -4456,95 +4380,215 @@ function ConvertSettingsView({ locale }: { locale: LanguageMode }): React.JSX.El
   )
 
   return (
-    <ScrollArea className="min-h-0 flex-1">
-      <div className="mx-auto w-full max-w-xl p-4 lg:p-6">
-        <p className="mb-5 text-sm text-muted-foreground">{t.description}</p>
-        <div className="space-y-4">
-          {/* 设备档位 */}
-          <div className="space-y-1.5">
-            <Label>{t.deviceProfile}</Label>
-            <Select
-              value={opts.deviceProfile}
-              onValueChange={(v) => set('deviceProfile', v as DeviceProfileOpt)}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {PROFILE_ORDER.map((p) => (
-                  <SelectItem key={p} value={p}>
-                    {t.profiles[p]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">{t.deviceProfileNote}</p>
-          </div>
+    <div className="fixed inset-0 z-50 flex flex-col bg-background">
+      {/* 顶栏：标题 + 关闭 */}
+      <div className="flex shrink-0 items-center justify-between border-b px-6 py-3">
+        <h2 className="text-lg font-semibold">{t.title}</h2>
+        <Button variant="ghost" size="icon" onClick={onClose} aria-label={tm.cancel}>
+          <X className="size-5" strokeWidth={1.75} />
+        </Button>
+      </div>
 
-          {/* 开关组 */}
-          <SwitchRow
-            label={t.mangaMode}
-            note={t.mangaModeNote}
-            checked={opts.mangaMode}
-            onChange={(v) => set('mangaMode', v)}
-          />
-          <SwitchRow
-            label={t.grayscale}
-            note={t.grayscaleNote}
-            checked={opts.grayscale}
-            onChange={(v) => set('grayscale', v)}
-          />
-          <SwitchRow
-            label={t.splitDoublePages}
-            note={t.splitDoublePagesNote}
-            checked={opts.splitDoublePages}
-            onChange={(v) => set('splitDoublePages', v)}
-          />
-
-          {/* 图片质量 */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label>{t.imageQuality}</Label>
-              <span className="text-sm tabular-nums text-muted-foreground">
-                {opts.imageQuality}
+      {/* 两栏主体：左=待转换表格，右=书籍详情+转换格式，中间可拖分隔 */}
+      <ResizablePanelGroup orientation="horizontal" className="min-h-0 flex-1">
+        {/* 左：待转换表格（书名/卷数/作者，双击行内编辑） */}
+        <ResizablePanel defaultSize={56} minSize={32}>
+          <div className="flex h-full min-h-0 flex-col">
+            <div className="flex items-baseline justify-between px-4 py-3">
+              <h3 className="text-sm font-semibold">{t.queue}</h3>
+              <span className="text-xs text-muted-foreground">
+                {t.editHint} · {t.queueCount(items.length)}
               </span>
             </div>
-            <Slider
-              min={45}
-              max={100}
-              step={1}
-              value={[opts.imageQuality]}
-              onValueChange={([v]) => set('imageQuality', v)}
-            />
-            <p className="text-xs text-muted-foreground">{t.imageQualityNote}</p>
+            <ScrollArea className="min-h-0 flex-1">
+              <Table>
+                <TableHeader className="sticky top-0 z-10 bg-card">
+                  <TableRow>
+                    <TableHead className="w-8 text-center">#</TableHead>
+                    <TableHead>{t.colTitle}</TableHead>
+                    <TableHead className="w-32">{t.colVolume}</TableHead>
+                    <TableHead className="w-40">{t.colAuthor}</TableHead>
+                    <TableHead className="w-8" />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {items.map((it, i) => (
+                    <TableRow
+                      key={it.vol.path}
+                      data-state={i === activeIdx ? 'selected' : undefined}
+                      onClick={() => setActiveIdx(i)}
+                      className="group cursor-default"
+                    >
+                      <TableCell className="text-center text-xs tabular-nums text-muted-foreground">
+                        {i + 1}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {editCell(i, 'seriesTitle', it.seriesTitle, tm.series)}
+                      </TableCell>
+                      <TableCell>
+                        {editCell(i, 'volumeTitle', it.volumeTitle, tm.volumePlaceholder)}
+                      </TableCell>
+                      <TableCell>
+                        {editCell(i, 'author', it.author, tm.authorPlaceholder)}
+                      </TableCell>
+                      <TableCell className="p-0 pr-2">
+                        {items.length > 1 ? (
+                          <button
+                            type="button"
+                            aria-label={t.remove}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              removeAt(i)
+                            }}
+                            className="rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
+                          >
+                            <X className="size-4" strokeWidth={1.75} />
+                          </button>
+                        ) : null}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </ScrollArea>
           </div>
+        </ResizablePanel>
 
-          {/* 单卷上限 */}
-          <div className="space-y-1.5">
-            <Label htmlFor="max-vol">{t.maxVolumeSize}</Label>
-            <Input
-              id="max-vol"
-              inputMode="numeric"
-              value={String(opts.maxVolumeSize)}
-              onChange={(e) => {
-                const n = Number(e.target.value.replace(/[^0-9]/g, ''))
-                set('maxVolumeSize', n > 0 ? n : 1)
-              }}
-              className="w-32"
-            />
-            <p className="text-xs text-muted-foreground">{t.maxVolumeSizeNote}</p>
-          </div>
+        <ResizableHandle withHandle />
 
-          <div className="flex items-center gap-2 pt-1">
-            <Button onClick={save}>{t.save}</Button>
-            <Button variant="outline" onClick={reset}>
-              <RefreshCw className="size-4" />
-              {t.reset}
-            </Button>
+        {/* 右：书籍详情（只读封面）+ 转换格式 + 开始转换 */}
+        <ResizablePanel defaultSize={44} minSize={28}>
+          <div className="flex h-full min-h-0 flex-col">
+            <ScrollArea className="min-h-0 flex-1">
+              <div className="space-y-5 p-4">
+                {/* 书籍信息：只读封面 + 书名/作者，点封面进模拟 Kindle 预览 */}
+                {active ? (
+                  <div className="flex flex-col items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => onPreview(active.vol)}
+                      className="group relative aspect-[3/4] w-44 overflow-hidden rounded-lg border bg-muted shadow-sm"
+                      title={text.convertPreview.open}
+                    >
+                      {active.vol.coverUrl ? (
+                        <CoverImage src={active.vol.coverUrl} alt="" quiet />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                          <BookText className="size-10" strokeWidth={1.25} />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition group-hover:bg-black/40 group-hover:opacity-100">
+                        <span className="flex items-center gap-1.5 rounded-md bg-background/90 px-2.5 py-1.5 text-xs font-medium shadow">
+                          <Eye className="size-4" strokeWidth={1.75} />
+                          {text.convertPreview.open}
+                        </span>
+                      </div>
+                    </button>
+                    <div className="w-full space-y-0.5 text-center">
+                      <div
+                        className="text-sm font-medium"
+                        title={composeBookTitle(active.seriesTitle, active.volumeTitle)}
+                      >
+                        {composeBookTitle(active.seriesTitle, active.volumeTitle)}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {active.author.trim() || tm.authorPlaceholder}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="py-8 text-center text-sm text-muted-foreground">{t.empty}</div>
+                )}
+
+                <Separator />
+
+                {/* 转换格式（全局参数） */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold">{t.format}</h3>
+                  {/* 设备档位 */}
+                  <div className="space-y-1.5">
+                    <Label>{ts.deviceProfile}</Label>
+                    <Select
+                      value={opts.deviceProfile}
+                      onValueChange={(v) => setOpt('deviceProfile', v as DeviceProfileOpt)}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PROFILE_ORDER.map((p) => (
+                          <SelectItem key={p} value={p}>
+                            {ts.profiles[p]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <SwitchRow
+                    label={ts.mangaMode}
+                    note={ts.mangaModeNote}
+                    checked={opts.mangaMode}
+                    onChange={(v) => setOpt('mangaMode', v)}
+                  />
+                  <SwitchRow
+                    label={ts.grayscale}
+                    note={ts.grayscaleNote}
+                    checked={opts.grayscale}
+                    onChange={(v) => setOpt('grayscale', v)}
+                  />
+                  <SwitchRow
+                    label={ts.splitDoublePages}
+                    note={ts.splitDoublePagesNote}
+                    checked={opts.splitDoublePages}
+                    onChange={(v) => setOpt('splitDoublePages', v)}
+                  />
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>{ts.imageQuality}</Label>
+                      <span className="text-sm tabular-nums text-muted-foreground">
+                        {opts.imageQuality}
+                      </span>
+                    </div>
+                    <Slider
+                      min={45}
+                      max={100}
+                      step={1}
+                      value={[opts.imageQuality]}
+                      onValueChange={([v]) => setOpt('imageQuality', v)}
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="max-vol">{ts.maxVolumeSize}</Label>
+                    <Input
+                      id="max-vol"
+                      inputMode="numeric"
+                      value={String(opts.maxVolumeSize)}
+                      onChange={(e) => {
+                        const n = Number(e.target.value.replace(/[^0-9]/g, ''))
+                        setOpt('maxVolumeSize', n > 0 ? n : 1)
+                      }}
+                      className="w-32"
+                    />
+                  </div>
+                </div>
+              </div>
+            </ScrollArea>
+            <div className="shrink-0 border-t p-4">
+              <Button
+                className="w-full"
+                disabled={items.length === 0}
+                onClick={() => onStart(items)}
+              >
+                {t.startCount(items.length)}
+              </Button>
+            </div>
           </div>
-        </div>
-      </div>
-    </ScrollArea>
+        </ResizablePanel>
+      </ResizablePanelGroup>
+    </div>
   )
 }
 

@@ -136,6 +136,22 @@ export const uiText = {
       batchCount: (n: number) => `共 ${n} 卷`,
       batchVolumes: '卷册（书名预览）'
     },
+    workbench: {
+      title: '格式转换',
+      queue: '待转换列表',
+      queueCount: (n: number) => `共 ${n} 卷`,
+      colTitle: '书名',
+      colVolume: '卷数',
+      colAuthor: '作者',
+      editHint: '双击单元格可修改',
+      bookInfo: '书籍信息',
+      format: '转换格式',
+      start: '开始转换',
+      startCount: (n: number) => `开始转换（${n} 卷）`,
+      remove: '移除',
+      empty: '没有待转换的卷',
+      noCover: '无封面'
+    },
     convertPreview: {
       open: '预览转换效果',
       title: 'Kindle 转换预览',
@@ -546,6 +562,22 @@ export const uiText = {
       batchTitle: 'Confirm conversion',
       batchCount: (n: number) => `${n} volume${n === 1 ? '' : 's'}`,
       batchVolumes: 'Volumes (title preview)'
+    },
+    workbench: {
+      title: 'Format conversion',
+      queue: 'Queue',
+      queueCount: (n: number) => `${n} volume${n === 1 ? '' : 's'}`,
+      colTitle: 'Title',
+      colVolume: 'Volume',
+      colAuthor: 'Author',
+      editHint: 'Double-click a cell to edit',
+      bookInfo: 'Book info',
+      format: 'Conversion format',
+      start: 'Convert',
+      startCount: (n: number) => `Convert ${n} volume${n === 1 ? '' : 's'}`,
+      remove: 'Remove',
+      empty: 'No volumes to convert',
+      noCover: 'No cover'
     },
     convertPreview: {
       open: 'Preview conversion',
