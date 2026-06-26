@@ -22,8 +22,7 @@ export interface PersistedConvertJob {
   id: string
   sourceVolumePath: string
   seriesPathName: string
-  seriesTitle: string
-  volumeTitle: string
+  title: string
   author: string | null
   status: ConvertJobStatus
   percent: number
@@ -43,7 +42,17 @@ const convertedRoot = (): string => join(app.getPath('userData'), 'converted')
 async function readQueue(): Promise<PersistedConvertJob[]> {
   try {
     const data = JSON.parse(await fs.readFile(queueFile(), 'utf-8')) as QueueFile
-    if (data && Array.isArray(data.jobs)) return data.jobs
+    if (data && Array.isArray(data.jobs)) {
+      // 旧记录把书名拆成 seriesTitle/volumeTitle，读取时折成单一 title
+      return data.jobs.map((j) => {
+        if (j.title != null) return j
+        const legacy = j as PersistedConvertJob & { seriesTitle?: string; volumeTitle?: string }
+        const s = (legacy.seriesTitle ?? '').trim()
+        const v = (legacy.volumeTitle ?? '').trim()
+        const title = !s ? v : !v || v === s || v.startsWith(s) ? v || s : `${s} ${v}`
+        return { ...j, title }
+      })
+    }
   } catch {
     /* 不存在或损坏 → 视作空队列 */
   }

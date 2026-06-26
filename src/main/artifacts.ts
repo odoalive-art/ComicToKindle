@@ -20,8 +20,7 @@ export interface Artifact {
   id: string
   sourceVolumePath: string
   seriesName: string
-  seriesTitle: string
-  volumeTitle: string
+  title: string
   author: string | null
   outputs: ConvertOutput[]
   format: 'epub'
@@ -43,7 +42,7 @@ function sanitize(name: string): string {
 }
 
 /**
- * EPUB 书名/文件名 = 「漫画名 + 卷册」（Kindle 上据此显示与归档）。
+ * 旧记录迁移用：把拆开的「漫画名 + 卷册」折成单一书名（新数据已是单一 title）。
  * 卷册名已含漫画名或漫画名缺失时退化，避免重复。
  */
 function composeBookTitle(seriesTitle: string, volumeTitle: string): string {
@@ -57,7 +56,16 @@ function composeBookTitle(seriesTitle: string, volumeTitle: string): string {
 async function readManifest(): Promise<Manifest> {
   try {
     const data = JSON.parse(await fs.readFile(manifestFile(), 'utf-8')) as Manifest
-    if (data && Array.isArray(data.artifacts)) return data
+    if (data && Array.isArray(data.artifacts)) {
+      // 旧记录把书名拆成 seriesTitle/volumeTitle，读取时折成单一 title
+      for (const a of data.artifacts as (Artifact & {
+        seriesTitle?: string
+        volumeTitle?: string
+      })[]) {
+        if (a.title == null) a.title = composeBookTitle(a.seriesTitle ?? '', a.volumeTitle ?? '')
+      }
+      return data
+    }
   } catch {
     /* 不存在或损坏 → 空清单 */
   }
@@ -80,8 +88,7 @@ async function upsertArtifact(artifact: Artifact): Promise<void> {
 export interface ConvertRequest {
   sourceVolumePath: string
   seriesName: string
-  seriesTitle: string
-  volumeTitle: string
+  title: string
   author?: string | null
   options?: ConvertOptions
 }
@@ -138,7 +145,7 @@ export function setupArtifacts(): void {
         {
           imagePaths,
           outputDir,
-          title: composeBookTitle(req.seriesTitle, req.volumeTitle),
+          title: req.title,
           author: req.author ?? 'Unknown',
           options: req.options
         },
@@ -155,8 +162,7 @@ export function setupArtifacts(): void {
       id: `${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
       sourceVolumePath: req.sourceVolumePath,
       seriesName: req.seriesName,
-      seriesTitle: req.seriesTitle,
-      volumeTitle: req.volumeTitle,
+      title: req.title,
       author: req.author ?? null,
       outputs: result.outputs,
       format: 'epub',

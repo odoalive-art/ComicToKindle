@@ -429,7 +429,7 @@ function FolderStackCard({
 const LIBRARY_GRID =
   'grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'
 
-/** EPUB 书名 = 「漫画名 + 卷册」（与 main/artifacts.ts composeBookTitle 保持一致，用于预览） */
+/** 打开工作台时，用「漫画名 + 卷册」拼出可编辑的单一书名初值（之后只剩一个 title 字段） */
 function composeBookTitle(seriesTitle: string, volumeTitle: string): string {
   const s = seriesTitle.trim()
   const v = volumeTitle.trim()
@@ -484,8 +484,7 @@ interface ConvertJob {
   id: string
   sourceVolumePath: string
   seriesPathName: string // 部文件夹名，IPC 用作 seriesName / 输出目录名
-  seriesTitle: string
-  volumeTitle: string
+  title: string // 书名（漫画名 + 卷册合一）
   author: string | null
   status: ConvertJobStatus
   percent: number
@@ -497,8 +496,7 @@ interface ConvertJob {
 interface ConvertEnqueueInput {
   sourceVolumePath: string
   seriesPathName: string
-  seriesTitle: string
-  volumeTitle: string
+  title: string
   author: string | null
 }
 interface ConvertActivity {
@@ -592,8 +590,7 @@ function useConvertActivity(locale: LanguageMode): ConvertActivity {
       .volume({
         sourceVolumePath: next.sourceVolumePath,
         seriesName: next.seriesPathName,
-        seriesTitle: next.seriesTitle,
-        volumeTitle: next.volumeTitle,
+        title: next.title,
         author: next.author,
         // 入队时快照过 options 就用它；持久化恢复的旧 job 无快照时回退到当前设置
         options: next.options ?? loadConvertOptions()
@@ -602,7 +599,7 @@ function useConvertActivity(locale: LanguageMode): ConvertActivity {
         await refreshArtifacts()
         setJobs((prev) => prev.filter((j) => j.id !== next.id))
         if (!cancelledIdsRef.current.delete(next.id))
-          toast.success(text.convert.done(next.volumeTitle))
+          toast.success(text.convert.done(next.title))
       })
       .catch((err) => {
         // 用户取消的任务已从列表移除，静默处理
@@ -610,7 +607,7 @@ function useConvertActivity(locale: LanguageMode): ConvertActivity {
         setJobs((prev) =>
           prev.map((j) => (j.id === next.id ? { ...j, status: 'failed', error: `${err}` } : j))
         )
-        toast.error(`${text.convert.failed(next.volumeTitle)} — ${err}`)
+        toast.error(`${text.convert.failed(next.title)} — ${err}`)
       })
       .finally(() => {
         runningRef.current = false
@@ -1050,20 +1047,20 @@ function ConvertActivityPopover({
 
   const deliver = async (a: Artifact): Promise<void> => {
     setDelivering((p) => new Set(p).add(a.id))
-    const toastId = toast.loading(`${ta.deliver} · ${a.volumeTitle}`)
+    const toastId = toast.loading(`${ta.deliver} · ${a.title}`)
     try {
       const res = await window.api.deliver.send(a.id)
-      if (res.success) toast.success(ta.delivered(a.volumeTitle), { id: toastId })
+      if (res.success) toast.success(ta.delivered(a.title), { id: toastId })
       else
         toast.error(
-          `${ta.deliverFailed(a.volumeTitle)} — ${deliveryErrorMsg(text.delivery, res)}`,
+          `${ta.deliverFailed(a.title)} — ${deliveryErrorMsg(text.delivery, res)}`,
           {
             id: toastId
           }
         )
       await activity.refreshArtifacts()
     } catch (err) {
-      toast.error(`${ta.deliverFailed(a.volumeTitle)} — ${err}`, { id: toastId })
+      toast.error(`${ta.deliverFailed(a.title)} — ${err}`, { id: toastId })
     } finally {
       setDelivering((p) => {
         const n = new Set(p)
@@ -1082,14 +1079,14 @@ function ConvertActivityPopover({
     try {
       const res = await window.api.webpush.open(a.id)
       if (res.success) {
-        toast.success(ta.webPushOpened(a.volumeTitle))
+        toast.success(ta.webPushOpened(a.title))
       } else {
         const msg = ta.webPushErrors[res.code ?? 'unknown'] ?? ta.webPushErrors.unknown
-        toast.error(`${a.volumeTitle} — ${msg}`)
+        toast.error(`${a.title} — ${msg}`)
         if (res.code === 'inject-failed') await window.api.webpush.reveal(a.id)
       }
     } catch (err) {
-      toast.error(`${a.volumeTitle} — ${err}`)
+      toast.error(`${a.title} — ${err}`)
     } finally {
       setPushing((p) => {
         const n = new Set(p)
@@ -1170,8 +1167,8 @@ function ConvertActivityPopover({
                   {active.map((j) => (
                     <div key={j.id} className="rounded-md px-2 py-2 hover:bg-muted/50">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="min-w-0 flex-1 truncate text-sm" title={j.volumeTitle}>
-                          {j.volumeTitle}
+                        <span className="min-w-0 flex-1 truncate text-sm" title={j.title}>
+                          {j.title}
                         </span>
                         <span className="flex shrink-0 items-center gap-1">
                           <span
@@ -1213,7 +1210,6 @@ function ConvertActivityPopover({
                           </Button>
                         </span>
                       </div>
-                      <div className="truncate text-xs text-muted-foreground">{j.seriesTitle}</div>
                       {j.status === 'converting' ? (
                         <div className="mt-1 h-1 overflow-hidden rounded bg-muted">
                           <div
@@ -1576,8 +1572,7 @@ function LibraryView({
       {
         vol,
         seriesPathName: selected.name,
-        seriesTitle: selected.title,
-        volumeTitle: vol.title,
+        title: composeBookTitle(selected.title, vol.title),
         author: selected.author ?? ''
       }
     ])
@@ -1596,8 +1591,7 @@ function LibraryView({
       enqueue({
         sourceVolumePath: it.vol.path,
         seriesPathName: it.seriesPathName,
-        seriesTitle: it.seriesTitle.trim(),
-        volumeTitle: it.volumeTitle.trim(),
+        title: it.title.trim(),
         author: it.author.trim() || null
       })
     )
@@ -1979,26 +1973,24 @@ function LibraryView({
   }
 
   // 转换所选：单本走单本确认弹窗（含封面预览），多本走批量确认弹窗。
-  // 部内用所属部的系列信息；顶层散卷各自为系列（seriesTitle 空，书名即卷名）。
+  // 部内：书名预填「部名 + 卷名」；顶层散卷：书名即卷名。输出目录名(seriesPathName)各自归属，不可编辑。
   const convertSelected = (): void => {
     if (selectedVols.size === 0) return
     const picked = bookVolumes.filter((v) => selectedVols.has(v.path))
     if (picked.length === 0) return
-    // 部内：共用所属部的系列信息；顶层散卷：各自为系列（系列名=卷名）。打开工作台逐卷可改。
+    // 部内：书名预填「部名 + 卷名」；顶层散卷：书名即卷名。打开工作台逐卷可改。
     const items: WorkbenchItem[] = picked.map((v) =>
       selected
         ? {
             vol: v,
             seriesPathName: selected.name,
-            seriesTitle: selected.title,
-            volumeTitle: v.title,
+            title: composeBookTitle(selected.title, v.title),
             author: selected.author ?? ''
           }
         : {
             vol: v,
             seriesPathName: (v as LibraryBook).name,
-            seriesTitle: (v as LibraryBook).title,
-            volumeTitle: (v as LibraryBook).title,
+            title: (v as LibraryBook).title,
             author: (v as LibraryBook).author ?? ''
           }
     )
@@ -2316,8 +2308,7 @@ function LibraryView({
       {
         vol: book,
         seriesPathName: book.name,
-        seriesTitle: book.title,
-        volumeTitle: book.title,
+        title: book.title,
         author: book.author ?? ''
       }
     ])
@@ -4244,8 +4235,7 @@ function ConvertPreviewDialog({
 interface WorkbenchItem {
   vol: LibraryVolume
   seriesPathName: string
-  seriesTitle: string
-  volumeTitle: string
+  title: string // 书名（漫画名 + 卷册合一），开始转换时直接作为 EPUB 书名
   author: string
 }
 
@@ -4292,7 +4282,7 @@ function ConvertWorkbench({
   }
 
   // 左表行内编辑：双击单元格进入，Enter/失焦提交，Esc 取消
-  type EditField = 'seriesTitle' | 'volumeTitle' | 'author'
+  type EditField = 'title' | 'author'
   const [editing, setEditing] = useState<{ row: number; field: EditField } | null>(null)
   const [draft, setDraft] = useState('')
   const beginEdit = (row: number, field: EditField, current: string): void => {
@@ -4406,8 +4396,7 @@ function ConvertWorkbench({
                   <TableRow>
                     <TableHead className="w-8 text-center">#</TableHead>
                     <TableHead>{t.colTitle}</TableHead>
-                    <TableHead className="w-32">{t.colVolume}</TableHead>
-                    <TableHead className="w-40">{t.colAuthor}</TableHead>
+                    <TableHead className="w-44">{t.colAuthor}</TableHead>
                     <TableHead className="w-8" />
                   </TableRow>
                 </TableHeader>
@@ -4423,10 +4412,7 @@ function ConvertWorkbench({
                         {i + 1}
                       </TableCell>
                       <TableCell className="font-medium">
-                        {editCell(i, 'seriesTitle', it.seriesTitle, tm.series)}
-                      </TableCell>
-                      <TableCell>
-                        {editCell(i, 'volumeTitle', it.volumeTitle, tm.volumePlaceholder)}
+                        {editCell(i, 'title', it.title, t.colTitle)}
                       </TableCell>
                       <TableCell>
                         {editCell(i, 'author', it.author, tm.authorPlaceholder)}
@@ -4485,11 +4471,8 @@ function ConvertWorkbench({
                       </div>
                     </button>
                     <div className="w-full space-y-0.5 text-center">
-                      <div
-                        className="text-sm font-medium"
-                        title={composeBookTitle(active.seriesTitle, active.volumeTitle)}
-                      >
-                        {composeBookTitle(active.seriesTitle, active.volumeTitle)}
+                      <div className="text-sm font-medium" title={active.title}>
+                        {active.title}
                       </div>
                       <div className="text-xs text-muted-foreground">
                         {active.author.trim() || tm.authorPlaceholder}
@@ -4599,14 +4582,9 @@ function formatBytes(bytes: number): string {
   return `${(bytes / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1)} ${units[i]}`
 }
 
-// 产物显示标题：「部标题 · 卷」。旧产物无 seriesTitle 时回退 seriesName
-function artifactLabel(a: {
-  seriesTitle?: string
-  seriesName?: string
-  volumeTitle: string
-}): string {
-  const series = a.seriesTitle || a.seriesName
-  return series ? `${series} · ${a.volumeTitle}` : a.volumeTitle
+// 产物显示标题：书名（漫画名 + 卷册已合一）。旧产物经 main 读取迁移后也带 title。
+function artifactLabel(a: { title?: string; seriesName?: string }): string {
+  return a.title || a.seriesName || 'Untitled'
 }
 
 // 把 main 返回的投递错误码翻译成当前语言文案；unknown 时附带服务器原始细节
@@ -4815,19 +4793,19 @@ function ArchiveView({ locale }: { locale: LanguageMode }): React.JSX.Element {
   const [delivering, setDelivering] = useState<Set<string>>(new Set())
   const deliver = async (a: Artifact): Promise<void> => {
     setDelivering((prev) => new Set(prev).add(a.id))
-    const toastId = toast.loading(`${t.deliver} · ${a.volumeTitle}`)
+    const toastId = toast.loading(`${t.deliver} · ${a.title}`)
     try {
       const res = await window.api.deliver.send(a.id)
       if (res.success) {
-        toast.success(t.delivered(a.volumeTitle), { id: toastId })
+        toast.success(t.delivered(a.title), { id: toastId })
       } else {
-        toast.error(`${t.deliverFailed(a.volumeTitle)} — ${deliveryErrorMsg(text.delivery, res)}`, {
+        toast.error(`${t.deliverFailed(a.title)} — ${deliveryErrorMsg(text.delivery, res)}`, {
           id: toastId
         })
       }
       await load()
     } catch (err) {
-      toast.error(`${t.deliverFailed(a.volumeTitle)} — ${err}`, { id: toastId })
+      toast.error(`${t.deliverFailed(a.title)} — ${err}`, { id: toastId })
     } finally {
       setDelivering((prev) => {
         const next = new Set(prev)
@@ -4843,15 +4821,15 @@ function ArchiveView({ locale }: { locale: LanguageMode }): React.JSX.Element {
     try {
       const res = await window.api.webpush.open(a.id)
       if (res.success) {
-        toast.success(t.webPushOpened(a.volumeTitle))
+        toast.success(t.webPushOpened(a.title))
       } else {
         const msg = t.webPushErrors[res.code ?? 'unknown'] ?? t.webPushErrors.unknown
-        toast.error(`${a.volumeTitle} — ${msg}`)
+        toast.error(`${a.title} — ${msg}`)
         // 自动填充失败时在 Finder 中定位文件，方便手动拖入
         if (res.code === 'inject-failed') await window.api.webpush.reveal(a.id)
       }
     } catch (err) {
-      toast.error(`${a.volumeTitle} — ${err}`)
+      toast.error(`${a.title} — ${err}`)
     } finally {
       setPushing((prev) => {
         const next = new Set(prev)

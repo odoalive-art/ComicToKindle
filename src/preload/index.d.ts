@@ -169,8 +169,7 @@ export interface Artifact {
   id: string
   sourceVolumePath: string
   seriesName: string
-  seriesTitle: string
-  volumeTitle: string
+  title: string
   author: string | null
   outputs: ConvertOutput[]
   format: 'epub'
@@ -182,8 +181,7 @@ export interface Artifact {
 export interface ConvertRequest {
   sourceVolumePath: string
   seriesName: string
-  seriesTitle: string
-  volumeTitle: string
+  title: string
   author?: string | null
   options?: ConvertOptions
 }
@@ -241,8 +239,7 @@ export interface PersistedConvertJob {
   id: string
   sourceVolumePath: string
   seriesPathName: string
-  seriesTitle: string
-  volumeTitle: string
+  title: string
   author: string | null
   status: ConvertJobStatus
   percent: number
