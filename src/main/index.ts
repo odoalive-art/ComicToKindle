@@ -3,7 +3,8 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { registerComicScheme, setupLibrary } from './library'
-import { setupArchive } from './archive'
+import { setupArchive, clearExtractedCache } from './archive'
+import { clearDocumentsCache } from './document'
 import { setupArtifacts } from './artifacts'
 import { setupQueue } from './queue'
 import { setupDelivery } from './deliver'
@@ -90,9 +91,14 @@ function createWindow(): void {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
+
+  // 启动即清空「转换准备缓存」（PDF/EPUB 页 + 压缩包解压），避免缓存堆积。
+  // 仅清可重建的中间解码产物；converted 成品 / thumbs 封面 / 设置 / 队列均保留。
+  // 须在任何 setup（准备/扫描）之前完成。
+  await Promise.all([clearDocumentsCache(), clearExtractedCache()])
 
   // 开发态 macOS 程序坞用应用图标（打包后走 build/icon.icns，dev 否则显示 Electron 默认图标）
   if (process.platform === 'darwin') app.dock?.setIcon(icon)

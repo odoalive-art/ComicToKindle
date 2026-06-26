@@ -36,6 +36,12 @@ export function documentsRoot(): string {
   return join(app.getPath('userData'), 'documents')
 }
 
+// 清空 PDF/EPUB 页缓存（整本渲染的 PNG / 抽出的图）。属可重建的「转换准备缓存」，
+// 应用启动时清空，避免堆积；清后首次转换/阅读 PDF 会重新渲染。
+export async function clearDocumentsCache(): Promise<void> {
+  await fs.rm(documentsRoot(), { recursive: true, force: true }).catch(() => {})
+}
+
 async function cacheDirFor(filePath: string): Promise<string> {
   const stat = await fs.stat(filePath)
   const key = `${filePath}:${stat.mtimeMs}:${stat.size}:document-v2`

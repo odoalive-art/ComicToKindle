@@ -128,6 +128,12 @@ export function extractedRoot(): string {
   return join(app.getPath('userData'), 'extracted')
 }
 
+// 清空压缩包解压缓存（CBZ/ZIP/RAR/7z 解出的图）。属可重建的「转换准备缓存」，
+// 应用启动时清空，避免堆积；清后首次读压缩包卷会重新解压。
+export async function clearExtractedCache(): Promise<void> {
+  await fs.rm(extractedRoot(), { recursive: true, force: true }).catch(() => {})
+}
+
 // ---------- 设置 / 密码池 ----------
 const settingsFile = (): string => join(app.getPath('userData'), 'settings.json')
 
