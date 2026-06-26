@@ -1,7 +1,24 @@
 import { promises as fs } from 'fs'
 import { dirname, join, sep } from 'path'
 import { createRequire } from 'module'
-import { createCanvas } from '@napi-rs/canvas'
+import { createCanvas, DOMMatrix, Path2D, ImageData, DOMPoint, DOMRect } from '@napi-rs/canvas'
+
+// pdfjs 的环境检测：
+//   isNodeJS = ... && !(process.versions.electron && process.type && process.type !== 'browser')
+// 在 Electron 主进程里 process.type==='browser' → 判为 Node（所以一直能用）；但本模块跑在
+// 转换子进程（utilityProcess，process.type==='utility'）里会被误判为「浏览器」，转而去找
+// document/window 而崩（`document is not defined`）。抹掉 versions.electron 让 pdfjs 走 node
+// 路径——必须在 loadPdfJs 之前、且原生模块（sharp/canvas）已 require 之后执行。
+delete (process.versions as { electron?: string }).electron
+
+// pdfjs node 路径仍会用到 DOMMatrix/Path2D/ImageData 等 DOM 类型，纯 Node 环境没有，
+// 用 @napi-rs/canvas 的同名实现补到全局，同样须在 loadPdfJs 之前完成。
+const g = globalThis as unknown as Record<string, unknown>
+g.DOMMatrix ??= DOMMatrix
+g.Path2D ??= Path2D
+g.ImageData ??= ImageData
+g.DOMPoint ??= DOMPoint
+g.DOMRect ??= DOMRect
 
 /**
  * PDF 整本光栅化的纯渲染核心（pdfjs + @napi-rs/canvas）。

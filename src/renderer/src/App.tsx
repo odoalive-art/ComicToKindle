@@ -1519,7 +1519,7 @@ function LibraryView({
           ? vol.sourceType === 'archive'
             ? text.archive.noImages
             : text.archive.noPages
-          : text.archive.extractFailed
+          : `${text.archive.extractFailed}：${r.message ?? ''}`
       )
       return false
     }

@@ -27,7 +27,8 @@ const nextId = (): string => `${Date.now()}-${seq++}`
 function spawn(): UtilityProcess {
   // out/main/convert-worker.js 与 index.js 同目录（electron.vite 多入口输出）
   const workerPath = join(__dirname, 'convert-worker.js')
-  const proc = utilityProcess.fork(workerPath, [], { stdio: 'pipe' })
+  // stdio[0]（stdin）对 utilityProcess 必须为 'ignore'；stdout/stderr 用 pipe 转主进程日志
+  const proc = utilityProcess.fork(workerPath, [], { stdio: ['ignore', 'pipe', 'pipe'] })
 
   proc.stdout?.on('data', (d: Buffer) => console.log('[convert-worker]', d.toString().trimEnd()))
   proc.stderr?.on('data', (d: Buffer) => console.error('[convert-worker]', d.toString().trimEnd()))
