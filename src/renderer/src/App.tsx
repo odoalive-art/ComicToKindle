@@ -1380,13 +1380,6 @@ function LibraryView({
   } | null>(null)
 
   // ---- 文件整理（真·本地文件操作）----
-  const [renameReq, setRenameReq] = useState<{
-    path: string
-    id?: string
-    kind?: 'book' | 'series'
-    name: string
-    busy: boolean
-  } | null>(null)
   // 批量重命名（托管库 manifest 级，只改卷册 displayName）：序号模板 + 实时预览
   const [batchRenameReq, setBatchRenameReq] = useState<{
     items: { id: string; oldName: string }[]
@@ -1741,25 +1734,6 @@ function LibraryView({
         .map((v) => v.id)
     }
     return [vol.id]
-  }
-
-  const submitRename = async (): Promise<void> => {
-    if (!renameReq || renameReq.busy || !renameReq.name.trim()) return
-    if (renameReq.kind !== 'book' || !renameReq.id) {
-      toast.info('部信息请用“编辑信息”修改')
-      setRenameReq(null)
-      return
-    }
-    setRenameReq((s) => (s ? { ...s, busy: true } : s))
-    try {
-      await window.api.library.renameBook(renameReq.id, renameReq.name)
-      setRenameReq(null)
-      toast.success(text.fileops.renamed)
-      await refreshAfterFileop()
-    } catch (e) {
-      toast.error(fileopErr(e))
-      setRenameReq((s) => (s ? { ...s, busy: false } : s))
-    }
   }
 
   // 序号模板渲染：含 {n} 则替换，否则在末尾补空格 + 序号
@@ -2432,10 +2406,10 @@ function LibraryView({
     deleteReq
   ])
 
-  // Cmd/Ctrl+R（主进程已拦掉刷新并转发为 IPC）：单选「卷」→重命名弹窗；单选「部」→编辑信息
+  // Cmd/Ctrl+R（主进程已拦掉刷新并转发为 IPC）：单选「书」→编辑书籍信息；单选「文件夹」→重命名
   useEffect(() => {
     const off = window.api?.onRenameShortcut?.(() => {
-      if (readingVolume || renameReq || batchRenameReq) return
+      if (readingVolume || batchRenameReq) return
       const ae = document.activeElement as HTMLElement | null
       if (ae && (ae.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))) return
       const layer = selected !== null ? volumes : series
@@ -2454,14 +2428,11 @@ function LibraryView({
         }
         return
       }
-      // 单选一个卷：顶层散卷 → 编辑书籍信息（书名+作者）；部内卷册 → 重命名弹窗
+      // 单选一本书（散卷或夹内皆同）→ 编辑书籍信息（书名 + 作者）
       if (selectedVols.size === 1) {
         const path = [...selectedVols][0]
         const vol = layer.find((v): v is LibraryVolume => v.type === 'book' && v.path === path)
-        if (vol) {
-          if (selected === null) openBookMeta(vol as LibraryBook)
-          else setRenameReq({ path: vol.path, id: vol.id, kind: 'book', name: vol.name, busy: false })
-        }
+        if (vol) openBookMeta(vol as LibraryBook)
         return
       }
       // 没选卷、单选了一个部 → 编辑信息
@@ -2475,7 +2446,6 @@ function LibraryView({
     return off
   }, [
     readingVolume,
-    renameReq,
     batchRenameReq,
     managedLibrary,
     selectedVols,
@@ -2600,7 +2570,7 @@ function LibraryView({
           onClose={() => setPreviewVol(null)}
         />
       ) : null}
-      {/* 格式转换工作台：整页三栏，替代旧的单卷/批量确认弹窗 */}
+      {/* 格式转换工作台：独立模态弹窗（两栏：待转换列表 + 书籍信息/转换格式） */}
       {workbench ? (
         <ConvertWorkbench
           initial={workbench}
@@ -2669,47 +2639,6 @@ function LibraryView({
                 </Button>
                 <Button type="submit" disabled={!seriesMetaReq.title.trim() || seriesMetaReq.busy}>
                   {text.seriesMeta.save}
-                </Button>
-              </DialogFooter>
-            </form>
-          ) : null}
-        </DialogContent>
-      </Dialog>
-      {/* 库整理：重命名（托管库只改卷册 displayName，不动源文件） */}
-      <Dialog
-        open={renameReq !== null}
-        onOpenChange={(o) => (!o && !renameReq?.busy ? setRenameReq(null) : undefined)}
-      >
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>{text.fileops.renameTitle}</DialogTitle>
-            <DialogDescription>{text.fileops.renameDesc}</DialogDescription>
-          </DialogHeader>
-          {renameReq ? (
-            <form
-              onSubmit={(e) => {
-                e.preventDefault()
-                void submitRename()
-              }}
-              className="space-y-3"
-            >
-              <Input
-                autoFocus
-                value={renameReq.name}
-                placeholder={text.fileops.namePlaceholder}
-                onChange={(e) => setRenameReq((s) => (s ? { ...s, name: e.target.value } : s))}
-              />
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => setRenameReq(null)}
-                  disabled={renameReq.busy}
-                >
-                  {text.fileops.cancel}
-                </Button>
-                <Button type="submit" disabled={!renameReq.name.trim() || renameReq.busy}>
-                  {text.fileops.confirm}
                 </Button>
               </DialogFooter>
             </form>
@@ -3681,20 +3610,10 @@ function LibraryView({
                           </ContextMenuItem>
                           <ContextMenuSeparator />
                           <ContextMenuItem
-                            onSelect={() =>
-                              deferOpen(() =>
-                                setRenameReq({
-                                  path: vol.path,
-                                  id: vol.id,
-                                  kind: 'book',
-                                  name: vol.name,
-                                  busy: false
-                                })
-                              )
-                            }
+                            onSelect={() => deferOpen(() => openBookMeta(vol as LibraryBook))}
                           >
                             <Pencil className="size-4" strokeWidth={1.75} />
-                            {text.fileops.rename}
+                            {text.seriesMeta.edit}
                           </ContextMenuItem>
                           {managedLibrary && selectedVols.size > 1 && selectedVols.has(vol.path) ? (
                             <>
@@ -4281,8 +4200,8 @@ interface WorkbenchItem {
   author: string
 }
 
-// 整页三栏「格式转换」工作台：左=待转换列表，中=逐卷书籍信息，右=全局转换参数。
-// 替代旧的单卷/批量确认弹窗；右栏参数即调即存为默认（删了独立设置页后这里是唯一入口）。
+// 「格式转换」独立模态弹窗：左=待转换列表，右=逐卷书籍信息 + 全局转换参数。
+// 右栏参数即调即存为默认（删了独立设置页后这里是唯一入口）。
 function ConvertWorkbench({
   initial,
   locale,
@@ -4382,15 +4301,6 @@ function ConvertWorkbench({
     )
   }
 
-  // Esc 关闭工作台
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
-
   const SwitchRow = ({
     label,
     note,
@@ -4412,17 +4322,26 @@ function ConvertWorkbench({
   )
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-background">
-      {/* 顶栏：标题 + 关闭 */}
-      <div className="flex shrink-0 items-center justify-between border-b px-6 py-3">
-        <h2 className="text-lg font-semibold">{t.title}</h2>
-        <Button variant="ghost" size="icon" onClick={onClose} aria-label={tm.cancel}>
-          <X className="size-5" strokeWidth={1.75} />
-        </Button>
-      </div>
+    <Dialog
+      open
+      onOpenChange={(o) => {
+        if (!o) onClose()
+      }}
+    >
+      <DialogContent
+        showCloseButton
+        // 正在编辑单元格时按 Esc 只取消编辑，不关整个弹窗
+        onEscapeKeyDown={(e) => {
+          if (editing) e.preventDefault()
+        }}
+        className="flex h-[85vh] w-[92vw] max-w-5xl flex-col gap-0 overflow-hidden p-0 sm:max-w-5xl"
+      >
+        <DialogHeader className="shrink-0 space-y-0 border-b px-4 py-2.5 text-left">
+          <DialogTitle className="text-sm font-semibold">{t.title}</DialogTitle>
+        </DialogHeader>
 
-      {/* 两栏主体：左=待转换表格，右=书籍详情+转换格式，中间可拖分隔 */}
-      <ResizablePanelGroup orientation="horizontal" className="min-h-0 flex-1">
+        {/* 两栏主体：左=待转换表格，右=书籍详情+转换格式，中间可拖分隔 */}
+        <ResizablePanelGroup orientation="horizontal" className="min-h-0 flex-1">
         {/* 左：待转换表格（书名/卷数/作者，双击行内编辑） */}
         <ResizablePanel defaultSize={56} minSize={32}>
           <div className="flex h-full min-h-0 flex-col">
@@ -4612,8 +4531,9 @@ function ConvertWorkbench({
             </div>
           </div>
         </ResizablePanel>
-      </ResizablePanelGroup>
-    </div>
+        </ResizablePanelGroup>
+      </DialogContent>
+    </Dialog>
   )
 }
 
