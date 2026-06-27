@@ -358,7 +358,7 @@ export default function DeliveryWizardView({
                 {/* 邮箱帮助文案容器 */}
                 <div className="rounded-lg bg-muted/40 border p-3.5 space-y-2">
                   <div className="flex items-center gap-1.5 text-foreground font-medium text-xs">
-                    <Info className="size-3.5 text-muted-foreground shrink-0" />
+                    <Info className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.75} />
                     <span>
                       {locale === 'zh' ? '如何获取密码？' : 'How to get password?'}
                     </span>
@@ -391,7 +391,7 @@ export default function DeliveryWizardView({
                           ? '🔗 访问亚马逊美国官网个人文档设置 (Amazon.com Settings)'
                           : '🔗 Visit Amazon.com Personal Document Settings'}
                       </span>
-                      <ExternalLink className="size-3" />
+                      <ExternalLink className="size-3" strokeWidth={1.75} />
                     </a>
                   </div>
                   <div className="pl-4">
@@ -406,7 +406,7 @@ export default function DeliveryWizardView({
                           ? '🔗 访问亚马逊日本官网个人文档设置 (Amazon.co.jp Settings)'
                           : '🔗 Visit Amazon.co.jp Personal Document Settings'}
                       </span>
-                      <ExternalLink className="size-3" />
+                      <ExternalLink className="size-3" strokeWidth={1.75} />
                     </a>
                   </div>
                 </div>
@@ -471,7 +471,7 @@ export default function DeliveryWizardView({
               <div className="flex flex-col items-center justify-center p-4 rounded-lg bg-muted/30 border gap-3">
                 {testResult === null ? (
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Info className="size-4 shrink-0" />
+                    <Info className="size-4 shrink-0" strokeWidth={1.75} />
                     <span>
                       {locale === 'zh'
                         ? '尚未进行 SMTP 连通性测试。'
@@ -480,14 +480,14 @@ export default function DeliveryWizardView({
                   </div>
                 ) : testResult.success ? (
                   <div className="flex flex-col items-center gap-1.5 text-center">
-                    <CheckCircle2 className="size-8 text-emerald-500 shrink-0" />
-                    <span className="text-xs font-semibold text-emerald-600">
+                    <CheckCircle2 className="size-8 text-emerald-500 shrink-0" strokeWidth={1.75} />
+                    <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                       {t.testSuccess}
                     </span>
                   </div>
                 ) : (
                   <div className="flex flex-col items-center gap-1.5 text-center">
-                    <ShieldAlert className="size-8 text-destructive shrink-0" />
+                    <ShieldAlert className="size-8 text-destructive shrink-0" strokeWidth={1.75} />
                     <span className="text-xs font-semibold text-destructive">
                       {t.testFailed}
                     </span>
@@ -504,9 +504,9 @@ export default function DeliveryWizardView({
                   className="w-full sm:w-auto"
                 >
                   {testing ? (
-                    <Loader2 className="size-4 animate-spin mr-1.5" />
+                    <Loader2 className="size-4 animate-spin mr-1.5" strokeWidth={1.75} />
                   ) : (
-                    <Mail className="size-4 mr-1.5" />
+                    <Mail className="size-4 mr-1.5" strokeWidth={1.75} />
                   )}
                   {testing ? t.testing : t.testBtn}
                 </Button>
@@ -525,7 +525,7 @@ export default function DeliveryWizardView({
               onClick={() => setStep(step - 1)}
               disabled={testing || saving}
             >
-              <ArrowLeft className="size-4 mr-1.5" />
+              <ArrowLeft className="size-4 mr-1.5" strokeWidth={1.75} />
               {t.prevBtn}
             </Button>
           )}
@@ -553,14 +553,14 @@ export default function DeliveryWizardView({
             }}
           >
             {t.nextBtn}
-            <ArrowRight className="size-4 ml-1.5" />
+            <ArrowRight className="size-4 ml-1.5" strokeWidth={1.75} />
           </Button>
         ) : (
           <Button onClick={handleSaveAndFinish} disabled={saving || testing}>
             {saving ? (
-              <Loader2 className="size-4 animate-spin mr-1.5" />
+              <Loader2 className="size-4 animate-spin mr-1.5" strokeWidth={1.75} />
             ) : (
-              <CheckCircle2 className="size-4 mr-1.5" />
+              <CheckCircle2 className="size-4 mr-1.5" strokeWidth={1.75} />
             )}
             {isEmbedInOnboarding ? t.finishBtn : t.saveBtn}
           </Button>

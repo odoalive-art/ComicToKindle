@@ -1,4 +1,4 @@
-import { app, ipcMain, shell, dialog, BrowserWindow } from 'electron'
+import { app, ipcMain, shell } from 'electron'
 import { join } from 'path'
 import { promises as fs } from 'fs'
 import type { ConvertOptions, ConvertOutput, PreviewPageResult } from './convert'
@@ -261,24 +261,6 @@ export function setupArtifacts(): void {
     const artifact = manifest.artifacts.find((a) => a.id === id)
     const first = artifact?.outputs[0]?.path
     if (first) shell.showItemInFolder(first)
-  })
-
-  ipcMain.handle('artifacts:export', async (event, id: string): Promise<boolean> => {
-    const manifest = await readManifest()
-    const artifact = manifest.artifacts.find((a) => a.id === id)
-    if (!artifact || artifact.outputs.length === 0) return false
-
-    const win = BrowserWindow.fromWebContents(event.sender)
-    const { canceled, filePaths } = win
-      ? await dialog.showOpenDialog(win, { properties: ['openDirectory'], title: '导出到文件夹' })
-      : await dialog.showOpenDialog({ properties: ['openDirectory'], title: '导出到文件夹' })
-    if (canceled || filePaths.length === 0) return false
-
-    const destDir = filePaths[0]
-    for (const out of artifact.outputs) {
-      await fs.copyFile(out.path, join(destDir, out.fileName))
-    }
-    return true
   })
 
   ipcMain.handle('artifacts:remove', async (_event, id: string): Promise<void> => {

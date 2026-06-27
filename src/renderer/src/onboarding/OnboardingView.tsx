@@ -214,7 +214,7 @@ export default function OnboardingView({
             <div className="flex-1 min-h-0 overflow-y-auto flex flex-col justify-between p-8 sm:p-12">
               <div className="flex-1 min-h-0 flex flex-col items-center justify-center text-center space-y-6">
                 <div className="flex items-center justify-center size-16 rounded-2xl bg-primary/10 text-primary">
-                  <BookOpen className="size-9" />
+                  <BookOpen className="size-9" strokeWidth={1.75} />
                 </div>
                 <div className="space-y-2">
                   <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
@@ -230,7 +230,7 @@ export default function OnboardingView({
               <div className="grid grid-cols-2 gap-4 border-t pt-6 mt-6">
                 <div className="space-y-1.5 min-w-0">
                   <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
-                    <Globe className="size-3" />
+                    <Globe className="size-3" strokeWidth={1.75} />
                     {t.welcome.languageSelect}
                   </span>
                   <div className="grid grid-cols-2 gap-1.5">
@@ -255,7 +255,7 @@ export default function OnboardingView({
 
                 <div className="space-y-1.5 min-w-0">
                   <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
-                    {themeMode === 'dark' ? <Moon className="size-3" /> : <Sun className="size-3" />}
+                    {themeMode === 'dark' ? <Moon className="size-3" strokeWidth={1.75} /> : <Sun className="size-3" strokeWidth={1.75} />}
                     {t.welcome.themeSelect}
                   </span>
                   <div className="grid grid-cols-2 gap-1.5">
@@ -282,7 +282,7 @@ export default function OnboardingView({
               <div className="flex justify-end pt-6">
                 <Button onClick={() => setStep(2)}>
                   {t.welcome.startBtn}
-                  <ArrowRight className="size-4 ml-1.5" />
+                  <ArrowRight className="size-4 ml-1.5" strokeWidth={1.75} />
                 </Button>
               </div>
             </div>
@@ -303,7 +303,7 @@ export default function OnboardingView({
                     className="flex flex-col items-center justify-center p-6 border rounded-xl bg-card hover:bg-muted/30 transition-all text-center gap-3 cursor-pointer group"
                   >
                     <div className="size-12 rounded-lg bg-primary/10 text-primary flex items-center justify-center group-hover:scale-105 transition-transform">
-                      <FolderPlus className="size-6" />
+                      <FolderPlus className="size-6" strokeWidth={1.75} />
                     </div>
                     <div>
                       <span className="font-semibold text-sm text-foreground block">
@@ -320,7 +320,7 @@ export default function OnboardingView({
                     className="flex flex-col items-center justify-center p-6 border rounded-xl bg-card hover:bg-muted/30 transition-all text-center gap-3 cursor-pointer group"
                   >
                     <div className="size-12 rounded-lg bg-primary/10 text-primary flex items-center justify-center group-hover:scale-105 transition-transform">
-                      <FolderOpen className="size-6" />
+                      <FolderOpen className="size-6" strokeWidth={1.75} />
                     </div>
                     <div>
                       <span className="font-semibold text-sm text-foreground block">
@@ -345,7 +345,7 @@ export default function OnboardingView({
 
               <div className="flex justify-between border-t pt-6 mt-6">
                 <Button variant="outline" onClick={() => setStep(1)}>
-                  <ArrowLeft className="size-4 mr-1.5" />
+                  <ArrowLeft className="size-4 mr-1.5" strokeWidth={1.75} />
                   {locale === 'zh' ? '返回' : 'Back'}
                 </Button>
                 <Button
@@ -359,7 +359,7 @@ export default function OnboardingView({
                   disabled={!libPath}
                 >
                   {t.library.nextBtn}
-                  <ArrowRight className="size-4 ml-1.5" />
+                  <ArrowRight className="size-4 ml-1.5" strokeWidth={1.75} />
                 </Button>
               </div>
             </div>
@@ -388,7 +388,7 @@ export default function OnboardingView({
                   {isImporting ? (
                     <div className="w-full max-w-xs space-y-3">
                       <div className="flex items-center justify-center gap-2">
-                        <Loader2 className="size-5 animate-spin text-primary shrink-0" />
+                        <Loader2 className="size-5 animate-spin text-primary shrink-0" strokeWidth={1.75} />
                         <span className="text-sm font-semibold">{t.import.importing}</span>
                       </div>
                       <Progress value={importProgress} className="h-1.5 w-full" />
@@ -398,14 +398,14 @@ export default function OnboardingView({
                     </div>
                   ) : importedCount !== null ? (
                     <div className="flex flex-col items-center gap-1.5">
-                      <CheckCircle2 className="size-10 text-emerald-500 shrink-0" />
-                      <span className="text-sm font-semibold text-emerald-600">
+                      <CheckCircle2 className="size-10 text-emerald-500 shrink-0" strokeWidth={1.75} />
+                      <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
                         {t.import.success(importedCount)}
                       </span>
                     </div>
                   ) : (
                     <>
-                      <Upload className="size-8 text-muted-foreground opacity-60 shrink-0" />
+                      <Upload className="size-8 text-muted-foreground opacity-60 shrink-0" strokeWidth={1.75} />
                       <p className="text-xs text-muted-foreground max-w-xs leading-normal">
                         {t.import.dragHint}
                       </p>
@@ -424,7 +424,7 @@ export default function OnboardingView({
 
               <div className="flex justify-between border-t pt-6 mt-6">
                 <Button variant="outline" onClick={() => setStep(2)} disabled={isImporting}>
-                  <ArrowLeft className="size-4 mr-1.5" />
+                  <ArrowLeft className="size-4 mr-1.5" strokeWidth={1.75} />
                   {locale === 'zh' ? '返回' : 'Back'}
                 </Button>
                 <div className="flex gap-2">
@@ -438,7 +438,7 @@ export default function OnboardingView({
                     disabled={isImporting || (importedCount === null && !libPath)}
                   >
                     {t.import.nextBtn}
-                    <ArrowRight className="size-4 ml-1.5" />
+                    <ArrowRight className="size-4 ml-1.5" strokeWidth={1.75} />
                   </Button>
                 </div>
               </div>

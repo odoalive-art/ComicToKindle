@@ -10,6 +10,35 @@ ComicToKindle **核心闭环已打通**，且**macOS 自签发布与自动更新
 
 ## 已完成
 
+### 2026-06-27 阶段（Phase 2 · 视觉/交互一致性收敛 + 库/已转换页打磨）
+
+Phase 1（A 发布管线 + B 转换稳定性 + C 引导向导）已全部合入 main，进入 Phase 2。本轮以渲染层为主，外加移除一处投递入口（导出副本）涉及 preload/main；`npm run typecheck` 与 `npm run build` 均通过。
+
+**视觉一致性收敛**
+
+- **图标线宽收敛**：项目既有 `strokeWidth={1.75}` 细线图标约定只覆盖了 App.tsx 部分图标，onboarding/delivery-wizard（C 线）完全没接。统一对三处所有独立 lucide 图标补 `strokeWidth={1.75}`（App.tsx 48 个 + onboarding/delivery 全量）；`components/ui/spinner.tsx` 也加 `strokeWidth={1.75}` 默认值，让 `<Spinner>` 与图标约定一致。
+- **加载态统一**：`ArchiveView` 加载时原本返回空白 `<div className="flex-1" />`，改为与 Reader 一致的「居中 `<Spinner>`」；两处页面级 spinner 统一加 `text-muted-foreground`。
+- **空态**：确认 `PageEmpty`（整页空态，size-10 图标）与紧凑 `<p>`（活动浮窗等小容器空态）是有意区分，未强行合并。
+- **明暗主题**：成功提示色在 App.tsx 用 `text-emerald-600 dark:text-emerald-400` 配对，onboarding/delivery 此前用裸 `text-emerald-600`（暗色偏暗），已补齐 `dark:text-emerald-400`。其余硬编码色（reader `bg-neutral-900` 画布、e-ink 预览 `bg-white dark:bg-zinc-100`、`bg-black/N` 悬浮遮罩、emerald/amber 状态色）经核为有意的语境选择，保留。
+
+**应用图标**
+
+- 换成新的键帽「K」图标（`Downloads/Kibrary icon (4).png`，1024 源）。`build/icon.png`(母版) / `icon.icns`(iconutil 全套含 1024@2x) / `icon.ico`(sharp 生成 16/32/48/64/128/256) / `resources/icon.png`(512，开发态 Dock) 全部从同一源图重生成。electron-builder 经 `buildResources: build` 自动取 `icon.icns`，无需改配置。
+
+**库视图**
+
+- **封面格式角标**：卷册卡右下角从「页数」改为「格式」——压缩包/PDF/EPUB 取真实扩展名（CBZ/ZIP/CBR/PDF…），图片目录显示「图片/Images」。新增 `volumeFormatLabel()` helper + i18n `imageFolder`。
+- **顶栏减负**：默认浏览态把低频库管理动作（重新扫描/切换库/新建库）+ 回收站收进 `⋯` 溢出菜单（`DropdownMenu`），顶栏从 ~8 个图标降到 4 + `⋯`。新增 i18n `moreActions`。
+
+**已转换页（原「归档」）**
+
+- **改名**：「归档/Archive」→「已转换/Converted」。理由：该页是刚转换、待投递的产物工作区，不是冷归档，旧名误导。改了侧边栏标签、页面标题及所有引用文案；压缩包语境的 "Archive"（密码/分卷/格式角标）保留未动。
+- **行内动作 hover**：该页此前不在 `TooltipProvider` 内，按钮 hover 无提示。已包 provider，5 个动作加 Radix tooltip。
+- **动作收拢**：行内只留「投递到 Kindle / 网页推送」，把「在 Finder 中显示 + 删除」收进每行 `⋯` 菜单（删除走 destructive variant）。
+- **移除「导出副本」**：全栈删除（renderer 按钮+handler、preload `artifacts.export`、main `artifacts:export` IPC 及其 `dialog`/`BrowserWindow` import、i18n export/exported）。用户取文件改为「在 Finder 中显示」后到转换文件夹自取。
+
+**Phase 2 剩余**：① 动效仅有 `animate-spin`，是否加入统一轻量过渡待评估；② 发布站点（渲染 `docs/release-notes.md` / `roadmap.md` 为 `/changelog`、`/roadmap`）形态待定（用户暂选「暂不决定」），未开工。
+
 ### 2026-06-27 阶段（macOS 自签签名 + Squirrel.Mac 真实升级）
 
 - 根因：electron-builder 26 在 `mac.identity: null` 时会在加载自定义 `sign` 钩子前直接跳过签名，因此旧构建无 `[sign-mac]` 日志且产物仍是 ad-hoc。

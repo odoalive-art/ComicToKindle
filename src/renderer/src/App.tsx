@@ -40,7 +40,8 @@ import {
   EyeOff,
   Pencil,
   FolderInput,
-  Puzzle
+  Puzzle,
+  MoreHorizontal
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -100,6 +101,13 @@ import {
   useSidebar
 } from '@/components/ui/sidebar'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
@@ -350,6 +358,15 @@ type LibraryBook = Extract<LibraryEntry, { type: 'book' }>
 // 「卷(可读单元)」即其中的 book 变体——读图/转换/解锁等只处理它。
 type LibraryDirEntry = Awaited<ReturnType<Window['api']['library']['listVolumes']>>[number]
 type LibraryVolume = Extract<LibraryDirEntry, { type: 'book' }>
+
+/** 封面右下角标显示的来源格式：压缩包/PDF/EPUB 取真实扩展名（CBZ/ZIP/CBR/PDF…），图片目录走 i18n 文案。 */
+function volumeFormatLabel(vol: LibraryVolume, imagesLabel: string): string {
+  if (vol.sourceType === 'folder') return imagesLabel
+  const base = vol.path.split(/[/\\]/).pop() ?? ''
+  const dot = base.lastIndexOf('.')
+  const ext = dot > 0 ? base.slice(dot + 1).toUpperCase() : ''
+  return ext || vol.sourceType.toUpperCase()
+}
 type Artifact = Awaited<ReturnType<Window['api']['artifacts']['list']>>[number]
 type ImportScanResult = Awaited<ReturnType<Window['api']['library']['scanImport']>>
 type ImportTarget =
@@ -372,7 +389,7 @@ function CoverImage({
   if (!src || failed) {
     return (
       <div className="flex h-full w-full items-center justify-center bg-muted text-muted-foreground">
-        {quiet ? null : <ImageOff className="size-7" />}
+        {quiet ? null : <ImageOff className="size-7" strokeWidth={1.75} />}
       </div>
     )
   }
@@ -792,7 +809,7 @@ function PdfReader({
           onClick={onClose}
           style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
         >
-          <ArrowLeft className="size-4" />
+          <ArrowLeft className="size-4" strokeWidth={1.75} />
           {text.reader.back}
         </Button>
         <span
@@ -924,7 +941,7 @@ function VolumeReader({
           onClick={onClose}
           style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
         >
-          <ArrowLeft className="size-4" />
+          <ArrowLeft className="size-4" strokeWidth={1.75} />
           {text.reader.back}
         </Button>
         <span
@@ -944,7 +961,7 @@ function VolumeReader({
               onClick={toggleDirection}
               title={`${text.reader.toggleDirection}: ${rtl ? text.reader.directionRtl : text.reader.directionLtr}`}
             >
-              <ArrowLeftRight className="size-4" />
+              <ArrowLeftRight className="size-4" strokeWidth={1.75} />
             </Button>
             <Button
               variant="ghost"
@@ -952,7 +969,7 @@ function VolumeReader({
               onClick={toggleMode}
               title={`${text.reader.toggleMode}: ${isDouble ? text.reader.modeDouble : text.reader.modeSingle}`}
             >
-              {isDouble ? <BookOpen className="size-4" /> : <BookText className="size-4" />}
+              {isDouble ? <BookOpen className="size-4" strokeWidth={1.75} /> : <BookText className="size-4" strokeWidth={1.75} />}
             </Button>
             <span className="ml-1 text-sm tabular-nums text-muted-foreground">{counter}</span>
           </div>
@@ -961,7 +978,7 @@ function VolumeReader({
 
       {loading ? (
         <div className="flex flex-1 items-center justify-center">
-          <Spinner />
+          <Spinner className="text-muted-foreground" />
         </div>
       ) : total === 0 ? (
         <div className="flex flex-1 items-center justify-center p-6 text-sm text-muted-foreground">
@@ -1016,7 +1033,7 @@ function VolumeReader({
             className="group absolute inset-y-0 left-0 flex w-1/2 items-center justify-start pl-3 disabled:pointer-events-none"
           >
             <span className="flex size-9 items-center justify-center rounded-full bg-black/40 text-white opacity-0 transition-opacity group-hover:opacity-100">
-              <ChevronLeft className="size-5" />
+              <ChevronLeft className="size-5" strokeWidth={1.75} />
             </span>
           </button>
           {/* 右半区 */}
@@ -1028,7 +1045,7 @@ function VolumeReader({
             className="group absolute inset-y-0 right-0 flex w-1/2 items-center justify-end pr-3 disabled:pointer-events-none"
           >
             <span className="flex size-9 items-center justify-center rounded-full bg-black/40 text-white opacity-0 transition-opacity group-hover:opacity-100">
-              <ChevronRight className="size-5" />
+              <ChevronRight className="size-5" strokeWidth={1.75} />
             </span>
           </button>
         </div>
@@ -1203,7 +1220,7 @@ function ConvertActivityPopover({
                               title={j.status === 'interrupted' ? t.resume : t.retry}
                               onClick={() => activity.retry(j.id)}
                             >
-                              <RotateCcw className="size-3.5" />
+                              <RotateCcw className="size-3.5" strokeWidth={1.75} />
                             </Button>
                           ) : null}
                           <Button
@@ -1264,9 +1281,9 @@ function ConvertActivityPopover({
                           onClick={() => deliver(a)}
                         >
                           {delivering.has(a.id) ? (
-                            <Loader2 className="size-3.5 animate-spin" />
+                            <Loader2 className="size-3.5 animate-spin" strokeWidth={1.75} />
                           ) : (
-                            <Send className="size-3.5" />
+                            <Send className="size-3.5" strokeWidth={1.75} />
                           )}
                         </Button>
                         <Button
@@ -1278,9 +1295,9 @@ function ConvertActivityPopover({
                           onClick={() => webPush(a)}
                         >
                           {pushing.has(a.id) ? (
-                            <Loader2 className="size-3.5 animate-spin" />
+                            <Loader2 className="size-3.5 animate-spin" strokeWidth={1.75} />
                           ) : (
-                            <Globe className="size-3.5" />
+                            <Globe className="size-3.5" strokeWidth={1.75} />
                           )}
                         </Button>
                         <Button
@@ -1290,7 +1307,7 @@ function ConvertActivityPopover({
                           title={ta.reveal}
                           onClick={() => window.api.artifacts.reveal(a.id)}
                         >
-                          <FolderOpen className="size-3.5" />
+                          <FolderOpen className="size-3.5" strokeWidth={1.75} />
                         </Button>
                         <Button
                           variant="ghost"
@@ -1299,7 +1316,7 @@ function ConvertActivityPopover({
                           title={ta.remove}
                           onClick={() => removeArtifact(a.id)}
                         >
-                          <Trash2 className="size-3.5" />
+                          <Trash2 className="size-3.5" strokeWidth={1.75} />
                         </Button>
                       </div>
                     </div>
@@ -2541,7 +2558,7 @@ function LibraryView({
                 onClick={() => setUnlockReq((s) => (s ? { ...s, show: !s.show } : s))}
                 className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground"
               >
-                {unlockReq?.show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                {unlockReq?.show ? <EyeOff className="size-4" strokeWidth={1.75} /> : <Eye className="size-4" strokeWidth={1.75} />}
               </button>
             </div>
             {unlockReq?.error ? (
@@ -2576,7 +2593,7 @@ function LibraryView({
               <Button type="submit" disabled={!unlockReq?.password || unlockReq?.busy}>
                 {unlockReq?.busy ? (
                   <>
-                    <Loader2 className="size-3.5 animate-spin" />
+                    <Loader2 className="size-3.5 animate-spin" strokeWidth={1.75} />
                     {text.archive.unlocking}
                   </>
                 ) : (
@@ -2873,7 +2890,7 @@ function LibraryView({
                       onClick={() => void submitMove(t.path)}
                       className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-accent disabled:opacity-50"
                     >
-                      <FolderInput className="size-4 shrink-0 text-muted-foreground" />
+                      <FolderInput className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />
                       <span className="min-w-0 flex-1 truncate">{t.title}</span>
                     </button>
                   ))}
@@ -2887,7 +2904,7 @@ function LibraryView({
                     onClick={() => setMoveNewFolderName('')}
                     className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
                   >
-                    <FolderPlus className="size-4 shrink-0" />
+                    <FolderPlus className="size-4 shrink-0" strokeWidth={1.75} />
                     <span>{text.fileops.moveNewFolder}</span>
                   </button>
                 ) : (
@@ -3142,7 +3159,7 @@ function LibraryView({
               disabled={trashReq?.busy}
               onClick={() => void restoreTrashItem(item.trashId)}
             >
-              <RotateCcw className="size-3.5" />
+              <RotateCcw className="size-3.5" strokeWidth={1.75} />
               {text.library.restore}
             </Button>
           )
@@ -3317,15 +3334,6 @@ function LibraryView({
                         </TooltipTrigger>
                         <TooltipContent>{text.library.importBooks}</TooltipContent>
                       </Tooltip>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon" onClick={openTrash}>
-                            <Trash2 className="size-4 text-muted-foreground" strokeWidth={1.75} />
-                            <span className="sr-only">{text.library.trashTitle}</span>
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>{text.library.trashTitle}</TooltipContent>
-                      </Tooltip>
                     </>
                   ) : (
                     <Tooltip>
@@ -3343,36 +3351,45 @@ function LibraryView({
                     locale={locale}
                     onOpenArchive={onOpenArchive}
                   />
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" onClick={rescan} disabled={loading}>
-                        <RefreshCw
-                          className={`size-4 text-muted-foreground ${loading ? 'animate-spin' : ''}`}
+                  {/* 低频的库管理动作（重新扫描/切换库/新建库）收进溢出菜单，给顶栏减负 */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <MoreHorizontal
+                          className="size-4 text-muted-foreground"
                           strokeWidth={1.75}
                         />
-                        <span className="sr-only">{text.library.rescan}</span>
+                        <span className="sr-only">{text.library.moreActions}</span>
                       </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>{text.library.rescan}</TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" onClick={openManagedLibrary}>
-                        <FolderOpen className="size-4 text-muted-foreground" strokeWidth={1.75} />
-                        <span className="sr-only">{text.library.changeFolder}</span>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>{text.library.changeFolder}</TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" onClick={createManagedLibrary}>
-                        <FolderPlus className="size-4 text-muted-foreground" strokeWidth={1.75} />
-                        <span className="sr-only">{text.library.createLibrary}</span>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>{text.library.createLibrary}</TooltipContent>
-                  </Tooltip>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {managedLibrary ? (
+                        <>
+                          <DropdownMenuItem onClick={openTrash}>
+                            <Trash2 strokeWidth={1.75} />
+                            {text.library.trashTitle}
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                        </>
+                      ) : null}
+                      <DropdownMenuItem onClick={rescan} disabled={loading}>
+                        <RefreshCw
+                          className={loading ? 'animate-spin' : ''}
+                          strokeWidth={1.75}
+                        />
+                        {text.library.rescan}
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={openManagedLibrary}>
+                        <FolderOpen strokeWidth={1.75} />
+                        {text.library.changeFolder}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={createManagedLibrary}>
+                        <FolderPlus strokeWidth={1.75} />
+                        {text.library.createLibrary}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </>
               )}
             </div>
@@ -3414,7 +3431,7 @@ function LibraryView({
             {dragImportActive ? (
               <div className="pointer-events-none absolute inset-3 z-30 flex items-center justify-center rounded-lg border border-dashed border-primary bg-background/80 backdrop-blur-sm">
                 <div className="flex items-center gap-3 rounded-md bg-background px-4 py-3 text-sm font-medium shadow-sm">
-                  <FileDown className="size-5 text-primary" />
+                  <FileDown className="size-5 text-primary" strokeWidth={1.75} />
                   <span>{text.library.importDropHere}</span>
                 </div>
               </div>
@@ -3518,11 +3535,11 @@ function LibraryView({
                                   {!vol.coverUrl && vol.kind === 'file' ? (
                                     <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-muted-foreground">
                                       {vol.locked ? (
-                                        <Lock className="size-8" />
+                                        <Lock className="size-8" strokeWidth={1.75} />
                                       ) : vol.sourceType === 'archive' ? (
-                                        <FileArchive className="size-8" />
+                                        <FileArchive className="size-8" strokeWidth={1.75} />
                                       ) : (
-                                        <FileText className="size-8" />
+                                        <FileText className="size-8" strokeWidth={1.75} />
                                       )}
                                     </div>
                                   ) : null}
@@ -3559,7 +3576,7 @@ function LibraryView({
                                       variant="secondary"
                                       className="absolute top-1.5 left-1.5 size-6 justify-center rounded-full bg-background/85 p-0 backdrop-blur"
                                     >
-                                      <CheckCircle2 className="size-3.5 text-emerald-500" />
+                                      <CheckCircle2 className="size-3.5 text-emerald-500" strokeWidth={1.75} />
                                     </Badge>
                                   </TooltipTrigger>
                                   <TooltipContent>{text.convert.converted}</TooltipContent>
@@ -3574,7 +3591,7 @@ function LibraryView({
                                   >
                                     {job.status === 'converting' ? (
                                       <>
-                                        <Loader2 className="size-3 animate-spin" />
+                                        <Loader2 className="size-3 animate-spin" strokeWidth={1.75} />
                                         {text.convert.progress(Math.max(0, job.percent))}
                                       </>
                                     ) : job.status === 'queued' ? (
@@ -3591,14 +3608,12 @@ function LibraryView({
                                   </Badge>
                                 </div>
                               ) : null}
-                              {vol.pageCount > 0 ? (
-                                <Badge
-                                  variant="secondary"
-                                  className="pointer-events-none absolute right-1.5 bottom-1.5 bg-background/85 px-1.5 py-0 text-[10px] backdrop-blur"
-                                >
-                                  {text.library.pageUnit(vol.pageCount)}
-                                </Badge>
-                              ) : null}
+                              <Badge
+                                variant="secondary"
+                                className="pointer-events-none absolute right-1.5 bottom-1.5 bg-background/85 px-1.5 py-0 text-[10px] backdrop-blur"
+                              >
+                                {volumeFormatLabel(vol, text.library.imageFolder)}
+                              </Badge>
                             </div>
                             <div
                               className={`min-w-0 rounded-md px-1.5 py-0.5 ${
@@ -3736,11 +3751,11 @@ function LibraryView({
                                 {!item.coverUrl && item.kind === 'file' ? (
                                   <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-muted-foreground">
                                     {item.locked ? (
-                                      <Lock className="size-8" />
+                                      <Lock className="size-8" strokeWidth={1.75} />
                                     ) : item.sourceType === 'archive' ? (
-                                      <FileArchive className="size-8" />
+                                      <FileArchive className="size-8" strokeWidth={1.75} />
                                     ) : (
-                                      <FileText className="size-8" />
+                                      <FileText className="size-8" strokeWidth={1.75} />
                                     )}
                                   </div>
                                 ) : null}
@@ -3769,7 +3784,7 @@ function LibraryView({
                                       variant="secondary"
                                       className="absolute top-1.5 left-1.5 size-6 justify-center rounded-full bg-background/85 p-0 backdrop-blur"
                                     >
-                                      <CheckCircle2 className="size-3.5 text-emerald-500" />
+                                      <CheckCircle2 className="size-3.5 text-emerald-500" strokeWidth={1.75} />
                                     </Badge>
                                   </TooltipTrigger>
                                   <TooltipContent>{text.convert.converted}</TooltipContent>
@@ -3783,7 +3798,7 @@ function LibraryView({
                                   >
                                     {job.status === 'converting' ? (
                                       <>
-                                        <Loader2 className="size-3 animate-spin" />
+                                        <Loader2 className="size-3 animate-spin" strokeWidth={1.75} />
                                         {text.convert.progress(Math.max(0, job.percent))}
                                       </>
                                     ) : job.status === 'queued' ? (
@@ -3800,14 +3815,12 @@ function LibraryView({
                                   </Badge>
                                 </div>
                               ) : null}
-                              {item.pageCount > 0 ? (
-                                <Badge
-                                  variant="secondary"
-                                  className="pointer-events-none absolute right-1.5 bottom-1.5 bg-background/85 px-1.5 py-0 text-[10px] backdrop-blur"
-                                >
-                                  {text.library.pageUnit(item.pageCount)}
-                                </Badge>
-                              ) : null}
+                              <Badge
+                                variant="secondary"
+                                className="pointer-events-none absolute right-1.5 bottom-1.5 bg-background/85 px-1.5 py-0 text-[10px] backdrop-blur"
+                              >
+                                {volumeFormatLabel(item, text.library.imageFolder)}
+                              </Badge>
                             </div>
                             <div
                               className={`min-w-0 rounded-md px-1.5 py-0.5 ${
@@ -4659,7 +4672,7 @@ function DeliverySettingsView({ locale }: { locale: LanguageMode }): React.JSX.E
             className="shrink-0"
             onClick={() => setShowWizard(true)}
           >
-            <Settings className="size-4 mr-1.5" />
+            <Settings className="size-4 mr-1.5" strokeWidth={1.75} />
             {locale === 'zh' ? '使用向导配置' : 'Use Setup Wizard'}
           </Button>
         </div>
@@ -4715,11 +4728,11 @@ function DeliverySettingsView({ locale }: { locale: LanguageMode }): React.JSX.E
           </div>
           <div className="flex items-center gap-2 pt-1">
             <Button onClick={save} disabled={saving}>
-              {saving ? <Loader2 className="size-4 animate-spin" /> : null}
+              {saving ? <Loader2 className="size-4 animate-spin" strokeWidth={1.75} /> : null}
               {t.save}
             </Button>
             <Button variant="outline" onClick={test} disabled={testing}>
-              {testing ? <Loader2 className="size-4 animate-spin" /> : <Mail className="size-4" />}
+              {testing ? <Loader2 className="size-4 animate-spin" strokeWidth={1.75} /> : <Mail className="size-4" strokeWidth={1.75} />}
               {testing ? t.testing : t.test}
             </Button>
           </div>
@@ -4766,7 +4779,7 @@ function PageEmpty({
 }): React.JSX.Element {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
-      {Icon ? <Icon className="size-10 text-muted-foreground opacity-30" /> : null}
+      {Icon ? <Icon className="size-10 text-muted-foreground opacity-30" strokeWidth={1.75} /> : null}
       {title || label ? (
         <div className="flex flex-col gap-1">
           {title ? <p className="text-sm font-medium text-foreground">{title}</p> : null}
@@ -4801,10 +4814,6 @@ function ArchiveView({ locale }: { locale: LanguageMode }): React.JSX.Element {
 
   const reveal = async (id: string): Promise<void> => {
     await window.api.artifacts.reveal(id)
-  }
-  const exportCopy = async (id: string): Promise<void> => {
-    const ok = await window.api.artifacts.export(id)
-    if (ok) toast.success(t.exported)
   }
   const remove = async (id: string): Promise<void> => {
     await window.api.artifacts.remove(id)
@@ -4868,22 +4877,28 @@ function ArchiveView({ locale }: { locale: LanguageMode }): React.JSX.Element {
         : t.statusReady
   const statusIcon = (status: Artifact['status']): React.JSX.Element =>
     status === 'delivered' ? (
-      <CheckCircle2 className="size-3 text-emerald-500" />
+      <CheckCircle2 className="size-3 text-emerald-500" strokeWidth={1.75} />
     ) : status === 'failed' ? (
-      <AlertCircle className="size-3 text-destructive" />
+      <AlertCircle className="size-3 text-destructive" strokeWidth={1.75} />
     ) : (
-      <Clock3 className="size-3 text-muted-foreground" />
+      <Clock3 className="size-3 text-muted-foreground" strokeWidth={1.75} />
     )
 
-  if (loading) return <div className="flex-1" />
+  if (loading)
+    return (
+      <div className="flex flex-1 items-center justify-center">
+        <Spinner className="text-muted-foreground" />
+      </div>
+    )
 
   if (artifacts.length === 0) {
     return <PageEmpty icon={Archive} label={t.empty} />
   }
 
   return (
-    <ScrollArea className="min-h-0 flex-1">
-      <div className="mx-auto w-full max-w-4xl p-4 lg:p-6">
+    <TooltipProvider delayDuration={300}>
+      <ScrollArea className="min-h-0 flex-1">
+        <div className="mx-auto w-full max-w-4xl p-4 lg:p-6">
         <div className="space-y-3">
           {artifacts.map((a) => {
             const totalBytes = a.outputs.reduce((sum, o) => sum + o.sizeBytes, 0)
@@ -4893,7 +4908,7 @@ function ArchiveView({ locale }: { locale: LanguageMode }): React.JSX.Element {
                 className="flex items-center gap-4 rounded-lg border bg-card p-4 text-card-foreground"
               >
                 <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-muted">
-                  <FileText className="size-5 text-muted-foreground" />
+                  <FileText className="size-5 text-muted-foreground" strokeWidth={1.75} />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
@@ -4916,58 +4931,72 @@ function ArchiveView({ locale }: { locale: LanguageMode }): React.JSX.Element {
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-1">
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={() => deliver(a)}
-                    disabled={delivering.has(a.id)}
-                  >
-                    {delivering.has(a.id) ? (
-                      <Loader2 className="size-4 animate-spin" />
-                    ) : (
-                      <Send className="size-4" />
-                    )}
-                    <span className="hidden lg:inline">
-                      {delivering.has(a.id) ? t.delivering : t.deliver}
-                    </span>
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => webPush(a)}
-                    disabled={pushing.has(a.id)}
-                    title={t.webPush}
-                  >
-                    {pushing.has(a.id) ? (
-                      <Loader2 className="size-4 animate-spin" />
-                    ) : (
-                      <Globe className="size-4" />
-                    )}
-                    <span className="hidden lg:inline">{t.webPush}</span>
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => reveal(a.id)}>
-                    <FolderOpen className="size-4" />
-                    <span className="hidden lg:inline">{t.reveal}</span>
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => exportCopy(a.id)}>
-                    <FileDown className="size-4" />
-                    <span className="hidden lg:inline">{t.export}</span>
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-destructive hover:text-destructive"
-                    onClick={() => remove(a.id)}
-                  >
-                    <Trash2 className="size-4" strokeWidth={1.75} />
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => deliver(a)}
+                        disabled={delivering.has(a.id)}
+                      >
+                        {delivering.has(a.id) ? (
+                          <Loader2 className="size-4 animate-spin" strokeWidth={1.75} />
+                        ) : (
+                          <Send className="size-4" strokeWidth={1.75} />
+                        )}
+                        <span className="hidden lg:inline">
+                          {delivering.has(a.id) ? t.delivering : t.deliver}
+                        </span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{t.deliver}</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => webPush(a)}
+                        disabled={pushing.has(a.id)}
+                      >
+                        {pushing.has(a.id) ? (
+                          <Loader2 className="size-4 animate-spin" strokeWidth={1.75} />
+                        ) : (
+                          <Globe className="size-4" strokeWidth={1.75} />
+                        )}
+                        <span className="hidden lg:inline">{t.webPush}</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{t.webPush}</TooltipContent>
+                  </Tooltip>
+                  {/* 低频的「在 Finder 中显示 / 删除」收进溢出菜单，给行内动作减负 */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <MoreHorizontal className="size-4" strokeWidth={1.75} />
+                        <span className="sr-only">{text.library.moreActions}</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => reveal(a.id)}>
+                        <FolderOpen strokeWidth={1.75} />
+                        {t.reveal}
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem variant="destructive" onClick={() => remove(a.id)}>
+                        <Trash2 strokeWidth={1.75} />
+                        {t.remove}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
             )
           })}
         </div>
-      </div>
-    </ScrollArea>
+        </div>
+      </ScrollArea>
+    </TooltipProvider>
   )
 }
 
@@ -5024,15 +5053,15 @@ function WebPushView({
           </div>
           <div className="flex flex-wrap items-center gap-2 pt-1">
             <Button onClick={() => window.api.webpush.openBlank()}>
-              <Globe className="size-4" />
+              <Globe className="size-4" strokeWidth={1.75} />
               {t.openLogin}
             </Button>
             <Button variant="outline" onClick={save} disabled={saving}>
-              {saving ? <Loader2 className="size-4 animate-spin" /> : null}
+              {saving ? <Loader2 className="size-4 animate-spin" strokeWidth={1.75} /> : null}
               {t.save}
             </Button>
             <Button variant="ghost" onClick={onGotoArchive}>
-              <Archive className="size-4" />
+              <Archive className="size-4" strokeWidth={1.75} />
               {t.gotoArchive}
             </Button>
           </div>
@@ -5121,7 +5150,7 @@ function AppSidebar({
           <SidebarMenu className="flex-1 min-w-0">
             <SidebarMenuItem>
               <SidebarMenuButton tooltip={text.sidebar.settings}>
-                <Settings className="size-4 shrink-0" />
+                <Settings className="size-4 shrink-0" strokeWidth={1.75} />
                 <span>{text.sidebar.settings}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>

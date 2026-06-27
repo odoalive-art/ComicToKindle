@@ -11,7 +11,7 @@ export const uiText = {
       'design-components': 'Shadcn 组件',
       'foundation-standards': '基础规范',
       'app-components': '设计组件',
-      archive: '归档'
+      archive: '已转换'
     },
     header: {
       componentDescription: 'shadcn/ui 官方组件索引，搭建界面时快速选型',
@@ -71,6 +71,7 @@ export const uiText = {
         `正在导入 ${done}/${total}：${name}`,
       importDone: (found: number) => `已导入 ${found} 卷`,
       rescan: '重新扫描',
+      moreActions: '更多',
       emptyTitle: '还没有漫画库',
       emptyDescription:
         '新建一个漫画库，再用「导入卷册」把漫画文件夹或压缩包加进来，开始整理你的漫画。',
@@ -83,6 +84,7 @@ export const uiText = {
       fileVolume: '压缩包',
       pdfVolume: 'PDF',
       epubVolume: 'EPUB',
+      imageFolder: '图片',
       volumeUnit: (n: number) => `${n} 卷`,
       pageUnit: (n: number) => `${n} 页`
     },
@@ -250,7 +252,7 @@ export const uiText = {
       dismiss: '移除',
       cancel: '取消',
       clearAll: '清空',
-      viewAll: '查看全部归档',
+      viewAll: '查看全部已转换',
       enqueued: (n: number) => `已加入 ${n} 卷到转换队列`,
       nothingToQueue: '没有可加入队列的卷',
       select: '选择',
@@ -261,14 +263,12 @@ export const uiText = {
       convertSelected: (n: number) => `转换所选（${n}）`
     },
     archiveView: {
-      title: '归档',
+      title: '已转换',
       description: '已转换的 Kindle 产物，可在 Finder 中查看、导出副本或删除。',
       empty: '还没有任何转换产物。在漫画库里选择一卷开始转换。',
       reveal: '在 Finder 中显示',
-      export: '导出副本',
       remove: '删除',
       removed: '已删除产物',
-      exported: '已导出副本',
       statusReady: '待投递',
       statusDelivered: '已投递',
       statusFailed: '失败',
@@ -297,14 +297,14 @@ export const uiText = {
         '通过 Amazon「Send to Kindle」网页通道推送转换产物，单文件上限 200MB，适合体积偏大的漫画卷（SMTP 邮件附件通常仅 ~50MB）。',
       howTitle: '怎么用',
       step1: '首次点下方按钮打开网页并登录你的 Amazon 账号（登录态会被记住）。',
-      step2: '回到「归档」，点某卷的「网页推送」，应用会自动把文件填进网页。',
+      step2: '回到「已转换」，点某卷的「网页推送」，应用会自动把文件填进网页。',
       step3: '在弹出的网页窗口里点 Send 完成推送。',
       openLogin: '打开 Send to Kindle（登录 / 管理）',
       urlLabel: 'Send to Kindle 页面地址',
       urlNote: '按你的 Amazon 商城调整，默认美区。例如日区：https://www.amazon.co.jp/sendtokindle',
       save: '保存',
       saved: '已保存网页地址',
-      gotoArchive: '前往归档选卷推送'
+      gotoArchive: '前往已转换选卷推送'
     },
     convertSettings: {
       title: '转换设置',
@@ -441,7 +441,7 @@ export const uiText = {
       'design-components': 'Shadcn Components',
       'foundation-standards': 'Foundations',
       'app-components': 'App Components',
-      archive: 'Archive'
+      archive: 'Converted'
     },
     header: {
       componentDescription: 'shadcn/ui component index for faster UI assembly',
@@ -505,6 +505,7 @@ export const uiText = {
         `Importing ${done}/${total}: ${name}`,
       importDone: (found: number) => `Imported ${found} volume${found === 1 ? '' : 's'}`,
       rescan: 'Rescan',
+      moreActions: 'More',
       emptyTitle: 'No library yet',
       emptyDescription:
         'Create a library, then use “Import volumes” to add comic folders or archives and start organizing.',
@@ -517,6 +518,7 @@ export const uiText = {
       fileVolume: 'Archive',
       pdfVolume: 'PDF',
       epubVolume: 'EPUB',
+      imageFolder: 'Images',
       volumeUnit: (n: number) => `${n} vol${n === 1 ? '' : 's'}`,
       pageUnit: (n: number) => `${n} page${n === 1 ? '' : 's'}`
     },
@@ -687,7 +689,7 @@ export const uiText = {
       dismiss: 'Dismiss',
       cancel: 'Cancel',
       clearAll: 'Clear all',
-      viewAll: 'View full archive',
+      viewAll: 'View all converted',
       enqueued: (n: number) => `Queued ${n} volume${n === 1 ? '' : 's'} for conversion`,
       nothingToQueue: 'Nothing to queue',
       select: 'Select',
@@ -698,14 +700,12 @@ export const uiText = {
       convertSelected: (n: number) => `Convert selected (${n})`
     },
     archiveView: {
-      title: 'Archive',
+      title: 'Converted',
       description: 'Converted Kindle artifacts. Reveal in Finder, export a copy, or delete.',
       empty: 'No converted artifacts yet. Pick a volume in the library to start converting.',
       reveal: 'Reveal in Finder',
-      export: 'Export copy',
       remove: 'Delete',
       removed: 'Artifact deleted',
-      exported: 'Copy exported',
       statusReady: 'Ready',
       statusDelivered: 'Delivered',
       statusFailed: 'Failed',
@@ -739,7 +739,7 @@ export const uiText = {
       step1:
         'Open the page below and sign in to your Amazon account once (the session is remembered).',
       step2:
-        'Back in Archive, click "Web push" on a volume — the app auto-fills the file on the page.',
+        'Back in Converted, click "Web push" on a volume — the app auto-fills the file on the page.',
       step3: 'Click Send in the popped-up web window to finish.',
       openLogin: 'Open Send to Kindle (sign in / manage)',
       urlLabel: 'Send to Kindle page URL',
@@ -747,7 +747,7 @@ export const uiText = {
         'Adjust for your Amazon marketplace; defaults to the US. e.g. Japan: https://www.amazon.co.jp/sendtokindle',
       save: 'Save',
       saved: 'Page URL saved',
-      gotoArchive: 'Go to Archive to push a volume'
+      gotoArchive: 'Go to Converted to push a volume'
     },
     convertSettings: {
       title: 'Conversion',
@@ -904,7 +904,7 @@ export const laneBConvertText = {
       channel: '自动投递通道',
       smtp: 'SMTP 邮件',
       webpush: 'Send to Kindle 网页推送',
-      retryHint: '自动投递失败后，可在归档中手动重试。'
+      retryHint: '自动投递失败后，可在已转换中手动重试。'
     },
     sourceErrors: {
       corruptImage: '图片损坏；请替换或删除该页后重试。',
@@ -938,7 +938,7 @@ export const laneBConvertText = {
       channel: 'Automatic delivery channel',
       smtp: 'SMTP email',
       webpush: 'Send to Kindle web delivery',
-      retryHint: 'If automatic delivery fails, retry manually from Archive.'
+      retryHint: 'If automatic delivery fails, retry manually from Converted.'
     },
     sourceErrors: {
       corruptImage: 'An image is damaged. Replace or remove that page, then retry.',
