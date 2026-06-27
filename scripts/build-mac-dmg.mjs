@@ -82,10 +82,9 @@ console.log(`发布：${publishMode}${publishMode === 'always' ? '（上传 GitH
 run('npm', ['run', 'build'])
 run('npm', ['run', 'prepare:dmg-notes'])
 
-const builderArgs = ['--mac', '--publish', publishMode]
-// 用自签证书名覆盖 electron-builder.yml 里的 identity:null
-if (signIdentity) builderArgs.push(`-c.mac.identity=${signIdentity}`)
-run('electron-builder', builderArgs)
+// 签名由 mac.sign 钩子（scripts/sign-mac.cjs）按 CTK_SIGN_IDENTITY 环境变量处理，
+// 不再用 -c.mac.identity（electron-builder 自带签名器在本机会卡死）。
+run('electron-builder', ['--mac', '--publish', publishMode])
 
 cleanupArtifacts()
 printDmgInventory()

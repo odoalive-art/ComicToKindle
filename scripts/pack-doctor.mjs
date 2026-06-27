@@ -76,6 +76,7 @@ function checkBuilderConfig() {
   const config = readText('electron-builder.yml')
   const requiredSnippets = [
     ['mac 构建 dmg + zip(自动更新)', /target:[\s\S]*?- dmg[\s\S]*?- zip/],
+    ['mac 自定义签名钩子', /identity: ["']-["'][\s\S]*?sign: scripts\/sign-mac\.cjs/],
     ['dmg 文件名包含 BUILD_STAMP', /artifactName: \$\{name}-\$\{version}-\$\{env\.BUILD_STAMP}\.\$\{ext}/],
     ['dmg 关闭 blockmap/update info', /writeUpdateInfo: false/],
     ['dmg 包含版本说明文件', /name: 版本说明\.txt/],

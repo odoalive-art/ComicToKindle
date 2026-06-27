@@ -38,10 +38,10 @@ src/renderer/src/assets/main.css
 当前项目路径：
 
 ```txt
-/Users/linweiqiang/Library/Mobile Documents/com~apple~CloudDocs/Dev/Projects/ComicToKindle
+/Users/linweiqiang/Desktop/ComicToKindle
 ```
 
-当前仓库位于 iCloud Drive 同步目录，这是 2026-06-15 按用户要求手动迁回的结果。2026-06-11 曾在同步盘路径下遇到 Node toolchain binary 卡住；如果再次复现，优先把项目迁回本地非同步目录后再继续开发。
+当前仓库已迁出 iCloud Drive，且是唯一工作副本。旧的 iCloud 副本已弃用，不要在其中构建或修改代码。
 
 ## 角色边界
 

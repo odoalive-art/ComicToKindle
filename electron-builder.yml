@@ -36,11 +36,12 @@ mac:
     # dmg = 分发安装包；zip = electron-updater/Squirrel.Mac 自动更新用的增量来源
     - dmg
     - zip
-  # 签名身份：
-  # - identity:null = ad-hoc 签名（无自动更新；仅快速内测，首次打开需右键→打开）
-  # - 自签发布：构建时传 CTK_SIGN_IDENTITY=<自签证书名>，build-mac-dmg.mjs 会用
-  #   `-c.mac.identity` 覆盖此处的 null，从而用自签证书签名（自动更新依赖稳定签名身份）
-  identity: null
+  # 签名：走自定义钩子 scripts/sign-mac.cjs（electron-builder 自带签名器在本机会卡死，
+  # 改用直接 codesign --deep）。传 CTK_SIGN_IDENTITY=<自签证书名> 用证书签（自动更新需要），
+  # 不传则 ad-hoc。identity 必须是 "-" 才会进入自定义钩子；null 会在解析 sign 前
+  # 直接跳过整个签名流程。钩子内不使用这个占位 identity，而是按环境变量签名。
+  identity: "-"
+  sign: scripts/sign-mac.cjs
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
     - NSCameraUsageDescription: Application requests access to the device's camera.

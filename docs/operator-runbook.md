@@ -7,10 +7,10 @@
 当前工作区路径：
 
 ```txt
-/Users/linweiqiang/Library/Mobile Documents/com~apple~CloudDocs/Dev/Projects/ComicToKindle
+/Users/linweiqiang/Desktop/ComicToKindle
 ```
 
-注意：该路径位于 iCloud Drive 同步目录，这是 2026-06-15 按用户要求迁回的结果。2026-06-11 项目曾因 `esbuild` 和 Node `.bin` shim 在同步目录下执行卡住而迁出；如果问题再次出现，优先迁回本地非同步目录。
+这是当前唯一工作副本，不在 iCloud Drive 同步目录内。旧的 iCloud 副本已弃用，不要在其中构建或修改代码。
 
 ## 安装
 
@@ -118,6 +118,22 @@ dmg 挂载后包含：
 
 自动更新（Squirrel.Mac）要求「新旧版本同一签名身份」：ad-hoc 每次构建身份都变 → 装不上更新；自签证书是固定身份 → 可更新。**自签证书是开发者一次性在本机创建，用户完全不参与签名。**
 
+本项目不让 `@electron/osx-sign` 执行真证书签名：本机上它会在 `signing` 阶段永久卡住。`electron-builder.yml` 使用 `mac.identity: "-"` 作为进入签名流程的占位值，再把实际签名委托给 `scripts/sign-mac.cjs`，由它直接执行 `codesign --deep --timestamp=none`。**不要把 `identity` 改成 `null`**；electron-builder 26 会在加载自定义 `sign` 钩子前直接跳过整个签名流程。构建日志必须出现 `[sign-mac]`。
+
+本地验收签名与自动更新元数据：
+
+```bash
+CTK_SIGN_IDENTITY="ComicToKindle Self-Signed" npm run build:mac
+cd dist
+rm -rf /tmp/ctk-sign-check && mkdir /tmp/ctk-sign-check
+ditto -x -k ComicToKindle-*-arm64-mac.zip /tmp/ctk-sign-check
+codesign -dvv /tmp/ctk-sign-check/ComicToKindle.app
+codesign --verify --strict --verbose=2 /tmp/ctk-sign-check/ComicToKindle.app
+shasum -a 512 ComicToKindle-*-arm64-mac.zip
+```
+
+`codesign -dvv` 应显示 `Authority=ComicToKindle Self-Signed` 与 `Identifier=com.comictokindle.app`。`latest-mac.yml` 中 zip 的 `size` 和 `sha512` 必须与最终 zip 一致；不要在 electron-builder 生成 yml 后再重签或重打 zip。
+
 #### 一次性：创建自签「代码签名」证书
 
 1. 打开「钥匙串访问」(Keychain Access)。
@@ -192,7 +208,13 @@ git status --short
 
 ## 环境变量
 
-当前没有应用专属环境变量。
+发布流程使用：
+
+- `CTK_SIGN_IDENTITY`：macOS 自签证书名；不传时 `build:mac` 回落 ad-hoc。
+- `CTK_PUBLISH`：`always` 上传 GitHub Release，默认 `never`。
+- `GH_TOKEN` / `GITHUB_TOKEN`：electron-builder 上传 GitHub Release 所需 token。
+- `BUILD_STAMP`：可选的 `YYYYMMDD-HHMMSS` 构建标识；不传时 `build:mac` 自动生成。
+- `CTK_FORCE_UPDATE_CHECK=1`：开发调试时强制走更新检查，需同时提供 `dev-app-update.yml`。
 
 如果后续新增转换器路径、Kindle 邮箱设置、转换后自动投递开关或模型位置，需要同步更新本文和 `AGENTS.md`。
 
@@ -211,7 +233,7 @@ Send to Kindle 网页通道有一项可配置项：STK 站点 URL，存 `userDat
 
 ## 已知工具链说明
 
-- 当前仓库位于 iCloud Drive 同步目录；若再次出现 Node toolchain 卡住，优先迁回本地非同步目录。
+- 当前仓库在 `~/Desktop/ComicToKindle`，已迁出 iCloud Drive；不要使用旧的 iCloud 副本。
 - 压缩包解压用内置 7-Zip（`7zip-bin`）。打包时 `electron-builder.yml` 的 `asarUnpack` 必须放行 `node_modules/7zip-bin/**`，运行时把 `path7za` 里的 `app.asar` 替换为 `app.asar.unpacked`，否则打包后 `7za` 不可执行、压缩包卷册无法解压。
 - 图像处理用 `sharp`（封面缩略图 + 转换）。`asarUnpack` 必须放行 `node_modules/sharp/**` 和 `node_modules/@img/**`：`@img/sharp-libvips-*` 只含 `.dylib`、不含 `.node`，electron-builder 的 smartUnpack 靠 `.node` 识别会漏掉它，导致打包后 sharp 一调用就崩。
 - PDF 渲染用 `pdfjs-dist` + `@napi-rs/canvas`。`asarUnpack` 必须放行 `node_modules/@napi-rs/canvas/**` 与 `node_modules/@napi-rs/canvas-*/**`，否则打包后 native canvas 可能加载失败。`npm run pack:doctor` 会检查 canvas unpack 配置。
