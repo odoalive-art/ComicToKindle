@@ -6,10 +6,17 @@ import { dirname } from 'node:path'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const stamp = process.env.BUILD_STAMP || makeBuildStamp()
+
+// 自签发布：传 CTK_SIGN_IDENTITY=<自签证书名> 即用自签证书签名（自动更新依赖
+// 稳定签名身份）。不传则回落 ad-hoc（关掉证书查找，避免本机同名证书 ambiguous）。
+const signIdentity = process.env.CTK_SIGN_IDENTITY?.trim()
+// CTK_PUBLISH=always 时由 electron-builder 直接把 dmg/zip/latest-mac.yml 上传到
+// GitHub Release（自动更新 feed）；默认 never，仅本地出包。需要 GH_TOKEN。
+const publishMode = process.env.CTK_PUBLISH?.trim() || 'never'
 const env = {
   ...process.env,
   BUILD_STAMP: stamp,
-  CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+  CSC_IDENTITY_AUTO_DISCOVERY: signIdentity ? 'true' : 'false'
 }
 
 function makeBuildStamp() {
@@ -38,12 +45,18 @@ function run(command, args) {
   if (result.status !== 0) process.exit(result.status ?? 1)
 }
 
-function removeNonDmgArtifacts() {
+// ad-hoc 构建只留 dmg；自签发布构建额外保留自动更新所需产物（zip + latest-mac.yml
+// + blockmap），否则 electron-updater 找不到更新来源。
+function cleanupArtifacts() {
   const distDir = join(root, 'dist')
   if (!existsSync(distDir)) return
 
+  const keepExt = signIdentity
+    ? ['.dmg', '.zip', '.blockmap', '.yml']
+    : ['.dmg']
+
   for (const entry of readdirSync(distDir)) {
-    if (entry.endsWith('.dmg')) continue
+    if (keepExt.some((ext) => entry.endsWith(ext))) continue
     rmSync(join(distDir, entry), { recursive: true, force: true })
   }
 }
@@ -64,8 +77,15 @@ function printDmgInventory() {
 }
 
 console.log(`mac dmg 构建标识：${stamp}`)
+console.log(signIdentity ? `签名身份（自签）：${signIdentity}` : '签名：ad-hoc（无自动更新）')
+console.log(`发布：${publishMode}${publishMode === 'always' ? '（上传 GitHub Release）' : '（仅本地）'}`)
 run('npm', ['run', 'build'])
 run('npm', ['run', 'prepare:dmg-notes'])
-run('electron-builder', ['--mac', '--publish', 'never'])
-removeNonDmgArtifacts()
+
+const builderArgs = ['--mac', '--publish', publishMode]
+// 用自签证书名覆盖 electron-builder.yml 里的 identity:null
+if (signIdentity) builderArgs.push(`-c.mac.identity=${signIdentity}`)
+run('electron-builder', builderArgs)
+
+cleanupArtifacts()
 printDmgInventory()
