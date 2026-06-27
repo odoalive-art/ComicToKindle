@@ -1,7 +1,11 @@
 # 工单：扩展功能 · AI 放大 / 高清化（阅读时增强）
 
 > 状态：**已拍板，待实现**。体例同 `docs/plan-import-enhancements.md` / `plan-eagle-library.md`。
-> 分支建议：`feat/extensions-upscale`（自 `main` 切；本期三条线同 base）。语言：中文优先，新文案中英双语。
+> 分支：三条线各自从**同一冻结 base（`main`）**切独立分支，base 在本期冻结：
+>   - A `feat/upscale-packaging`（Claude） · B `feat/upscale-engine`（Codex） · C `feat/upscale-ui`（Gemini）
+>   - 合并归 Claude，顺序 A→B→C，每步 `npm run build` 绿了再下一步。
+>   - 单工作目录建议各线用独立 `git worktree` 或顺序执行，避免互相覆盖未提交改动。
+> 语言：中文优先，新文案中英双语。
 > 拍板日期：2026-06-27。
 > 协作总规则见 `docs/agent-collaboration.md`、`docs/plan-release-1.0.md` 的「分支协作铁律」。
 
