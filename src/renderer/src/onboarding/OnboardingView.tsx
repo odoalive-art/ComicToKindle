@@ -204,8 +204,8 @@ export default function OnboardingView({
         <CardContent className="flex-1 min-h-0 p-0 flex flex-col">
           {/* Step 1: Welcome */}
           {step === 1 && (
-            <div className="flex-1 flex flex-col justify-between p-8 sm:p-12">
-              <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6">
+            <div className="flex-1 min-h-0 overflow-y-auto flex flex-col justify-between p-8 sm:p-12">
+              <div className="flex-1 min-h-0 flex flex-col items-center justify-center text-center space-y-6">
                 <div className="flex items-center justify-center size-16 rounded-2xl bg-primary/10 text-primary">
                   <BookOpen className="size-9" />
                 </div>
@@ -445,6 +445,7 @@ export default function OnboardingView({
                 locale={locale}
                 isEmbedInOnboarding={true}
                 onSaveSuccess={onComplete}
+                onSkip={onComplete}
                 onCancel={() => setStep(3)}
               />
             </div>

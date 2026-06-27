@@ -21,6 +21,7 @@ interface DeliveryWizardViewProps {
   locale: LanguageMode
   onSaveSuccess?: () => void
   onCancel?: () => void
+  onSkip?: () => void
   isEmbedInOnboarding?: boolean
 }
 
@@ -30,6 +31,7 @@ export default function DeliveryWizardView({
   locale,
   onSaveSuccess,
   onCancel,
+  onSkip,
   isEmbedInOnboarding = false
 }: DeliveryWizardViewProps): React.JSX.Element {
   const t = onboardingText[locale].delivery
@@ -514,22 +516,29 @@ export default function DeliveryWizardView({
 
       {/* 底部导航按钮 */}
       <div className="flex items-center justify-between border-t bg-muted/20 px-6 py-4">
-        {step > 1 ? (
-          <Button
-            variant="outline"
-            onClick={() => setStep(step - 1)}
-            disabled={testing || saving}
-          >
-            <ArrowLeft className="size-4 mr-1.5" />
-            {t.prevBtn}
-          </Button>
-        ) : !isEmbedInOnboarding && onCancel ? (
-          <Button variant="ghost" onClick={onCancel} disabled={testing || saving}>
-            {locale === 'zh' ? '取消' : 'Cancel'}
-          </Button>
-        ) : (
-          <div />
-        )}
+        <div className="flex items-center gap-2">
+          {step > 1 && (
+            <Button
+              variant="outline"
+              onClick={() => setStep(step - 1)}
+              disabled={testing || saving}
+            >
+              <ArrowLeft className="size-4 mr-1.5" />
+              {t.prevBtn}
+            </Button>
+          )}
+          {step === 1 && !isEmbedInOnboarding && onCancel && (
+            <Button variant="ghost" onClick={onCancel} disabled={testing || saving}>
+              {locale === 'zh' ? '取消' : 'Cancel'}
+            </Button>
+          )}
+          {/* 嵌入引导时允许跳过投递配置（投递是可选项，可之后在设置里配） */}
+          {isEmbedInOnboarding && onSkip && (
+            <Button variant="ghost" onClick={onSkip} disabled={testing || saving}>
+              {locale === 'zh' ? '稍后配置' : 'Set up later'}
+            </Button>
+          )}
+        </div>
 
         {step < 3 ? (
           <Button
