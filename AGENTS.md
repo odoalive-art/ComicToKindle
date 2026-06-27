@@ -125,6 +125,7 @@ src/renderer/src/data/design-tokens.ts
 - 添加产品工作流时，保持 `docs/` 同步更新。
 - 保持 README 中的安装和验证命令与 `package.json` 同步。
 - **`package.json` 的 `dependencies` 只放 main/preload 进程运行时真正需要的包**（当前：`sharp` / `7zip-bin` / `archiver` / `nodemailer` / `pdfjs-dist` / `@napi-rs/canvas` / `fast-xml-parser` / `@electron-toolkit{,/preload}`）；新增 UI/渲染层库一律装到 `devDependencies`，否则会被外部化进 `app.asar` 使打包体积暴涨（详见 `docs/architecture.md` 「打包」）。
+- macOS 自签打包必须保持 `mac.identity: "-"` + `mac.sign: scripts/sign-mac.cjs`；`identity: null` 会让 electron-builder 26 在加载自定义钩子前跳过整个签名流程。传 `CTK_SIGN_IDENTITY` 用自签证书，不传仍回落 ad-hoc。
 - 除非仓库重新移回同步目录，否则不要新增 iCloud 特定工具链 workaround。
 - 优先使用 shadcn/ui 组件和本地既有模式，不要随意新增自定义 primitive。
 - 未经用户明确授权，绝不擅自执行 `git commit` 或 `git push` 提交及推送操作，必须先询问用户并获得确认。

@@ -2,6 +2,8 @@
 
 本文是 ComicToKindle 从内测（`0.1.0-beta.2`）走向 **开源社区正式发布（1.0）** 的实施计划与多 agent 任务分派单。供 Claude Code、Codex、Antigravity(Gemini) 接力时按线领取任务。
 
+> 状态：A 线 macOS 自签发布管线已完成，`0.1.0-beta.3 → 0.1.0-beta.4` 真实 electron-updater/Squirrel.Mac 升级已于 2026-06-27 验证通过。
+
 协作总规则见 `docs/agent-collaboration.md`；本文件只补充本轮的「发布策略定案 + 分线任务卡 + 合并质检关」。
 
 ## 发布策略定案（2026-06-27）
@@ -96,6 +98,8 @@
 - handoff 里那 4 项托管库交互回归
 - B 线转换边界用例实测
 - 自签发布包真机开箱 + 一次真实自动更新升级
+
+A 线该项已通过：最终 zip 签名、`latest-mac.yml` 校验值、公开 feed 匿名访问、版本发现/下载/重启替换均已实测。
 
 **冲突避免约定**：
 - 任意两条线不碰同一文件（i18n.ts 例外，按区块追加）。

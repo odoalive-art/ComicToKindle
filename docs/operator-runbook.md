@@ -134,6 +134,12 @@ shasum -a 512 ComicToKindle-*-arm64-mac.zip
 
 `codesign -dvv` 应显示 `Authority=ComicToKindle Self-Signed` 与 `Identifier=com.comictokindle.app`。`latest-mac.yml` 中 zip 的 `size` 和 `sha512` 必须与最终 zip 一致；不要在 electron-builder 生成 yml 后再重签或重打 zip。
 
+GitHub 仓库必须是 public，或提供另一个对客户端匿名可读的更新源。应用不会携带开发者的 GitHub token；若仓库为 private，安装后的客户端读 `releases/latest/download/latest-mac.yml` 会得到 404。发布后可用下面的匿名请求验收：
+
+```bash
+curl -fsSL https://github.com/odoalive-art/ComicToKindle/releases/latest/download/latest-mac.yml
+```
+
 #### 一次性：创建自签「代码签名」证书
 
 1. 打开「钥匙串访问」(Keychain Access)。
@@ -171,6 +177,8 @@ CTK_SIGN_IDENTITY="ComicToKindle Self-Signed" npm run release:mac -- --local
 3. 出 **版本 B**（再跑一次 `release:mac`，版本号自动 +1）并发布。
 4. 重开已安装的 A：约 3 秒后台检查 → 检测到 B → 后台下载 → 弹「发现新版本，立即重启更新」。点重启 → 应用替换为 B 并重启。
 5. 确认重启后版本变成 B，且**不再**弹 Gatekeeper 警告（经 app 内更新替换的新版不带 quarantine）。
+
+2026-06-27 已完成真实验证：`0.1.0-beta.3` 从公开 GitHub Release 发现并下载 `0.1.0-beta.4`，点「立即重启更新」后 Squirrel.Mac 成功替换 `/Applications/ComicToKindle.app` 并重启新进程。更新后版本为 `0.1.0-beta.4`，仍显示 `Authority=ComicToKindle Self-Signed` / `Identifier=com.comictokindle.app`，`codesign --verify --strict` 通过。
 
 排查：
 

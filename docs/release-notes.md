@@ -21,7 +21,12 @@
 
 ### 验证
 
-- 用于从 `0.1.0-beta.3` 执行一次真实 electron-updater/Squirrel.Mac 自动升级；升级结果待测试完成后补记。
+- 已从安装在 `/Applications` 的 `0.1.0-beta.3` 完成一次真实 electron-updater/Squirrel.Mac 自动升级：发现新版、下载、点击重启、替换并重启到 `0.1.0-beta.4` 全部通过。
+- 更新后应用仍为 `Authority=ComicToKindle Self-Signed` / `Identifier=com.comictokindle.app`，`codesign --verify --strict` 通过。
+
+### 下载
+
+- `comic-to-kindle-0.1.0-beta.4-20260627-171139.dmg`
 
 ## 0.1.0-beta.3 · 2026-06-27
 
@@ -98,4 +103,4 @@
 
 ### 下载
 
-- 待补：PDF/EPUB 来源接入后，`npm run build:mac` 在 electron-builder 外部下载阶段遇到 TLS 断开，尚未生成包含该能力的新 dmg。网络恢复并成功打包后，补入最终 `comic-to-kindle-0.1.0-beta.2-<YYYYMMDD-HHMMSS>.dmg` 文件名。
+- beta.2 已完成本地打包验收；公开下载请使用后续 beta.3 或 beta.4 Release。

@@ -44,7 +44,8 @@
 
 ### 内测打包
 
-- macOS 内测包走 ad-hoc 签名 dmg。
+- macOS 发布包可用稳定自签证书签名，并保留不传 `CTK_SIGN_IDENTITY` 时的 ad-hoc 本地内测路径。
+- GitHub Release 同时发布 dmg、Squirrel.Mac zip 与 `latest-mac.yml`；electron-updater 已完成 `0.1.0-beta.3 → 0.1.0-beta.4` 真实升级验证。
 - dmg 文件名包含版本号和构建时间戳，便于留存对比。
 - dmg 内置当前版本说明。
 - 打包前可运行 `npm run pack:doctor` 做环境和配置体检。
@@ -78,6 +79,7 @@
 
 - 更新日志和路线图维护规范。
 - dmg 内容、版本号、构建标识和包体大小检查。
+- 继续观察公开 GitHub Release 的稳定性，并在后续版本发布时复验匿名 feed 与自签身份。
 - 未来官网 `/changelog` 和 `/roadmap` 的内容同步。
 
 ## 计划中
