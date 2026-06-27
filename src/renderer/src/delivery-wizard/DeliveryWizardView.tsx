@@ -267,13 +267,15 @@ export default function DeliveryWizardView({
 
   return (
     <div className="flex h-full w-full flex-col bg-background">
-      {/* 顶部进度条 */}
-      <div className="relative h-1 w-full bg-muted">
-        <div
-          className="absolute h-full bg-primary transition-all duration-300"
-          style={{ width: `${(step / 3) * 100}%` }}
-        />
-      </div>
+      {/* 顶部进度条：仅独立使用时显示；嵌入引导时隐藏，避免被误读为引导总进度 */}
+      {!isEmbedInOnboarding && (
+        <div className="relative h-1 w-full bg-muted">
+          <div
+            className="absolute h-full bg-primary transition-all duration-300"
+            style={{ width: `${(step / 3) * 100}%` }}
+          />
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto px-6 py-8">
         <div className="mx-auto max-w-lg space-y-6">

@@ -202,6 +202,13 @@ export default function OnboardingView({
     <div className="flex h-dvh w-full items-center justify-center bg-muted/30 p-4 select-none">
       <Card className="w-full max-w-2xl h-[560px] flex flex-col shadow-xl border overflow-hidden bg-background">
         <CardContent className="flex-1 min-h-0 p-0 flex flex-col">
+          {/* 引导总进度条：贯穿 4 步（welcome / library / import / delivery） */}
+          <div className="relative h-1 w-full shrink-0 bg-muted">
+            <div
+              className="absolute h-full bg-primary transition-all duration-300"
+              style={{ width: `${(step / 4) * 100}%` }}
+            />
+          </div>
           {/* Step 1: Welcome */}
           {step === 1 && (
             <div className="flex-1 min-h-0 overflow-y-auto flex flex-col justify-between p-8 sm:p-12">
@@ -226,7 +233,7 @@ export default function OnboardingView({
                     <Globe className="size-3" />
                     {t.welcome.languageSelect}
                   </span>
-                  <div className="flex gap-1.5">
+                  <div className="grid grid-cols-2 gap-1.5">
                     <Button
                       variant={locale === 'zh' ? 'default' : 'outline'}
                       size="sm"
@@ -251,7 +258,7 @@ export default function OnboardingView({
                     {themeMode === 'dark' ? <Moon className="size-3" /> : <Sun className="size-3" />}
                     {t.welcome.themeSelect}
                   </span>
-                  <div className="flex gap-1.5">
+                  <div className="grid grid-cols-2 gap-1.5">
                     <Button
                       variant={themeMode === 'light' ? 'default' : 'outline'}
                       size="sm"
