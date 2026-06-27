@@ -879,3 +879,76 @@ export const uiText = {
     }
   }
 } as const
+
+// === lane-B convert ===
+export const laneBConvertText = {
+  zh: {
+    webPushInjected: {
+      dismiss: '知道了',
+      preparing: '正在准备上传…',
+      uploading: (names: string) => `正在上传 ${names}…`,
+      filled: '已填入，点 Send 发送到 Kindle',
+      filledLead: '已自动填入',
+      filledDesc: (names: string) => `${names}，确认后点 Amazon 的 Send 发送到 Kindle。`,
+      armedLead: '自动填入已就绪',
+      armedDesc:
+        '点页面中的「Add a file」按钮，已转换的文件会自动填入（不会弹出系统选择框），随后点 Send 发送到 Kindle。',
+      closeTitle: '关闭 Send to Kindle 窗口？',
+      closeDesc: '尚未点 Send 的文件不会发送。',
+      cancel: '取消',
+      close: '关闭'
+    },
+    autoDelivery: {
+      enabled: '转换后自动投递',
+      description: '转换完成后自动进入所选投递通道；网页推送仍需确认并点击 Send。',
+      channel: '自动投递通道',
+      smtp: 'SMTP 邮件',
+      webpush: 'Send to Kindle 网页推送',
+      retryHint: '自动投递失败后，可在归档中手动重试。'
+    },
+    sourceErrors: {
+      corruptImage: '图片损坏；请替换或删除该页后重试。',
+      emptyVolume: '卷册中没有可转换的图片。',
+      archiveCorrupt: '压缩包已损坏或格式不受支持，请重新打包后重试。',
+      archiveMissingPart: '压缩包分卷不完整，请补齐所有分卷后重试。',
+      epubReflowUnsupported: '暂不支持纯文本/重排 EPUB，请先转换为图片型 EPUB。',
+      pdfRenderFailed: 'PDF 渲染失败，请重新导出或拆分 PDF 后重试。'
+    }
+  },
+  en: {
+    webPushInjected: {
+      dismiss: 'Got it',
+      preparing: 'Preparing upload…',
+      uploading: (names: string) => `Uploading ${names}…`,
+      filled: 'Files added. Click Send to deliver them to Kindle.',
+      filledLead: 'Files added automatically',
+      filledDesc: (names: string) => `${names}. Review them, then click Amazon’s Send button.`,
+      armedLead: 'Automatic file selection is ready',
+      armedDesc:
+        'Click “Add a file” on this page. ComicToKindle will add the converted files without opening the system file picker; then click Send.',
+      closeTitle: 'Close the Send to Kindle window?',
+      closeDesc: 'Files not yet sent will be discarded.',
+      cancel: 'Cancel',
+      close: 'Close'
+    },
+    autoDelivery: {
+      enabled: 'Deliver automatically after conversion',
+      description:
+        'After conversion, open the selected delivery channel automatically. Web delivery still requires review and a click on Send.',
+      channel: 'Automatic delivery channel',
+      smtp: 'SMTP email',
+      webpush: 'Send to Kindle web delivery',
+      retryHint: 'If automatic delivery fails, retry manually from Archive.'
+    },
+    sourceErrors: {
+      corruptImage: 'An image is damaged. Replace or remove that page, then retry.',
+      emptyVolume: 'The volume contains no convertible images.',
+      archiveCorrupt: 'The archive is damaged or unsupported. Repack it and retry.',
+      archiveMissingPart: 'Archive volumes are incomplete. Restore every part and retry.',
+      epubReflowUnsupported:
+        'Reflowable or text-only EPUB is not supported. Convert it to an image-based EPUB first.',
+      pdfRenderFailed: 'PDF rendering failed. Re-export or split the PDF, then retry.'
+    }
+  }
+} as const
+// === /lane-B convert ===

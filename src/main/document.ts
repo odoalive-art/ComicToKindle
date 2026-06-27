@@ -21,6 +21,9 @@ import { runRenderPdf } from './convert-host'
 const nodeRequire = createRequire(__filename)
 const IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif', '.avif', '.bmp'])
 const DOCUMENT_EXTS = new Set(['.pdf', '.epub'])
+const PDF_RENDER_SCALE = 2
+const PDF_MAX_RENDER_PIXELS = 24_000_000
+const PDF_MAX_RENDER_EDGE = 12_000
 
 export const isDocumentFile = (name: string): boolean =>
   DOCUMENT_EXTS.has(extname(name).toLowerCase())
@@ -67,8 +70,12 @@ export async function getCachedDocumentImages(filePath: string): Promise<string[
   }
 }
 
-async function writeManifest(dir: string, images: string[]): Promise<string[]> {
-  if (images.length === 0) throw new Error('NO_IMAGES')
+async function writeManifest(
+  dir: string,
+  images: string[],
+  emptyCode = 'NO_IMAGES'
+): Promise<string[]> {
+  if (images.length === 0) throw new Error(emptyCode)
   await fs.writeFile(
     manifestPath(dir),
     JSON.stringify({ images } satisfies DocumentManifest),
@@ -127,18 +134,208 @@ async function inspectPdf(filePath: string): Promise<DocumentInfo> {
     cMapPacked: true,
     wasmUrl: pdfAssetDir('wasm')
   } as never)
-  const doc = await task.promise
-  const pageCount = doc.numPages
-  await task.destroy() // pdfjs v6：销毁在 loadingTask 上（doc 无 destroy），否则 finally 抛错吞掉结果
-  return { pageCount }
+  try {
+    const doc = await task.promise
+    if (doc.numPages < 1) throw new Error('PDF_NO_PAGES')
+    return { pageCount: doc.numPages }
+  } catch (err) {
+    throw normalizeDocumentError('pdf', err)
+  } finally {
+    await task.destroy().catch(() => {})
+  }
 }
 
-// PDF 整本光栅化：缓存目录/manifest 留在主进程，逐页 render（pdfjs CPU 重活）委托给
-// 转换子进程（convert-host.runRenderPdf），避免大 PDF 准备期堵死主进程 event loop。
+function normalizeDocumentError(type: 'pdf' | 'epub', err: unknown): Error {
+  const message = err instanceof Error ? err.message : String(err)
+  const lower = message.toLowerCase()
+  if (type === 'pdf') {
+    if (message === 'PDF_NO_PAGES') {
+      return new Error(
+        'PDF_NO_PAGES: PDF 不包含可渲染页面，请检查文件内容后重试。 / The PDF contains no renderable pages. Check the file and retry.'
+      )
+    }
+    if (message.startsWith('PDF_')) return new Error(message)
+    if (lower.includes('password')) {
+      return new Error(
+        'PDF_PASSWORD_REQUIRED: 此 PDF 受密码保护，当前无法打开；请先移除密码后重试。 / This PDF is password-protected. Remove the password and retry.'
+      )
+    }
+    if (
+      lower.includes('invalid pdf') ||
+      lower.includes('missing pdf') ||
+      lower.includes('unexpected response') ||
+      lower.includes('xref')
+    ) {
+      return new Error(
+        'PDF_INVALID: PDF 已损坏或结构不完整，请用 PDF 工具重新导出后重试。 / The PDF is damaged or incomplete. Re-export it and retry.'
+      )
+    }
+    return new Error(
+      `PDF_RENDER_FAILED: PDF 页面渲染失败，请尝试重新导出或拆分 PDF 后重试。 / PDF rendering failed. Re-export or split the PDF, then retry. (${message})`
+    )
+  }
+  if (message === 'NO_IMAGES' || message === 'EPUB_REFLOW_UNSUPPORTED') {
+    return new Error(
+      'EPUB_REFLOW_UNSUPPORTED: 暂不支持纯文本/重排 EPUB；请先转换为图片型 EPUB 或图片目录。 / Reflowable or text-only EPUB is not supported. Convert it to an image-based EPUB or image folder first.'
+    )
+  }
+  if (message.startsWith('EPUB_')) return new Error(message)
+  if (lower.includes('container') || lower.includes('is not archive')) {
+    return new Error(
+      'EPUB_INVALID: EPUB 已损坏或缺少必要目录结构，请重新导出后重试。 / The EPUB is damaged or missing required files. Re-export it and retry.'
+    )
+  }
+  return new Error(
+    `EPUB_PREPARE_FAILED: EPUB 页面准备失败，请重新导出后重试。 / EPUB preparation failed. Re-export it and retry. (${message})`
+  )
+}
+
+interface PdfRenderPlan {
+  pageCount: number
+  needsAdaptiveRendering: boolean
+}
+
+async function inspectPdfRenderPlan(
+  filePath: string,
+  onProgress?: DocumentProgressCb
+): Promise<PdfRenderPlan> {
+  const pdfjs = await loadPdfJs()
+  const data = new Uint8Array(await fs.readFile(filePath))
+  const task = pdfjs.getDocument({
+    data,
+    disableWorker: true,
+    useSystemFonts: true,
+    standardFontDataUrl: pdfAssetDir('standard_fonts'),
+    cMapUrl: pdfAssetDir('cmaps'),
+    cMapPacked: true,
+    wasmUrl: pdfAssetDir('wasm')
+  } as never)
+  try {
+    const doc = await task.promise
+    if (doc.numPages < 1) throw new Error('PDF_NO_PAGES')
+    let needsAdaptiveRendering = false
+    for (let i = 1; i <= doc.numPages; i++) {
+      const page = await doc.getPage(i)
+      const viewport = page.getViewport({ scale: PDF_RENDER_SCALE })
+      if (
+        viewport.width * viewport.height > PDF_MAX_RENDER_PIXELS ||
+        viewport.width > PDF_MAX_RENDER_EDGE ||
+        viewport.height > PDF_MAX_RENDER_EDGE
+      ) {
+        needsAdaptiveRendering = true
+        break
+      }
+      page.cleanup()
+      onProgress?.(Math.max(1, Math.round((i / doc.numPages) * 5)))
+    }
+    return { pageCount: doc.numPages, needsAdaptiveRendering }
+  } catch (err) {
+    throw normalizeDocumentError('pdf', err)
+  } finally {
+    await task.destroy().catch(() => {})
+  }
+}
+
+function adaptivePdfScale(width: number, height: number): number {
+  const pixelScale = Math.sqrt(PDF_MAX_RENDER_PIXELS / Math.max(1, width * height))
+  const edgeScale = PDF_MAX_RENDER_EDGE / Math.max(1, width, height)
+  const scale = Math.min(PDF_RENDER_SCALE, pixelScale, edgeScale)
+  return Number.isFinite(scale) && scale > 0 ? scale : 1
+}
+
+function shouldRetryPdfInMain(err: unknown): boolean {
+  const message = (err instanceof Error ? err.message : String(err)).toLowerCase()
+  return !(
+    message.includes('password') ||
+    message.includes('invalid pdf') ||
+    message.includes('missing pdf') ||
+    message.includes('xref')
+  )
+}
+
+async function renderPdfAdaptive(
+  filePath: string,
+  dir: string,
+  onProgress?: DocumentProgressCb
+): Promise<string[]> {
+  await fs.rm(dir, { recursive: true, force: true }).catch(() => {})
+  const pagesDir = join(dir, 'pages')
+  await fs.mkdir(pagesDir, { recursive: true })
+  const pdfjs = await loadPdfJs()
+  const data = new Uint8Array(await fs.readFile(filePath))
+  const task = pdfjs.getDocument({
+    data,
+    disableWorker: true,
+    useSystemFonts: true,
+    standardFontDataUrl: pdfAssetDir('standard_fonts'),
+    cMapUrl: pdfAssetDir('cmaps'),
+    cMapPacked: true,
+    wasmUrl: pdfAssetDir('wasm')
+  } as never)
+  const relImages: string[] = []
+  try {
+    const doc = await task.promise
+    if (doc.numPages < 1) throw new Error('PDF_NO_PAGES')
+    for (let i = 1; i <= doc.numPages; i++) {
+      const page = await doc.getPage(i)
+      const base = page.getViewport({ scale: 1 })
+      const viewport = page.getViewport({ scale: adaptivePdfScale(base.width, base.height) })
+      const canvas = createCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height))
+      const canvasContext = canvas.getContext('2d')
+      await page.render({ canvas: null, canvasContext, viewport } as never).promise
+      const rel = join('pages', `${String(i).padStart(4, '0')}.png`)
+      await fs.writeFile(join(dir, rel), canvas.toBuffer('image/png'))
+      canvas.width = 1
+      canvas.height = 1
+      relImages.push(rel)
+      page.cleanup()
+      onProgress?.(5 + Math.round((i / doc.numPages) * 93))
+      await new Promise<void>((resolvePromise) => setImmediate(resolvePromise))
+    }
+    return relImages
+  } catch (err) {
+    await fs.rm(dir, { recursive: true, force: true }).catch(() => {})
+    throw normalizeDocumentError('pdf', err)
+  } finally {
+    await task.destroy().catch(() => {})
+  }
+}
+
+// PDF 整本光栅化：普通页面委托转换子进程，避免大 PDF 准备期堵死主进程；检测到超大页时
+// 在主进程走自适应像素上限渲染，逐页让出 event loop，避免 canvas 分配过大导致崩溃。
 async function renderPdf(filePath: string, onProgress?: DocumentProgressCb): Promise<string[]> {
   const dir = await cacheDirFor(filePath)
-  const relImages = await runRenderPdf(filePath, dir, (percent) => onProgress?.(percent))
-  return writeManifest(dir, relImages)
+  let lastProgress = 0
+  const report = (percent: number): void => {
+    lastProgress = Math.max(lastProgress, Math.min(100, percent))
+    onProgress?.(lastProgress)
+  }
+  report(0)
+  try {
+    const plan = await inspectPdfRenderPlan(filePath, report)
+    report(5)
+    let relImages: string[]
+    if (plan.needsAdaptiveRendering) {
+      relImages = await renderPdfAdaptive(filePath, dir, report)
+    } else {
+      try {
+        relImages = await runRenderPdf(filePath, dir, (percent) =>
+          report(5 + Math.round((percent / 100) * 93))
+        )
+      } catch (err) {
+        // utility process 对少数特殊字体/Canvas 环境可能失败；回退同一套 PDF.js 资源在
+        // main 逐页渲染，并继续使用自适应像素上限。进度只前进、不回退。
+        if (!shouldRetryPdfInMain(err)) throw err
+        relImages = await renderPdfAdaptive(filePath, dir, report)
+      }
+    }
+    const images = await writeManifest(dir, relImages, 'PDF_NO_PAGES')
+    report(100)
+    return images
+  } catch (err) {
+    await fs.rm(dir, { recursive: true, force: true }).catch(() => {})
+    throw normalizeDocumentError('pdf', err)
+  }
 }
 
 /**
@@ -180,10 +377,13 @@ async function renderPdfFirstPage(filePath: string, dir: string, coverPath: stri
   const doc = await task.promise
   try {
     const page = await doc.getPage(1)
-    const viewport = page.getViewport({ scale: 1.5 })
+    const base = page.getViewport({ scale: 1 })
+    const viewport = page.getViewport({
+      scale: Math.min(1.5, adaptivePdfScale(base.width, base.height))
+    })
     const canvas = createCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height))
     const canvasContext = canvas.getContext('2d')
-    await page.render({ canvasContext, viewport } as never).promise
+    await page.render({ canvas: null, canvasContext, viewport } as never).promise
     await fs.mkdir(dir, { recursive: true })
     await fs.writeFile(coverPath, canvas.toBuffer('image/png'))
   } finally {
@@ -232,6 +432,7 @@ async function extractEpubImages(
   await fs.mkdir(rawDir, { recursive: true })
 
   try {
+    onProgress?.(0)
     await run7za(['x', '-y', `-o${rawDir}`, filePath])
     onProgress?.(60)
     // 不再二次复制到 pages/：解包目录的原图直接作为页面缓存，manifest 按 spine 顺序
@@ -243,11 +444,13 @@ async function extractEpubImages(
       if (!stat?.isFile()) continue
       relImages.push(relative(dir, src))
     }
+    onProgress?.(90)
+    const images = await writeManifest(dir, relImages, 'EPUB_REFLOW_UNSUPPORTED')
     onProgress?.(100)
-    return writeManifest(dir, relImages)
+    return images
   } catch (err) {
     await fs.rm(dir, { recursive: true, force: true }).catch(() => {})
-    throw err
+    throw normalizeDocumentError('epub', err)
   }
 }
 

@@ -36,8 +36,8 @@ function run7za(
       bin7za(),
       args,
       { maxBuffer: opts.maxBuffer ?? 64 * 1024 * 1024, timeout: opts.timeout },
-      (err, stdout) => {
-        if (err) reject(err)
+      (err, stdout, stderr) => {
+        if (err) reject(with7zaDetail(err, stderr))
         else resolve({ stdout })
       }
     )
@@ -52,6 +52,59 @@ const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'bas
 const naturalSort = (a: string, b: string): number => collator.compare(a, b)
 
 const isImageName = (name: string): boolean => IMAGE_EXTS.has(extname(name).toLowerCase())
+
+function with7zaDetail(err: Error, stderr: string | Buffer): Error {
+  const detail = typeof stderr === 'string' ? stderr.trim() : stderr.toString().trim()
+  return new Error(detail ? `${err.message}\n${detail}` : err.message)
+}
+
+type ArchiveFailureCode =
+  | 'WRONG_PASSWORD'
+  | 'ARCHIVE_MISSING_PART'
+  | 'ARCHIVE_CORRUPT'
+  | 'ARCHIVE_UNREADABLE'
+
+function classifyArchiveFailure(err: unknown): ArchiveFailureCode {
+  const message = (err instanceof Error ? err.message : String(err)).toLowerCase()
+  if (
+    message.includes('wrong password') ||
+    message.includes('password is incorrect') ||
+    message.includes('can not open encrypted archive')
+  ) {
+    return 'WRONG_PASSWORD'
+  }
+  if (
+    message.includes('unexpected end of archive') ||
+    message.includes('missing volume') ||
+    message.includes('cannot find volume') ||
+    message.includes('no such file or directory')
+  ) {
+    return 'ARCHIVE_MISSING_PART'
+  }
+  if (
+    message.includes('is not archive') ||
+    message.includes('headers error') ||
+    message.includes('crc failed') ||
+    message.includes('data error') ||
+    message.includes('unsupported method')
+  ) {
+    return 'ARCHIVE_CORRUPT'
+  }
+  return 'ARCHIVE_UNREADABLE'
+}
+
+function archiveFailureMessage(code: ArchiveFailureCode): string {
+  switch (code) {
+    case 'WRONG_PASSWORD':
+      return 'WRONG_PASSWORD'
+    case 'ARCHIVE_MISSING_PART':
+      return 'ARCHIVE_MISSING_PART: 压缩包分卷不完整，请补齐所有分卷后重试。 / Archive volumes are incomplete. Restore every part and retry.'
+    case 'ARCHIVE_CORRUPT':
+      return 'ARCHIVE_CORRUPT: 压缩包已损坏或格式不受支持，请重新打包后重试。 / The archive is damaged or uses an unsupported method. Repack it and retry.'
+    default:
+      return 'ARCHIVE_UNREADABLE: 无法读取压缩包，请确认文件可访问后重试。 / The archive cannot be read. Check file access and retry.'
+  }
+}
 
 // ---------- 分卷压缩包 ----------
 const escapeRe = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -263,9 +316,13 @@ export async function inspectArchive(filePath: string): Promise<EntryInfo> {
       }
     }
     return { imageCount, encrypted, listFailed: false }
-  } catch {
-    // 列表失败：多为 7z 加密头，需密码
-    return { imageCount: 0, encrypted: true, listFailed: true }
+  } catch (err) {
+    // 只有明确的加密头/密码错误才进入密码流程；损坏包、缺分卷等直接抛出，避免误弹密码框。
+    const code = classifyArchiveFailure(err)
+    if (code === 'WRONG_PASSWORD') {
+      return { imageCount: 0, encrypted: true, listFailed: true }
+    }
+    throw new Error(archiveFailureMessage(code))
   }
 }
 
@@ -277,8 +334,8 @@ export type ProgressCb = (percent: number) => void
  */
 function extract7za(args: string[], onProgress?: ProgressCb): Promise<void> {
   return new Promise((resolve, reject) => {
-    const child = execFile(bin7za(), args, { maxBuffer: 64 * 1024 * 1024 }, (err) => {
-      if (err) reject(err)
+    const child = execFile(bin7za(), args, { maxBuffer: 64 * 1024 * 1024 }, (err, _out, stderr) => {
+      if (err) reject(with7zaDetail(err, stderr))
       else resolve()
     })
     child.stdin?.end()
@@ -353,8 +410,8 @@ export async function prepareArchive(
   let info: EntryInfo
   try {
     info = await inspectArchive(filePath)
-  } catch {
-    return { status: 'error', message: 'INSPECT_FAILED' }
+  } catch (err) {
+    return { status: 'error', message: (err as Error).message }
   }
 
   // 不加密：直接解
@@ -364,7 +421,8 @@ export async function prepareArchive(
       const images = await extractAll(filePath, undefined, onProgress)
       return { status: 'ready', pageCount: images.length }
     } catch (err) {
-      return { status: 'error', message: (err as Error).message }
+      const code = classifyArchiveFailure(err)
+      return { status: 'error', message: archiveFailureMessage(code) }
     }
   }
 
@@ -380,6 +438,10 @@ export async function prepareArchive(
       // 解压成功但无图 = 真错误，不再试其它密码；其余失败多为密码不对，继续
       if ((err as Error).message === 'NO_IMAGES') {
         return { status: 'error', message: 'NO_IMAGES' }
+      }
+      const code = classifyArchiveFailure(err)
+      if (code !== 'WRONG_PASSWORD') {
+        return { status: 'error', message: archiveFailureMessage(code) }
       }
     }
   }
@@ -407,7 +469,10 @@ export async function unlockArchive(
     if ((err as Error).message === 'NO_IMAGES') {
       return { status: 'error', message: 'NO_IMAGES' }
     }
-    return { status: 'needs-password', message: 'WRONG_PASSWORD' }
+    const code = classifyArchiveFailure(err)
+    return code === 'WRONG_PASSWORD'
+      ? { status: 'needs-password', message: 'WRONG_PASSWORD' }
+      : { status: 'error', message: archiveFailureMessage(code) }
   }
 }
 
@@ -424,7 +489,12 @@ export function setupArchive(): void {
 
   ipcMain.handle(
     'archive:unlock',
-    async (event, filePath: string, password: string, remember: boolean): Promise<PrepareResult> => {
+    async (
+      event,
+      filePath: string,
+      password: string,
+      remember: boolean
+    ): Promise<PrepareResult> => {
       const emit = (percent: number): void =>
         event.sender.send('archive:progress', { filePath, percent })
       return unlockArchive(filePath, password, remember, emit)

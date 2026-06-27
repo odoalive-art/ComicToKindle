@@ -96,14 +96,21 @@ async function pMap<T, R>(
 ): Promise<R[]> {
   const results: R[] = []
   const iterator = array.entries()
+  let firstError: unknown = null
   const workers = Array(Math.max(1, concurrency))
     .fill(null)
     .map(async () => {
       for (const [index, item] of iterator) {
-        results[index] = await mapper(item, index)
+        if (firstError) break
+        try {
+          results[index] = await mapper(item, index)
+        } catch (err) {
+          firstError ??= err
+        }
       }
     })
   await Promise.all(workers)
+  if (firstError) throw firstError
   return results
 }
 
@@ -332,6 +339,7 @@ function zipEPUB(srcDir: string, destZipPath: string): Promise<void> {
     // archiver 8：用 ZipArchive 类替代旧的 archiver('zip', …) 工厂调用
     const archive = new ZipArchive({ zlib: { level: 1 } })
     output.on('close', () => resolve())
+    output.on('error', (err) => reject(err))
     archive.on('error', (err) => reject(err))
     archive.pipe(output)
     // mimetype 必须第一个且不压缩
@@ -356,6 +364,19 @@ export interface ConvertParams {
 
 const IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.bmp', '.gif', '.avif'])
 
+function emptyVolumeError(): Error {
+  return new Error(
+    'EMPTY_VOLUME: 这一卷没有可转换的图片，请确认卷册内含有效图片后重试。 / No convertible images were found. Add valid image pages and retry.'
+  )
+}
+
+function corruptImageError(srcPath: string, err?: unknown): Error {
+  const detail = err instanceof Error && err.message ? ` (${err.message})` : ''
+  return new Error(
+    `CORRUPT_IMAGE: 图片“${basename(srcPath)}”无法读取，请替换或删除该页后重试。 / Image "${basename(srcPath)}" cannot be read; replace or remove it, then retry.${detail}`
+  )
+}
+
 export async function convertMangaToEPUB({
   imagePaths,
   outputDir,
@@ -366,9 +387,16 @@ export async function convertMangaToEPUB({
   onLog = () => {},
   checkCancelled = () => false
 }: ConvertParams): Promise<ConvertResult> {
-  const opt = { ...DEFAULTS, ...options }
+  const merged = { ...DEFAULTS, ...options }
+  const opt = {
+    ...merged,
+    imageQuality: Math.max(1, Math.min(100, Number(merged.imageQuality) || DEFAULTS.imageQuality)),
+    maxVolumeSize: Math.max(1, Number(merged.maxVolumeSize) || DEFAULTS.maxVolumeSize),
+    concurrency: Math.max(1, Math.min(16, Math.floor(Number(merged.concurrency) || 1)))
+  }
   const taskId = Math.random().toString(36).substring(2, 9)
   const tempDir = join(outputDir, `tmp_${taskId}`)
+  const stagedOutputs: Array<{ stagedPath: string; finalPath: string }> = []
 
   try {
     onLog(`[Start] 初始化转换：${title}`)
@@ -377,7 +405,7 @@ export async function convertMangaToEPUB({
     )
 
     const imageFiles = imagePaths.filter((p) => IMAGE_EXTS.has(extname(p).toLowerCase()))
-    if (imageFiles.length === 0) throw new Error('这一卷里没有可转换的图片。')
+    if (imageFiles.length === 0) throw emptyVolumeError()
     onLog(`[Scan] 源图片 ${imageFiles.length} 张`)
 
     const res = PROFILE_RES[opt.deviceProfile]
@@ -402,10 +430,10 @@ export async function convertMangaToEPUB({
       let metadata: sharp.Metadata
       try {
         metadata = await img.metadata()
-      } catch {
-        onLog(`[Warning] 跳过损坏图片：${basename(srcPath)}`)
-        return []
+      } catch (err) {
+        throw corruptImageError(srcPath, err)
       }
+      if (!metadata.width || !metadata.height) throw corruptImageError(srcPath)
 
       // 封面页保留彩色（彩色设备/云端阅读器显示更好）
       const isCoverPage = i === 0
@@ -414,46 +442,52 @@ export async function convertMangaToEPUB({
       const localProcessed: string[] = []
       const fileBase = basename(srcPath, extname(srcPath)) + `_${String(i).padStart(4, '0')}`
 
-      if (opt.splitDoublePages && (metadata.width ?? 0) > (metadata.height ?? 0)) {
-        const width = metadata.width as number
-        const height = metadata.height as number
-        const halfWidth = Math.floor(width / 2)
-        const leftCrop = { left: 0, top: 0, width: halfWidth, height }
-        const rightCrop = { left: halfWidth, top: 0, width: width - halfWidth, height }
-        // RTL：右半在前
-        const [p1Crop, p2Crop] = opt.mangaMode ? [rightCrop, leftCrop] : [leftCrop, rightCrop]
-        const p1Name = `${fileBase}_p1.jpg`
-        const p2Name = `${fileBase}_p2.jpg`
+      try {
+        if (opt.splitDoublePages && metadata.width > metadata.height) {
+          const width = metadata.width
+          const height = metadata.height
+          const halfWidth = Math.floor(width / 2)
+          if (halfWidth < 1) throw corruptImageError(srcPath)
+          const leftCrop = { left: 0, top: 0, width: halfWidth, height }
+          const rightCrop = { left: halfWidth, top: 0, width: width - halfWidth, height }
+          // RTL：右半在前
+          const [p1Crop, p2Crop] = opt.mangaMode ? [rightCrop, leftCrop] : [leftCrop, rightCrop]
+          const p1Name = `${fileBase}_p1.jpg`
+          const p2Name = `${fileBase}_p2.jpg`
 
-        fileDimensions[p1Name] = await processAndSaveImage(
-          sharp(srcPath).extract(p1Crop),
-          join(tempImagesDir, p1Name),
-          targetWidth,
-          targetHeight,
-          applyGrayscale,
-          opt.imageQuality
-        )
-        localProcessed.push(p1Name)
-        fileDimensions[p2Name] = await processAndSaveImage(
-          sharp(srcPath).extract(p2Crop),
-          join(tempImagesDir, p2Name),
-          targetWidth,
-          targetHeight,
-          applyGrayscale,
-          opt.imageQuality
-        )
-        localProcessed.push(p2Name)
-      } else {
-        const destName = `${fileBase}.jpg`
-        fileDimensions[destName] = await processAndSaveImage(
-          img,
-          join(tempImagesDir, destName),
-          targetWidth,
-          targetHeight,
-          applyGrayscale,
-          opt.imageQuality
-        )
-        localProcessed.push(destName)
+          fileDimensions[p1Name] = await processAndSaveImage(
+            sharp(srcPath).extract(p1Crop),
+            join(tempImagesDir, p1Name),
+            targetWidth,
+            targetHeight,
+            applyGrayscale,
+            opt.imageQuality
+          )
+          localProcessed.push(p1Name)
+          fileDimensions[p2Name] = await processAndSaveImage(
+            sharp(srcPath).extract(p2Crop),
+            join(tempImagesDir, p2Name),
+            targetWidth,
+            targetHeight,
+            applyGrayscale,
+            opt.imageQuality
+          )
+          localProcessed.push(p2Name)
+        } else {
+          const destName = `${fileBase}.jpg`
+          fileDimensions[destName] = await processAndSaveImage(
+            img,
+            join(tempImagesDir, destName),
+            targetWidth,
+            targetHeight,
+            applyGrayscale,
+            opt.imageQuality
+          )
+          localProcessed.push(destName)
+        }
+      } catch (err) {
+        if (err instanceof Error && err.message.startsWith('CORRUPT_IMAGE:')) throw err
+        throw corruptImageError(srcPath, err)
       }
 
       completedCount++
@@ -466,6 +500,7 @@ export async function convertMangaToEPUB({
 
     const pMapResults = await pMap(imageFiles, processSingleImage, opt.concurrency)
     const processedFiles = naturalSort(pMapResults.flat().filter(Boolean))
+    if (processedFiles.length === 0) throw emptyVolumeError()
     onLog(`[Image Processing] 完成，产出 ${processedFiles.length} 张`)
 
     // 按体积分卷
@@ -589,14 +624,46 @@ export async function convertMangaToEPUB({
 
       const volEpubName = `${volTitle.replace(/[/\\?%*:|"<>\s]/g, '_')}.epub`
       const finalEpubPath = join(outputDir, volEpubName)
-      await zipEPUB(volEpubDir, finalEpubPath)
+      const stagedEpubPath = join(tempDir, `output_${v}.epub`)
+      await zipEPUB(volEpubDir, stagedEpubPath)
+      stagedOutputs.push({ stagedPath: stagedEpubPath, finalPath: finalEpubPath })
       outputs.push({
         path: finalEpubPath,
         fileName: volEpubName,
-        sizeBytes: statSync(finalEpubPath).size,
+        sizeBytes: statSync(stagedEpubPath).size,
         volTitle
       })
       onLog(`[Zip] EPUB 已生成：${volEpubName}`)
+    }
+
+    // 全部分卷成功打包后再一次性替换正式产物；任一替换失败就回滚旧文件，避免重转失败
+    // 留下半个 EPUB 或误删上一版可用产物。
+    const promoted: Array<{ finalPath: string; backupPath: string | null }> = []
+    try {
+      for (let i = 0; i < stagedOutputs.length; i++) {
+        const { stagedPath, finalPath } = stagedOutputs[i]
+        const backupPath = join(tempDir, `backup_${i}.epub`)
+        const hadPrevious = await fs
+          .rename(finalPath, backupPath)
+          .then(() => true)
+          .catch((err: NodeJS.ErrnoException) => {
+            if (err.code === 'ENOENT') return false
+            throw err
+          })
+        try {
+          await fs.rename(stagedPath, finalPath)
+          promoted.push({ finalPath, backupPath: hadPrevious ? backupPath : null })
+        } catch (err) {
+          if (hadPrevious) await fs.rename(backupPath, finalPath).catch(() => {})
+          throw err
+        }
+      }
+    } catch (err) {
+      for (const item of promoted.reverse()) {
+        await fs.rm(item.finalPath, { force: true }).catch(() => {})
+        if (item.backupPath) await fs.rename(item.backupPath, item.finalPath).catch(() => {})
+      }
+      throw err
     }
 
     onProgress(95, '清理临时文件…')
