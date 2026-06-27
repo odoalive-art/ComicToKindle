@@ -12,6 +12,33 @@
 - 不把尚未实现的能力写成已上线；路线规划放在 `docs/roadmap.md`
 - dmg 文件名由打包脚本生成，补记录时把最终文件名写进「下载」
 
+## 0.1.0-beta.4 · 2026-06-27
+
+### 修复
+
+- 修复 electron-builder 26 配置 `mac.identity: null` 时会在解析自定义 `sign` 钩子前跳过签名，导致自签证书未应用的问题。
+- macOS 打包改为用 `identity: "-"` 进入 `scripts/sign-mac.cjs`，再由钩子按 `CTK_SIGN_IDENTITY` 执行自签或 ad-hoc `codesign`，避开本机 `@electron/osx-sign` 卡死问题。
+
+### 验证
+
+- 用于从 `0.1.0-beta.3` 执行一次真实 electron-updater/Squirrel.Mac 自动升级；升级结果待测试完成后补记。
+
+## 0.1.0-beta.3 · 2026-06-27
+
+### 修复
+
+- 接通自定义 macOS 签名钩子，发布产物使用稳定自签证书签名，同时保留不传 `CTK_SIGN_IDENTITY` 时的 ad-hoc 本地出包。
+- 新增打包体检项，防止 `mac.identity` 再次被改回会跳过钩子的 `null`。
+
+### 验证
+
+- 最终 zip 解压后显示 `Authority=ComicToKindle Self-Signed` 与 `Identifier=com.comictokindle.app`，`codesign --verify --strict` 通过。
+- `latest-mac.yml` 的 zip `size` / `sha512` 与最终产物一致。
+
+### 下载
+
+- `comic-to-kindle-0.1.0-beta.3-20260627-170610.dmg`
+
 ## 未发布 · 2026-06-25
 
 ### 新增
