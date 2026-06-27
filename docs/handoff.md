@@ -2,11 +2,18 @@
 
 ## 快照
 
-日期：2026-06-25
+日期：2026-06-27
 
-ComicToKindle **核心闭环已打通**，且**已可打包内测**（macOS dmg，ad-hoc 签名，`npm run release:mac` 一键出包，当前 `0.1.0-beta.2`）：托管漫画库浏览 → 阅读器 → 卷册转 Kindle 固定版式 EPUB → 归档 → 投递到 Kindle（SMTP 邮件 / Send to Kindle 网页通道二选一）。最新一轮（2026-06-25，导入增强）已实现导入预览目标选择（散卷 / 已有部 / 新建部）和库内容区外部拖放导入；拖放路径通过 preload 暴露的 Electron `webUtils.getPathForFile(file)` 获取，按钮导入和拖放导入共用扫描 → 预览 → 导入管线。此前同日分支 `feat/scan-managed-volumes` / PR #2 已把漫画库收敛为 Eagle 式 `.ctklib` 托管库包：导入复制成桶，分组/书名/作者/排序只写 manifest，卷册软删除进库内 `trash/`，旧文件视图与本地文件整理 IPC 已移除；同轮完成 Shift 范围多选、Cmd/Ctrl+A 只全选漫画、Delete 删卷/部、删除部可选连内部卷册一并移入回收站、网页式快捷键收敛、Cmd/Ctrl+R 复用为「重命名选中项」。4 项托管库交互实测已全部通过（多分卷导入读/转、manifest 损坏重建、导入中断自动清 `.tmp`、改名/分组/排序不改用户漫画内容且 bookId 桶路径稳定）。2026-06-23 新增 **PDF 单文件来源 + 图片型 EPUB 来源**，并把 macOS 内测打包改为 **dmg-only + 构建时间戳防覆盖 + dmg 内置版本说明.txt + 自动清理非 dmg 产物**；2026-06-22 完成打包内测准备、包体瘦身、开发期演示页移出生产包、移动框「＋新建文件夹并移入」、UI 清理和窗口缩放白边修复。
+ComicToKindle **核心闭环已打通**，且**已可打包内测**（macOS dmg，ad-hoc 签名，`npm run release:mac` 一键出包，当前 `0.1.0-beta.2`）：托管漫画库浏览 → 阅读器 → 卷册转 Kindle 固定版式 EPUB → 归档 → 投递到 Kindle（SMTP 邮件 / Send to Kindle 网页通道二选一）。最新一轮（2026-06-25，导入增强）已实现导入预览目标选择（散卷 / 已有部 / 新建部）和库内容区外部拖放导入；拖放路径通过 preload 暴露的 Electron `webUtils.getPathForFile(file)` 获取，按钮导入和拖放导入共用扫描 → 预览 → 导入管线。此前同日分支 `feat/scan-managed-volumes` / PR #2 已把漫画库收敛为 Eagle 式 `.ctklib` 托管库包：导入复制成桶，分组/书名/作者/排序只写 manifest，卷册软删除进库内 `trash/`，旧文件视图与本地文件整理 IPC 已移除；同轮完成 Shift 范围多选、Cmd/Ctrl+A 只全选漫画、Delete 删卷/部、删除部可选连内部卷册一并移入回收站、网页式快捷键收敛、Cmd/Ctrl+R 复用为「重命名选中项」。4 项托管库交互实测已全部通过（多分卷导入读/转、manifest 损坏重建、导入中断自动清 `.tmp`、改名/分组/排序不改用户漫画内容且 bookId 桶路径稳定）。2026-06-23 新增 **PDF 单文件来源 + 图片型 EPUB 来源**，并把 macOS 内测打包改为 **dmg-only + 构建时间戳防覆盖 + dmg 内置版本说明.txt + 自动清理非 dmg 产物**；2026-06-22 完成打包内测准备、包体瘦身、开发期演示页移出生产包、移动框「＋新建文件夹并移入」、UI 清理和窗口缩放白边修复。最新一轮（2026-06-27，分支 `feat/convert-workbench`）把库模型简化为「书（单册，自带书名+作者）+ 文件夹（纯收纳，无作者，作者跟书走）」，转换书名收为单一字段、转换工作台改独立模态弹窗、单本编辑统一为「编辑信息」(书名+作者) + 多选「批量设置作者」。
 
 ## 已完成
+
+### 2026-06-27 阶段（库模型简化 + 转换台模态弹窗，分支 `feat/convert-workbench`）
+
+- **转换书名单字段**（commit `86ea1e5`）：`Artifact`/`ConvertRequest`/`PersistedConvertJob`/渲染层把 `seriesTitle`+`volumeTitle` 收为单一 `title`；转换不再 `composeBookTitle` 拼接，直接以 `title` 作 EPUB 书名；`seriesName`（输出目录名）保留；旧 artifacts.json/queue.json 读取时自动折成 `title`。
+- **库模型简化**（commit `169f941`）：取消「部/系列」特殊身份——`SeriesNode`/`LibrarySeries` 去掉 author，文件夹成纯收纳容器；每本书自带书名+作者（复用 `book.json.seriesAuthorHint`），**作者跟书走**：建/移入/解散/重命名文件夹只改归属 hint、不碰作者。新增 `setBookMeta`(书名+作者) / `setBooksAuthor`(批量) IPC。卡片里外统一为「书名+作者」+ 页数封面角标；文件夹卡只显名字+册数。转换预填用书自带书名（不再拼文件夹名）。
+- **转换台改模态弹窗 + 单本编辑统一**（commit `80946ae`）：转换工作台从整页接管改为应用内模态 `Dialog`（顶栏瘦身、Esc/遮罩关闭、编辑单元格时 Esc 只取消编辑）；夹内单本右键由「重命名」改为「编辑信息」(书名+作者)，与散卷一致，`Cmd/Ctrl+R` 单选任意书皆开「编辑信息」；移除旧的纯重命名 `renameReq`（文件夹仍走「重命名文件夹」）。
+- 验证：`npm run typecheck` 通过；尚未真机 `npm run dev` 实跑。文档/记忆已随本轮同步（AGENTS.md、architecture.md、roadmap.md、operator-runbook.md、README.md + 记忆）。
 
 ### 2026-06-25 阶段（导入增强：目标选择 + 外部拖放）
 

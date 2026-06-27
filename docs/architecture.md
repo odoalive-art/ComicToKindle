@@ -15,12 +15,12 @@ ComicToKindle 目前是一个桌面应用工作台，已打通核心闭环:**本
 - shadcn/ui 组件体系
 - 构建和打包脚本
 - `src/renderer/src/App.tsx` 中的侧边栏工作台壳
-- **Eagle 式 `.ctklib` 托管漫画库**：已接入 App 独占库包（`library.json` + `books/<bookId>/book.json` + `source.*`/`images/`），支持新建/打开库包、扫描导入源、把卷册复制进库包、manifest 投影的部/散卷书架、多级下钻、部名/作者与卷册显示名编辑、归属和排序管理、库内 `trash/` 回收站；阅读器与转换仍复用现有取图链路（详见「漫画库数据层」）。
+- **Eagle 式 `.ctklib` 托管漫画库**：已接入 App 独占库包（`library.json` + `books/<bookId>/book.json` + `source.*`/`images/`），支持新建/打开库包、扫描导入源、把书复制进库包、manifest 投影的书架（文件夹 + 单册书，多级下钻）、文件夹重命名、每本书的书名与作者编辑（含多选批量设作者）、归属和排序管理、库内 `trash/` 回收站；阅读器与转换仍复用现有取图链路（详见「漫画库数据层」）。模型已简化为「书（单册）+ 文件夹（纯收纳容器，无作者）」，每本书自带书名 + 作者、作者跟书走。
 - **压缩包来源**：CBZ/ZIP/CBR/RAR/7z 卷册（含加密 zip、多卷分卷，共享密码池，解压进度）解出图片供阅读 + 转换（详见「压缩包来源层」）
 - **文档来源**：PDF 单文件卷册渲染为页面图片；图片型 EPUB 按 OPF spine / XHTML 图片引用抽成页面（详见「文档来源层」）
 - **卷册阅读器**：单页 / 双页、左右阅读方向、记住每卷续读进度；网格封面走缩略图缓存
-- **转换流水线**：图片目录、压缩包、PDF、图片型 EPUB → Kindle 固定版式 EPUB3，书名「漫画名 + 卷册」+ 作者元数据、转换前确认弹窗（详见「转换与产物层」）
-- **漫画信息编辑**：在应用内改部名/作者和卷册显示名，写入托管库 manifest，不改用户导入源
+- **转换流水线**：图片目录、压缩包、PDF、图片型 EPUB → Kindle 固定版式 EPUB3，书名为单一字段（每本书自带完整书名 + 作者元数据），转换工作台为独立模态弹窗（详见「转换与产物层」）
+- **书籍信息编辑**：在应用内改每本书的书名与作者（文件夹仅可重命名、无作者），写入托管库 manifest，不改用户导入源
 - **归档视图**：列出转换产物，支持在 Finder 显示 / 导出副本 / 删除 / 投递到 Kindle
 - **Kindle 投递**：SMTP 配置页（设备与邮箱）+ 归档手动投递（详见「投递层」）
 - **Send to Kindle 网页推送**：应用内嵌 Amazon 网页通道（≤200MB 单文件），自动填入产物、半自动发送（详见「网页推送层」）
@@ -124,26 +124,28 @@ library:seriesBooks      读取某部卷册
 library:inspectBook      懒补单个桶卷册信息
 library:scanImport       选择或传入单个/多个导入源 → 只识别候选，不复制
 library:import           复制候选进桶，进度事件 library:importProgress
-library:createSeries     新建部，并可同时把若干 bookId 归入该部
-library:renameSeries     改部名/作者，并同步桶 book.json hints
-library:deleteSeries     解散部，卷册回到 ungrouped，不删桶
-library:assignBooks      把卷册移入某部，或 targetSeriesId=null 回到散卷
-library:reorderSeries    更新部顺序（IPC 已有，UI 拖拽排序待做）
-library:reorderBooks     更新散卷或部内卷册顺序（IPC 已有，UI 拖拽排序待做）
-library:renameBook       改卷册显示名，只写 book.json
+library:createSeries     新建文件夹，并可同时把若干 bookId 放进去（不带作者）
+library:renameSeries     重命名文件夹，并同步桶 book.json 的归属 hint（不碰作者）
+library:deleteSeries     解散文件夹，书回到 ungrouped，不删桶
+library:assignBooks      把书移入某文件夹，或 targetSeriesId=null 回到散卷（只改归属，不动作者）
+library:reorderSeries    更新文件夹顺序（IPC 已有，UI 拖拽排序待做）
+library:reorderBooks     更新散卷或文件夹内书顺序（IPC 已有，UI 拖拽排序待做）
+library:renameBook       改书显示名，只写 book.json（旧接口，仍保留）
+library:setBookMeta      改单本书的书名 + 作者（作者跟书走）
+library:setBooksAuthor   批量给多本书设同一作者
 library:trashBooks       把卷册桶移动到库内 trash/，并从 manifest 摘除
 library:listTrash        列出库内 trash/ 中可还原的卷册桶
 library:restoreTrashBooks  把 trash/ 中的卷册桶还原回 books/，并按 book.json hints 尽量回原部
 library:emptyTrash       永久清空库内 trash/
 ```
 
-**当前 UI 接入状态**：现有库视图已能新建部、编辑部名/作者、改卷册显示名、把卷册移入已有部或“新建部并移入”、解散部（卷册回散卷）、删除卷册到库内 `trash/`，并通过顶栏打开库内回收站来还原或清空。导入流程已有预览弹窗，可勾选“导入完成后删除源文件或源文件夹”，并可选择导入目标（散卷 / 已有部 / 新建部）。库内容区支持外部拖放导入，renderer 通过 preload 暴露的 `webUtils.getPathForFile(file)` 获取真实路径后调用 `scanImport(paths)`。排序通过右键菜单的“上移 / 下移”完成，分别调用 `reorderSeries` 或 `reorderBooks` 写 manifest。
+**当前 UI 接入状态**：现有库视图已能新建文件夹、重命名文件夹、改每本书的书名 + 作者（单本「编辑信息」/ 多选「批量设置作者」）、把书移入已有文件夹或“新建文件夹并移入”、解散文件夹（书回散卷）、删除书到库内 `trash/`，并通过顶栏打开库内回收站来还原或清空。导入流程已有预览弹窗，可勾选“导入完成后删除源文件或源文件夹”，并可选择导入目标（散卷 / 已有部 / 新建部）。库内容区支持外部拖放导入，renderer 通过 preload 暴露的 `webUtils.getPathForFile(file)` 获取真实路径后调用 `scanImport(paths)`。排序通过右键菜单的“上移 / 下移”完成，分别调用 `reorderSeries` 或 `reorderBooks` 写 manifest。
 
 **manifest 投影模型**：
 
 - **卷（volume / book）**= 托管库桶 `books/<bookId>/`，桶内保存 `book.json` 以及 `source.*` 或 `images/`；`kind: 'folder' | 'file'`，`sourceType: 'folder' | 'archive' | 'pdf' | 'epub'`。分卷压缩包的入口卷与续卷一起复制到同一桶，书架只展示一个 book。
-- **部（series）**= `library.json` 中的分组节点，可包含子部和卷册，支持任意深度嵌套。部名、作者、排序和归属都来自 manifest。
-- **散卷（ungrouped）**= `library.json` 中未归入部的 bookId 有序数组，直接显示在「所有漫画」书架。
+- **文件夹（series 节点）**= `library.json` 中的分组节点，纯收纳容器，只有名字（无作者/系列身份），可嵌套。名字、排序、归属来自 manifest。代码内部仍叫 `SeriesNode`/series，是历史命名。
+- **散卷（ungrouped）**= `library.json` 中未归入文件夹的 bookId 有序数组，直接显示在「所有漫画」书架。书无论在不在文件夹里都是「单册」，一视同仁。
 - `scan`/`listVolumes` 每级返回同构的 `LibraryEntry[]`（部或卷）；前端用路径栈 + 面包屑做多级导航。
 - 排序以 `library.json` 中的数组顺序为准；导入时按候选自然排序写入，后续上移/下移只改 manifest。
 
@@ -156,11 +158,13 @@ library:getSaved      读取已保存的库包路径（不存在/失效则返回
 library:scan          读取 manifest 投影 → LibraryEntry[]（书/卷 或 部，含封面 URL、卷数/页数）
 library:listVolumes   列某部下条目 → LibraryEntry[]（可含可继续下钻的子部）
 library:listPages     按阅读顺序递归收集一卷所有页 → comic:// URL[]
-library:renameBook    改卷册显示名，只写 book.json
-library:renameSeries  改部名/作者，只写 library.json 并同步 book hints
-library:deleteSeries  解散部，或按参数连内部卷册一并移入库内 trash/
-library:reorderSeries 更新部顺序
-library:reorderBooks  更新散卷或部内卷册顺序
+library:renameBook    改书显示名，只写 book.json（旧接口）
+library:setBookMeta   改单本书的书名 + 作者
+library:setBooksAuthor 批量给多本书设同一作者
+library:renameSeries  重命名文件夹，只写 library.json 并同步 book 归属 hint（不碰作者）
+library:deleteSeries  解散文件夹，或按参数连内部书一并移入库内 trash/
+library:reorderSeries 更新文件夹顺序
+library:reorderBooks  更新散卷或文件夹内书顺序
 library:trashBooks    把卷册桶移入库内 trash/
 ```
 
@@ -171,9 +175,10 @@ library:trashBooks    把卷册桶移入库内 trash/
 **数据模型**（`src/preload/index.d.ts` 为单一事实来源）：
 
 ```txt
-LibrarySeries  id, path, name, title, author, volumeCount, coverUrl
+LibrarySeries  id, path, name, title, volumeCount, coverUrl   // 文件夹：无 author
 LibraryVolume  id, path, name, title, kind('folder'|'file'), sourceType('folder'|'archive'|'pdf'|'epub'), pageCount, coverUrl
-LibraryEntry   (LibrarySeries & {type:'folder'}) | (LibraryVolume & {type:'book', author})
+LibraryEntry   (LibrarySeries & {type:'folder'}) | (LibraryVolume & {type:'book', author})  // 书自带 author（跟书走）
+BookRecord     ...其中 seriesTitleHint=所属文件夹名（归属），seriesAuthorHint=本书作者（历史命名，现纯属书自己）
 TrashBookView  id, bookId, title, author, sourceType, deletedAt, coverUrl
 ```
 
@@ -240,7 +245,7 @@ LibraryVolume         ... + locked?(加密且未解锁缓存)
 
 - 产物**由应用托管**，落在 `userData/converted/<部>/`，用户无需指定路径。
 - 清单 `userData/artifacts.json` 记录「源卷 → N 个产物文件」映射（一个源卷可能因分卷产出多个 EPUB，故 `outputs` 是数组），用于库内角标命中和归档视图。
-- **书籍元数据**：EPUB 的 `dc:title` 与文件名 = `composeBookTitle(seriesTitle, volumeTitle)` =「漫画名 + 卷册」（如「朱音落语 第01卷」，卷册名已含漫画名时去重）；`dc:creator` = 作者。单卷转换前 renderer 弹「确认书籍信息」框预填漫画名/卷册名/作者，可改后再转。
+- **书籍元数据**：EPUB 的 `dc:title` 与文件名 = 书自带的单一书名 `title`（不再拼接「漫画名 + 卷册」）；`dc:creator` = 作者。转换前在「格式转换」独立模态弹窗里逐本预填书名/作者，可改后再转；书名默认就是该书的 displayName（文件夹内也不再前缀文件夹名）。旧 `composeBookTitle` 仅保留用于读取旧 artifacts/queue 记录时把拆开的 seriesTitle+volumeTitle 折成单一 title。
 
 **IPC 频道**：
 
@@ -258,10 +263,11 @@ artifacts:remove   删除产物文件 + 清单条目
 
 ```txt
 ConvertOutput  path, fileName, sizeBytes, volTitle
-Artifact       id, sourceVolumePath, seriesName, seriesTitle, volumeTitle, author,
+Artifact       id, sourceVolumePath, seriesName, title, author,
                outputs(ConvertOutput[]), format('epub'), pageCount, createdAt,
                status('ready'|'delivered'|'failed')   // 投递成功置 'delivered'，失败置 'failed'
-               // seriesTitle 为解析后的部标题；旧产物无此字段时 UI 回退 seriesName
+               // seriesName=输出目录名（沿用所属文件夹名）；title=书名；
+               // 旧产物（seriesTitle+volumeTitle）读取时自动折成单一 title
 ```
 
 ## 转换队列持久化层
@@ -287,7 +293,7 @@ queue:save   每次结构变化推一份（payload 是当前 jobs 数组）
 **数据模型**（`src/preload/index.d.ts` 为单一事实来源）：
 
 ```txt
-PersistedConvertJob  id, sourceVolumePath, seriesPathName, seriesTitle, volumeTitle, author,
+PersistedConvertJob  id, sourceVolumePath, seriesPathName, title, author,
                      status('queued'|'converting'|'interrupted'|'failed'), percent, error?,
                      options?(ConvertOptions 快照), enqueuedAt?
 ```
@@ -345,15 +351,16 @@ webpush:reveal      兜底：在 Finder 定位产物，方便手动拖入
   **双击进入**：双击部卡逐级下钻、双击卷卡进 VolumeReader（单页/双页、左右方向、续读、相邻页预加载）。
   **按下即选中**：内容区卡片在 pointerdown 时高亮（封面 ring 描边 + 标题/作者浅色反白底 bg-accent，整卡为选中单位）；
   普通点击只保留单选高亮，Cmd/Ctrl 点累加、空白拖动框选（marquee，pointer capture）、Cmd·Ctrl+A 全选；
-  顶层「所有漫画」框选只选择散卷卡，不把部文件夹纳入批量卷册操作；
+  顶层「所有漫画」框选只选择书卡，不把文件夹纳入批量操作；
   选中 2 个及以上后顶栏切为「已选计数 + 全选 + 转换所选 + 退出」，拖动已选多选组时不先打散选择。
   **空白单击取消选择**；ESC 退出多选。全程 `select-none` 禁原生文本选区（拖动只框选不选文本）。
   网格用原生 `overflow-y-auto` 容器（非 Radix ScrollArea，后者 Viewport `display:table` 使 min-h-full
   失效、内容下方空白命不中）。封面经 comic:// 加载、内描边，卡片封面不显示普通信息标签；
   队列中/中断/失败显示状态角标，已转换显示「已转换」图标角标（封面不再放单独转换按钮）。
-  转换入口：选中 → 顶栏「转换所选」——单本走单本确认弹窗（含封面预览），多本走批量确认弹窗。
-  整理入口：右键或顶栏触发托管库 IPC，支持改卷册显示名、编辑部名/作者、移入已有部、新建部并移入、
-  解散部、删除到库内回收站、上移/下移排序；这些动作只写 manifest 或移动库内桶。
+  转换入口：选中 → 顶栏「转换所选」——单本/多本都进同一个「格式转换」独立模态弹窗（左=待转换列表逐本改书名/作者，右=书籍信息+全局转换参数）。
+  整理入口：右键或顶栏触发托管库 IPC，支持单本「编辑信息」（书名+作者）、多选「批量设置作者」、
+  文件夹重命名、移入已有文件夹、新建文件夹并移入、解散文件夹、删除到库内回收站、上移/下移排序；
+  这些动作只写 manifest 或移动库内桶。
 
 转换活动（队列）
   转换状态由 App 层 hook `useConvertActivity` 管理（队列顺序处理、进度订阅、产物刷新），
