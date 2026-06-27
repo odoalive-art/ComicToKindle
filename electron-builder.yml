@@ -33,9 +33,13 @@ nsis:
   createDesktopShortcut: always
 mac:
   target:
+    # dmg = 分发安装包；zip = electron-updater/Squirrel.Mac 自动更新用的增量来源
     - dmg
-  # 内测不走 Developer ID：identity:null 跳过证书查找，改用 ad-hoc 签名
-  # （Apple Silicon 需 ad-hoc 才能启动）。测试者首次打开需右键→打开或去隔离属性。
+    - zip
+  # 签名身份：
+  # - identity:null = ad-hoc 签名（无自动更新；仅快速内测，首次打开需右键→打开）
+  # - 自签发布：构建时传 CTK_SIGN_IDENTITY=<自签证书名>，build-mac-dmg.mjs 会用
+  #   `-c.mac.identity` 覆盖此处的 null，从而用自签证书签名（自动更新依赖稳定签名身份）
   identity: null
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
@@ -73,4 +77,9 @@ linux:
 appImage:
   artifactName: ${name}-${version}.${ext}
 npmRebuild: false
-publish: null
+# 自动更新 feed：GitHub Releases。配了 publish 后即使本地 --publish never，
+# electron-builder 也会生成 latest-mac.yml（electron-updater 据此发现新版）。
+publish:
+  provider: github
+  owner: odoalive-art
+  repo: ComicToKindle

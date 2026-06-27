@@ -10,6 +10,7 @@ import { setupQueue } from './queue'
 import { setupDelivery } from './deliver'
 import { setupWebPush } from './webpush'
 import { disposeConvertHost } from './convert-host'
+import { setupAutoUpdate } from './updater'
 
 // 自定义 comic:// 协议必须在 app ready 之前注册
 registerComicScheme()
@@ -158,6 +159,9 @@ app.whenReady().then(async () => {
   })
 
   createWindow()
+
+  // 自动更新：检查 GitHub Releases，有新版下载后提示重启（仅打包后生效）
+  setupAutoUpdate()
 
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the

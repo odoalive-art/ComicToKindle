@@ -41,6 +41,7 @@ function checkDependencies(packageJson) {
     '@napi-rs/canvas',
     '7zip-bin',
     'archiver',
+    'electron-updater',
     'fast-xml-parser',
     'nodemailer',
     'pdfjs-dist',
@@ -74,11 +75,11 @@ function checkDependencies(packageJson) {
 function checkBuilderConfig() {
   const config = readText('electron-builder.yml')
   const requiredSnippets = [
-    ['mac 只构建 dmg', /mac:\n(?:  .+\n)*  target:\n    - dmg/],
+    ['mac 构建 dmg + zip(自动更新)', /target:[\s\S]*?- dmg[\s\S]*?- zip/],
     ['dmg 文件名包含 BUILD_STAMP', /artifactName: \$\{name}-\$\{version}-\$\{env\.BUILD_STAMP}\.\$\{ext}/],
     ['dmg 关闭 blockmap/update info', /writeUpdateInfo: false/],
     ['dmg 包含版本说明文件', /name: 版本说明\.txt/],
-    ['publish 已关闭', /publish: null/],
+    ['publish feed = GitHub', /publish:\n\s*provider: github/],
     ['排除 agent 本地目录', /!\{\.claude,\.gemini}\/\*\*/],
     ['排除 mac x64 7za', /!node_modules\/7zip-bin\/mac\/x64\/\*\*/],
     ['unpack PDF canvas native 依赖', /node_modules\/@napi-rs\/canvas-\*\/\*\*/]
