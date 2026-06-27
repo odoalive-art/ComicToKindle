@@ -22,6 +22,7 @@ import {
   isDocumentFile,
   prepareDocument
 } from './document'
+import { enhance, getUpscaleConfig, setupUpscale } from './upscale'
 
 /**
  * 漫画库数据层（App 独占 .ctklib 库包）：库包生命周期 + 导入(复制成桶) + manifest 分组 +
@@ -1355,8 +1356,27 @@ function handleComicProtocol(): void {
           /* 缩略图生成失败 → 回退原图 */
         }
       }
-      const data = await fs.readFile(filePath)
-      const mime = MIME[extname(filePath).toLowerCase()] ?? 'application/octet-stream'
+      // 阅读增强只接图片正文；PDF 原文件与封面缩略图保持原路径。任何引擎/缓存失败都回退原图。
+      let responsePath = filePath
+      if (params.get('enhance') === '1' && !wantThumb && isImage(filePath)) {
+        const config = await getUpscaleConfig()
+        if (config.enabled) {
+          try {
+            responsePath = await enhance(filePath)
+          } catch (error) {
+            console.warn('[upscale] enhance failed, falling back to source image:', error)
+          }
+        }
+      }
+      let data: Buffer
+      try {
+        data = await fs.readFile(responsePath)
+      } catch (error) {
+        if (responsePath === filePath) throw error
+        data = await fs.readFile(filePath)
+        responsePath = filePath
+      }
+      const mime = MIME[extname(responsePath).toLowerCase()] ?? 'application/octet-stream'
       return new Response(new Uint8Array(data), { headers: { 'content-type': mime } })
     } catch {
       return new Response('Not Found', { status: 404 })
@@ -1367,6 +1387,7 @@ function handleComicProtocol(): void {
 // ---------- IPC ----------
 /** 在 app ready 之后调用 */
 export function setupLibrary(): void {
+  setupUpscale()
   handleComicProtocol()
 
   ipcMain.handle('library:create', async (event) => {

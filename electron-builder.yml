@@ -18,6 +18,8 @@ files:
   - '!node_modules/7zip-bin/{linux,win}/**'
   - '!node_modules/7zip-bin/mac/x64/**'
 asarUnpack:
+  # resources/** 已覆盖 waifu2x AI 放大引擎（resources/waifu2x-ncnn-vulkan/，原生可执行 + 模型，
+  # 须解包到 app.asar.unpacked 才能 spawn；二进制由 npm run fetch:upscale 按需拉取，见 .gitignore）。
   - resources/**
   - node_modules/7zip-bin/**
   - node_modules/sharp/**

@@ -9,3 +9,5 @@ out
 .claude/
 .gemini/
 build/release-notes-current.txt
+# AI 放大引擎二进制 + 模型（~34MB，按需 npm run fetch:upscale 拉取，不进版本库）
+resources/waifu2x-ncnn-vulkan/

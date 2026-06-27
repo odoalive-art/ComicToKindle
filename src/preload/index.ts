@@ -92,6 +92,13 @@ const api = {
     open: (artifactId: string) => ipcRenderer.invoke('webpush:open', artifactId),
     reveal: (artifactId: string) => ipcRenderer.invoke('webpush:reveal', artifactId)
   },
+  upscale: {
+    getConfig: () => ipcRenderer.invoke('upscale:getConfig'),
+    setConfig: (patch: unknown) => ipcRenderer.invoke('upscale:setConfig', patch),
+    status: () => ipcRenderer.invoke('upscale:status'),
+    clearCache: () => ipcRenderer.invoke('upscale:clearCache'),
+    cacheSize: () => ipcRenderer.invoke('upscale:cacheSize')
+  },
   setBackgroundColor: (color: string): void => ipcRenderer.send('set-background-color', color),
   // 主进程把被收敛的浏览器快捷键复用为应用动作（如 Cmd/Ctrl+R → 重命名选中项）后转发到这里
   onRenameShortcut: (cb: () => void): (() => void) => {

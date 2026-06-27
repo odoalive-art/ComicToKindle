@@ -1070,3 +1070,70 @@ export const onboardingText = {
   }
 } as const
 
+// === lane-C upscale ===
+export const upscaleText = {
+  zh: {
+    title: '扩展功能',
+    subtitle: '管理与配置 ComicToKindle 的高级扩展插件与本地 AI 能力。',
+    cardTitle: 'AI 图像放大 (Waifu2x)',
+    cardDesc: '利用本地 waifu2x-ncnn-vulkan 引擎，对漫画页面进行离线 AI 高清化放大，提升阅读清晰度。',
+    status: '引擎状态',
+    engineReady: '就绪',
+    engineNotReady: '未就绪',
+    gpuAvailable: 'GPU 加速已启用',
+    cpuOnly: '仅 CPU 模式',
+    noGpu: '未检测到可用 GPU (运行较慢)',
+    enableDefault: '阅读时默认开启增强',
+    enableDefaultDesc: '打开漫画卷册时自动启用 AI 增强，亦可在阅读器顶栏临时切换',
+    scale: '放大倍率',
+    denoise: '降噪等级',
+    denoiseLevels: {
+      none: '无',
+      low: '低 (Level 0)',
+      medium: '中 (Level 1)',
+      high: '高 (Level 2)',
+      highest: '超高 (Level 3)'
+    },
+    cacheLimit: '缓存容量限制',
+    cacheSize: '当前缓存占用',
+    clearCache: '清理缓存',
+    clearingCache: '正在清理...',
+    clearSuccess: (size: string) => `清理完毕，已释放 ${size} 空间。`,
+    clearFailed: '清理缓存失败',
+    saveSuccess: '设置已保存',
+    cpuWarning: '当前运行在 CPU 模式下，放大图片可能会消耗较长时间且卡顿，建议关闭默认增强，仅在阅读时按需开启。'
+  },
+  en: {
+    title: 'Extensions',
+    subtitle: 'Manage and configure advanced extension plugins and local AI capabilities.',
+    cardTitle: 'AI Image Upscaling (Waifu2x)',
+    cardDesc: 'Use local waifu2x-ncnn-vulkan engine to upscale comic pages offline, improving clarity for reading.',
+    status: 'Engine Status',
+    engineReady: 'Ready',
+    engineNotReady: 'Not Ready',
+    gpuAvailable: 'GPU Acceleration Enabled',
+    cpuOnly: 'CPU-only Mode',
+    noGpu: 'No compatible GPU detected (Slower)',
+    enableDefault: 'Enable by Default for Reading',
+    enableDefaultDesc: 'Automatically enable AI enhancement when opening a volume. Can also be toggled in the reader toolbar.',
+    scale: 'Scale Factor',
+    denoise: 'Denoise Level',
+    denoiseLevels: {
+      none: 'None',
+      low: 'Low (Level 0)',
+      medium: 'Medium (Level 1)',
+      high: 'High (Level 2)',
+      highest: 'Highest (Level 3)'
+    },
+    cacheLimit: 'Cache Capacity Limit',
+    cacheSize: 'Current Cache Usage',
+    clearCache: 'Clear Cache',
+    clearingCache: 'Clearing...',
+    clearSuccess: (size: string) => `Cache cleared, released ${size} of space.`,
+    clearFailed: 'Failed to clear cache',
+    saveSuccess: 'Settings saved',
+    cpuWarning: 'Running in CPU mode. Upscaling may take significant time and cause UI lag. We recommend disabling default enhancement and toggling it manually during reading.'
+  }
+} as const
+
+

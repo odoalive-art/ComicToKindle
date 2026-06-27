@@ -41,6 +41,7 @@ import {
   Pencil,
   FolderInput,
   Puzzle,
+  Sparkles,
   MoreHorizontal
 } from 'lucide-react'
 
@@ -143,6 +144,7 @@ import { cn } from '@/lib/utils'
 import { uiText, type LanguageMode } from './i18n'
 import OnboardingView from './onboarding'
 import DeliveryWizardView from './delivery-wizard'
+import { ExtensionsView } from './extensions/ExtensionsView'
 
 // 开发期组件/规范演示页：仅 dev 构建载入，生产包里整段不存在（含 recharts 等重依赖）
 const DevShowcase = import.meta.env.DEV ? React.lazy(() => import('./dev/Showcase')) : null
@@ -306,10 +308,7 @@ function App(): React.JSX.Element {
               ) : activeView === 'devices-emails' ? (
                 <DeliverySettingsView locale={languageMode} />
               ) : activeView === 'extensions' ? (
-                <PageEmpty
-                  icon={Puzzle}
-                  label={languageMode === 'zh' ? '暂无可用扩展' : 'No extensions available yet'}
-                />
+                <ExtensionsView locale={languageMode} />
               ) : (
                 <div className="flex-1 bg-background" />
               )}
@@ -828,6 +827,83 @@ function PdfReader({
   )
 }
 
+interface EnhancedImageProps {
+  src: string
+  enhance: boolean
+  alt?: string
+  className?: string
+  style?: React.CSSProperties
+  draggable?: boolean
+  containerClassName?: string
+}
+
+function EnhancedImage({
+  src,
+  enhance,
+  alt,
+  className,
+  style,
+  draggable,
+  containerClassName
+}: EnhancedImageProps): React.JSX.Element {
+  const [displaySrc, setDisplaySrc] = useState(src)
+  const [isEnhancing, setIsEnhancing] = useState(false)
+
+  useEffect(() => {
+    if (!enhance) {
+      setDisplaySrc(src)
+      setIsEnhancing(false)
+      return
+    }
+
+    // 先以原图秒显
+    setDisplaySrc(src)
+    setIsEnhancing(true)
+
+    const enhancedUrl = `${src}${src.includes('?') ? '&' : '?'}enhance=1`
+    const img = new Image()
+    img.src = enhancedUrl
+
+    let active = true
+    img.onload = () => {
+      if (active) {
+        setDisplaySrc(enhancedUrl)
+        setIsEnhancing(false)
+      }
+    }
+    img.onerror = () => {
+      if (active) {
+        setDisplaySrc(src)
+        setIsEnhancing(false)
+      }
+    }
+
+    return () => {
+      active = false
+      img.onload = null
+      img.onerror = null
+    }
+  }, [src, enhance])
+
+  return (
+    <div className={cn("relative flex items-center justify-center overflow-hidden", containerClassName)}>
+      <img
+        src={displaySrc}
+        alt={alt}
+        draggable={draggable}
+        style={style}
+        className={className}
+      />
+      {isEnhancing && (
+        <div className="absolute bottom-2 right-2 z-10 flex items-center gap-1.5 rounded bg-black/60 px-2 py-0.5 text-[10px] text-white backdrop-blur-sm select-none pointer-events-none">
+          <span className="size-1.5 animate-pulse rounded-full bg-amber-400" />
+          <span>增强中...</span>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function VolumeReader({
   volume,
   locale,
@@ -843,6 +919,29 @@ function VolumeReader({
   const [loading, setLoading] = useState(true)
   const [direction, setDirection] = useState<ReadingDirection>(getInitialDirection)
   const [mode, setMode] = useState<ReadingMode>(getInitialMode)
+  const [enhance, setEnhance] = useState(false)
+
+  // 读取 upscale 默认配置
+  useEffect(() => {
+    window.electron.ipcRenderer
+      .invoke('upscale:getConfig')
+      .then((cfg) => {
+        if (cfg && typeof cfg.enabled === 'boolean') {
+          setEnhance(cfg.enabled)
+        }
+      })
+      .catch((err) => console.error('Failed to get upscale config:', err))
+  }, [])
+
+  const toggleEnhance = async () => {
+    const next = !enhance
+    setEnhance(next)
+    try {
+      await window.electron.ipcRenderer.invoke('upscale:setConfig', { enabled: next })
+    } catch (err) {
+      console.error('Failed to save upscale config:', err)
+    }
+  }
 
   // 加载页面并恢复上次阅读进度
   useEffect(() => {
@@ -971,6 +1070,15 @@ function VolumeReader({
             >
               {isDouble ? <BookOpen className="size-4" strokeWidth={1.75} /> : <BookText className="size-4" strokeWidth={1.75} />}
             </Button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={toggleEnhance}
+              className={enhance ? 'text-amber-500 hover:text-amber-600' : 'text-muted-foreground'}
+              title={locale === 'zh' ? `AI 画面增强: ${enhance ? '已开启' : '已关闭'}` : `AI Image Enhancement: ${enhance ? 'ON' : 'OFF'}`}
+            >
+              <Sparkles className="size-4" strokeWidth={1.75} />
+            </Button>
             <span className="ml-1 text-sm tabular-nums text-muted-foreground">{counter}</span>
           </div>
         ) : null}
@@ -988,41 +1096,51 @@ function VolumeReader({
         <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-neutral-900">
           {isDouble ? (
             <div className={`flex h-full w-full ${rtl ? 'flex-row-reverse' : 'flex-row'}`}>
-              <img
+              <EnhancedImage
                 key={pages[index]}
                 src={pages[index]}
+                enhance={enhance}
                 alt={`${index + 1}`}
                 draggable={false}
                 style={{ objectPosition: rtl ? 'left' : 'right' }}
-                className="h-full w-1/2 object-contain select-none"
+                className="h-full w-full object-contain select-none"
+                containerClassName="h-full w-1/2"
               />
               {hasSecond ? (
-                <img
+                <EnhancedImage
                   key={pages[index + 1]}
                   src={pages[index + 1]}
+                  enhance={enhance}
                   alt={`${index + 2}`}
                   draggable={false}
                   style={{ objectPosition: rtl ? 'right' : 'left' }}
-                  className="h-full w-1/2 object-contain select-none"
+                  className="h-full w-full object-contain select-none"
+                  containerClassName="h-full w-1/2"
                 />
               ) : null}
             </div>
           ) : (
-            <img
+            <EnhancedImage
               key={pages[index]}
               src={pages[index]}
+              enhance={enhance}
               alt={`${index + 1}`}
               draggable={false}
               className="max-h-full max-w-full object-contain select-none"
+              containerClassName="h-full w-full"
             />
           )}
 
           {/* 预加载相邻页 */}
           {Array.from({ length: 6 }, (_, k) => index - 2 + k)
             .filter((i) => i >= 0 && i < total && i !== index && !(isDouble && i === index + 1))
-            .map((i) => (
-              <img key={`pre-${i}`} src={pages[i]} alt="" aria-hidden className="hidden" />
-            ))}
+            .map((i) => {
+              const url = pages[i]
+              const srcWithEnhance = enhance ? `${url}${url.includes('?') ? '&' : '?'}enhance=1` : url
+              return (
+                <img key={`pre-${i}`} src={srcWithEnhance} alt="" aria-hidden className="hidden" />
+              )
+            })}
 
           {/* 左半区 */}
           <button

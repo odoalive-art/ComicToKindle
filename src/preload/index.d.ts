@@ -306,6 +306,28 @@ export interface WebPushAPI {
   reveal: (artifactId: string) => Promise<void>
 }
 
+export interface UpscaleConfig {
+  enabled: boolean
+  model: string
+  scale: 1 | 2
+  denoise: -1 | 0 | 1 | 2 | 3
+  cacheLimitMB: number
+}
+
+export interface UpscaleStatus {
+  engineReady: boolean
+  gpu: 'available' | 'cpu-only' | 'none'
+  model: string
+}
+
+export interface UpscaleAPI {
+  getConfig: () => Promise<UpscaleConfig>
+  setConfig: (patch: Partial<UpscaleConfig>) => Promise<UpscaleConfig>
+  status: () => Promise<UpscaleStatus>
+  clearCache: () => Promise<number>
+  cacheSize: () => Promise<number>
+}
+
 export interface CustomAPI {
   library: LibraryAPI
   archive: ArchiveAPI
@@ -314,6 +336,7 @@ export interface CustomAPI {
   queue: QueueAPI
   deliver: DeliverAPI
   webpush: WebPushAPI
+  upscale: UpscaleAPI
   setBackgroundColor: (color: string) => void
   /** 订阅主进程转发的「重命名选中项」快捷键（Cmd/Ctrl+R）；返回取消订阅函数 */
   onRenameShortcut: (cb: () => void) => () => void

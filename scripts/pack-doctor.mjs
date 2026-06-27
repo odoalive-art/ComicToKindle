@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { accessSync, constants as fsConstants, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -83,7 +83,8 @@ function checkBuilderConfig() {
     ['publish feed = GitHub', /publish:\n\s*provider: github/],
     ['排除 agent 本地目录', /!\{\.claude,\.gemini}\/\*\*/],
     ['排除 mac x64 7za', /!node_modules\/7zip-bin\/mac\/x64\/\*\*/],
-    ['unpack PDF canvas native 依赖', /node_modules\/@napi-rs\/canvas-\*\/\*\*/]
+    ['unpack PDF canvas native 依赖', /node_modules\/@napi-rs\/canvas-\*\/\*\*/],
+    ['waifu2x 引擎随 resources/** 解包', /asarUnpack:[\s\S]*?- resources\/\*\*/]
   ]
 
   let ok = true
@@ -133,6 +134,42 @@ function checkBuildStampEnv() {
   }
 }
 
+function checkUpscaleEngine() {
+  // waifu2x 引擎不进 git（数十 MB），由 npm run fetch:upscale 拉到 resources/waifu2x-ncnn-vulkan/。
+  // 缺失 → 警告（打包前补拉，不挡日常体检）；存在但坏（没执行位/缺模型）→ 失败。
+  const engineDir = join(root, 'resources', 'waifu2x-ncnn-vulkan')
+  const binary = join(engineDir, 'waifu2x-ncnn-vulkan')
+  const modelDir = join(engineDir, 'models-cunet')
+
+  let binaryOk = false
+  try {
+    statSync(binary)
+    binaryOk = true
+  } catch {
+    warn('waifu2x 引擎未拉取（resources/waifu2x-ncnn-vulkan/）。打包前先运行 npm run fetch:upscale。')
+    return
+  }
+
+  if (binaryOk) {
+    try {
+      accessSync(binary, fsConstants.X_OK)
+      pass('waifu2x 二进制存在且可执行')
+    } catch {
+      fail('waifu2x 二进制缺执行位，请运行 npm run fetch:upscale 重新拉取（脚本会 chmod +x）。')
+    }
+  }
+
+  try {
+    if (statSync(modelDir).isDirectory() && readdirSync(modelDir).length > 0) {
+      pass('waifu2x cunet 模型目录就绪')
+    } else {
+      fail('waifu2x models-cunet 目录为空。')
+    }
+  } catch {
+    fail('waifu2x 缺 models-cunet 模型目录，请运行 npm run fetch:upscale。')
+  }
+}
+
 function checkPackageVersion(packageJson) {
   if (/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(packageJson.version)) {
     pass(`package.json 版本号格式正常 (${packageJson.version})`)
@@ -149,6 +186,7 @@ checkDependencies(packageJson)
 checkBuilderConfig()
 checkReleaseNotes(packageJson)
 checkBuildStampEnv()
+checkUpscaleEngine()
 await checkEsbuild()
 
 if (warnings.length > 0) {

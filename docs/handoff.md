@@ -2,7 +2,104 @@
 
 ## 快照
 
-日期：2026-06-27
+日期：2026-06-28
+
+AI 图像放大（阅读时增强）C 线 UI 部分已成功实现并完成本地构建测试：
+- 支持在阅读器顶栏快捷启用/关闭「高清/增强」选项；
+- 实现了翻页时原图秒显 + 增强后 swap 优雅切换，并在右下角提供轻量“增强中...”闪烁指示器；
+- 支持在预加载的邻近页自动追加 `enhance=1` 参数，提前暖缓存以实现无感切换；
+- 新建了扩展页面配置面板（`ExtensionsView.tsx`），支持检测 Waifu2x 引擎和 GPU 加速状态，进行模型、放大倍率、降噪等级、缓存限制参数的修改及一键清理缓存。
+
+`npm run typecheck && npm run build` 均成功通过。
+
+> [!NOTE]
+> 工作区内目前存在非本轮 C 线 UI 的未提交改动文件（为分支自带的 B 线已有引擎与 preload 实现），包括 `src/main/library.ts`、`src/preload/index.ts`、`src/preload/index.d.ts` 以及新建的 `src/main/upscale.ts`。本轮 UI 改动纯增量且完全限定在 C 线硬边界内 (`App.tsx`、`i18n.ts` 以及新建的 `extensions/ExtensionsView.tsx`)，未干扰其他既有实现。
+
+### B 线交接（`feat/upscale-engine`）
+
+当前状态：
+- main 放大引擎、`comic://` 增强分支、设置与 `upscale:*` IPC、preload 透传已完成；未提交、未合并、未 push。
+
+已完成：
+- 新建 `src/main/upscale.ts`：按 `sha1(源图内容 hash + model + scale + denoise)` 缓存到 `userData/upscaled/<key>.png`，同 key 并发合并，GPU/CPU 任务串行，缓存按 mtime 做 LRU 清理。
+- 懒启动单例 Electron utility process，由其调用 `waifu2x-ncnn-vulkan`；能力探针先试自动 GPU，再试官方 `-g -1` CPU 模式，如实返回 `available | cpu-only | none`。
+- `comic://` 仅在正文图片、`enhance=1` 且 `settings.json.upscale.enabled=true` 时增强；PDF、缩略图不进入增强；引擎、缓存或读文件失败均回退原图。
+- 完成 `upscale:getConfig/setConfig/status/clearCache/cacheSize` IPC 与 `window.api.upscale` 类型契约；默认配置为 `cunet / 2x / denoise 1 / 2048 MB / disabled`。
+- 未修改 `i18n.ts`：引擎层只返回稳定错误码并写 main 日志，没有新增面向用户的错误串，因而无需向 `// === lane-B convert ===` 区块追加词条。
+
+未完成：
+- 四类来源（图片目录 / 压缩包 / PDF / 图片型 EPUB）的真实阅读增强回归、打包后 dmg 资源执行仍待合并阶段完成。
+
+重要文件：
+- B 线本轮：`src/main/upscale.ts`、`src/main/library.ts`、`src/preload/index.ts`、`src/preload/index.d.ts`、`docs/handoff.md`。
+- 同工作区另有 C 线未提交改动：`src/renderer/src/App.tsx`、`src/renderer/src/i18n.ts`、`src/renderer/src/extensions/`；另有 A 线 `scripts/fetch-upscale-bin.mjs`，B 线均未修改。
+
+验证：
+- `npm run typecheck` 通过。
+- `npm run build` 通过。
+- 临时假引擎黑盒通过：故意让自动 GPU 失败、仅允许 `-g -1`，`upscale:status` 正确返回 `cpu-only`；`comic://img/?p=...&enhance=1` 首次生成 93,873 字节缓存、二次命中；`clearCache` 返回 93,873 且 `cacheSize` 归零。测试资产仅在 `/tmp/ctk-upscale-test`，未写入仓库。
+- A 线资源落位后补做真实引擎黑盒：macOS arm64 `waifu2x-ncnn-vulkan + models-cunet` 上报 `engineReady=true / gpu=available`；512×512 PNG 经 `2x / denoise 1` 输出 1024×1024，首次缓存 303,205 字节、二次命中，清理后归零。Electron 使用 `/tmp/ctk-upscale-real-userdata` 隔离设置，进程已停止。
+
+注意事项：
+- 向 A 线申报的资源为官方 `waifu2x-ncnn-vulkan` macOS arm64 可执行文件 + `models-cunet` 模型目录，用于离线阅读时增强；不要作为 npm 运行时依赖安装。约定路径为 `resources/waifu2x-ncnn-vulkan/{waifu2x-ncnn-vulkan,models-cunet/}`，开发联调也支持 `CTK_WAIFU2X_BIN` / `CTK_WAIFU2X_MODELS`。
+- main/preload 改动合并后必须完全重启 `npm run dev` 再测。
+
+### A 线交接（`feat/upscale-packaging`）
+
+当前状态：依赖/打包侧已就绪；未提交、未合并、未 push。`npm run build && npm run pack:doctor` 均通过。
+
+**资源路径解析规则（B 已据此实现，契约已对齐）**：
+
+- 引擎随 `resources/waifu2x-ncnn-vulkan/` 走，目录结构：
+  - `resources/waifu2x-ncnn-vulkan/waifu2x-ncnn-vulkan`（arm64 可执行，+x）
+  - `resources/waifu2x-ncnn-vulkan/models-cunet/`（cunet 模型）
+- **dev**：`app.getAppPath()` = 仓库根 → 引擎在 `<repo>/resources/waifu2x-ncnn-vulkan/`，B 的 `resolveEngineResources` 首个候选即命中。
+- **打包后**：`resources/**` 在 `asarUnpack`，引擎落 `.../Contents/Resources/app.asar.unpacked/resources/waifu2x-ncnn-vulkan/`，命中 B 的 `<unpackedAppPath>/resources/...` 候选。
+- 联调可用 `CTK_WAIFU2X_BIN` / `CTK_WAIFU2X_MODELS` 覆盖（B 已支持）。
+
+**已做**：
+
+- `scripts/fetch-upscale-bin.mjs`：拉取**固定版本** `nihui/waifu2x-ncnn-vulkan@20250915` macOS 包（SHA256 `a5b58b23…4d42` 校验），解压取二进制 + `models-cunet/` 放入 `resources/waifu2x-ncnn-vulkan/`，`chmod +x`，并 `lipo -thin arm64` 瘦身（universal 23MB → arm64 9.8MB，同 7zip-bin 只留 mac/arm64 的取舍）。幂等（缺失才拉，`-- --force` 强制）。
+- `.gitignore`：忽略 `resources/waifu2x-ncnn-vulkan/`（**二进制不进 git**，~34MB）。
+- `package.json`：加 `fetch:upscale` 脚本 + `prebuild:mac` 预钩子（`npm run build:mac` 前自动补拉，幂等）。
+- `electron-builder.yml`：引擎随既有 `asarUnpack: resources/**` 解包，加注释标注；无需新增依赖。
+- `scripts/pack-doctor.mjs`：新增「引擎随 resources/** 解包」配置项 + 引擎落位体检（缺失=警告提示先 `fetch:upscale`，存在但无执行位/缺模型=失败）。
+- 签名：嵌套二进制由既有 `scripts/sign-mac.cjs` 的 `codesign --deep` 一并自签，无需单独处理（自动更新同一签名身份链不破）。
+- `docs/operator-runbook.md`：记体积增量与许可证。
+
+**待合并阶段验证**：打包后 dmg 内 `app.asar.unpacked/resources/waifu2x-ncnn-vulkan/` 二进制可执行、被 `--deep` 正确签名、B 引擎 `engineReady=true`。
+
+## 已完成
+
+### 2026-06-28 阶段（A 线 AI 放大依赖与打包，分支 `feat/upscale-packaging`）
+
+- waifu2x-ncnn-vulkan 引擎经 `scripts/fetch-upscale-bin.mjs` 按需拉取（不进 git）落 `resources/waifu2x-ncnn-vulkan/`，随 `asarUnpack: resources/**` 进包；`pack:doctor` 加引擎落位/可执行/模型防回归检查；体积/许可证见 runbook。详见上方「A 线交接」。
+
+### 2026-06-28 阶段（B 线 AI 图像放大 main 引擎，分支 `feat/upscale-engine`）
+
+- 完成 utility process 原生引擎调度、能力探测、内容寻址缓存、并发合并、LRU 治理、协议降级、设置 IPC 和 preload 契约；详细验证与待真机项见上方「B 线交接」。
+
+### 2026-06-28 阶段（C 线 AI 图像放大 UI 部分，分支 `feat/upscale-ui`）
+
+- **阅读时增强 UI 挂载与联动**（`src/renderer/src/App.tsx`）：
+  - 引入了新建立的扩展配置页面。将侧边栏「扩展功能」对应的占位 PageEmpty 组件替换为 `<ExtensionsView locale={languageMode} />`。
+  - 在 `VolumeReader` 组件中通过 `window.electron.ipcRenderer.invoke('upscale:getConfig')` 初始化默认是否开启增强。
+  - 在阅读器顶栏方向/模式切换按钮旁新增了一个 Sparkles 图标，用于一键开启或关闭画面增强，并通过 `setConfig` 持久化默认状态。
+- **当前页原图秒显与增强图 swap**（`src/renderer/src/App.tsx`）：
+  - 实现了 `EnhancedImage` 辅助组件，作为阅读器单双页图片的渲染核心。
+  - 开启增强时，`EnhancedImage` 优先显示原图 URL（`comic://?p=...`）以保证翻页秒显。另在后台创建 `Image` 对象加载对应的 `&enhance=1` 高清地址，并在 `onload` 事件成功后将图片 `src` swap 切换到高清版。
+  - swap 期间在图片右下角贴片显示微弱的「增强中...」动态指示角标。
+- **预加载携带参数暖缓存**（`src/renderer/src/App.tsx`）：
+  - 当阅读时开启增强，相邻 6 页的预加载隐藏 `<img>` 标签直接携带 `&enhance=1` 进行后台请求，预先暖好主进程的放大缓存，实现用户翻页时能秒显高清或完成近无感的原图到高清的 swap 体验。
+- **扩展页面配置**（`src/renderer/src/extensions/ExtensionsView.tsx`）：
+  - 新建了配置页面，支持中英文双语切换，复用现有的 shadcn 组件（Switch, Select, Button, Badge 等）并遵守左右布局防溢出和长文字截断截流规范。
+  - 支持调用 `upscale:status` 上报引擎的就绪状态以及 GPU 能力级别（`available` | `cpu-only` | `none`），在仅 CPU 模式下显示显眼的警告提示，以规避可能带来的翻页性能卡顿。
+  - 提供配置：放大倍率（1x/2x）、降噪等级（-1至3共5档）、缓存限制（512MB-16GB共6档）。
+  - 显示当前缓存占用大小，并提供一键清理缓存功能（调用 `upscale:clearCache` 并通过 toast 告知释放空间大小）。
+- **中英双语词条追加**（`src/renderer/src/i18n.ts`）：
+  - 严格遵循分支协作铁律，仅在文件尾端新增注释锚点 `// === lane-C upscale ===` 并追加对应的多语言静态对象，绝不修改、干扰其他既有条目，合并时零冲突。
+
+### 2026-06-27 阶段（Phase 2 · 视觉/交互一致性收敛 + 库/已转换页打磨）
 
 ComicToKindle **核心闭环已打通**，且**macOS 自签发布与自动更新已实测通过**。当前版本 `0.1.0-beta.4`，GitHub Release 同时提供 dmg、Squirrel.Mac zip 和 `latest-mac.yml`；不传 `CTK_SIGN_IDENTITY` 时仍可生成 ad-hoc 本地内测包。
 

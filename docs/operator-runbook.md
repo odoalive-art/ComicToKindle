@@ -203,6 +203,22 @@ npm run build:linux   # AppImage / deb / snap
 
 这些脚本同样先 `npm run build` 再调 electron-builder。Windows/Linux 暂未配套签名与版本脚本，需要时再补。
 
+### AI 放大引擎（waifu2x，阅读时增强）
+
+- 引擎二进制 + 模型**不进 git**（~34MB），由脚本按需拉取：
+
+  ```bash
+  npm run fetch:upscale            # 缺失才拉，幂等
+  npm run fetch:upscale -- --force # 强制重拉
+  ```
+
+- 落点：`resources/waifu2x-ncnn-vulkan/{waifu2x-ncnn-vulkan, models-cunet/}`（已 gitignore）。`npm run build:mac` 有 `prebuild:mac` 预钩子会自动补拉；`npm run pack:doctor` 会检查引擎是否就绪（缺失=警告）。
+- 版本固定：`nihui/waifu2x-ncnn-vulkan@20250915`，下载后 SHA256 校验；官方 macOS 包为 universal，脚本 `lipo -thin arm64` 瘦身（23MB→9.8MB），与「内测只发 arm64」一致。
+- **体积增量**：进包约 **+34MB**（arm64 二进制 ~9.8MB + cunet 模型 ~24MB）。
+- **许可证**：waifu2x-ncnn-vulkan 为 MIT（nihui）；cunet 模型源自 waifu2x（MIT）。随包分发需在发布说明保留版权声明。
+- **签名**：引擎在 `resources/**` → `app.asar.unpacked`，由 `scripts/sign-mac.cjs` 的 `codesign --deep` 一并自签，自动更新签名身份链不受影响。
+- 升级版本：改 `scripts/fetch-upscale-bin.mjs` 的 `VERSION` 与 `SHA256` 常量后 `npm run fetch:upscale -- --force`。
+
 ## 常用检查
 
 ```bash
@@ -223,6 +239,7 @@ git status --short
 - `GH_TOKEN` / `GITHUB_TOKEN`：electron-builder 上传 GitHub Release 所需 token。
 - `BUILD_STAMP`：可选的 `YYYYMMDD-HHMMSS` 构建标识；不传时 `build:mac` 自动生成。
 - `CTK_FORCE_UPDATE_CHECK=1`：开发调试时强制走更新检查，需同时提供 `dev-app-update.yml`。
+- `CTK_WAIFU2X_BIN` / `CTK_WAIFU2X_MODELS`：开发联调时覆盖 waifu2x 引擎二进制 / 模型目录位置（不设则用 `resources/waifu2x-ncnn-vulkan/`）。
 
 如果后续新增转换器路径、Kindle 邮箱设置、转换后自动投递开关或模型位置，需要同步更新本文和 `AGENTS.md`。
 
