@@ -2,7 +2,7 @@ import { app, ipcMain, safeStorage } from 'electron'
 import { join, basename } from 'path'
 import { promises as fs } from 'fs'
 import nodemailer from 'nodemailer'
-import { getArtifactById, setArtifactStatus } from './artifacts'
+import { getArtifactById, registerAutoDeliveryHandler, setArtifactStatus } from './artifacts'
 
 /**
  * Kindle 投递层：SMTP 配置存储 + 发送转换产物到 Kindle 邮箱。
@@ -21,6 +21,8 @@ export interface DeliveryConfigInput {
   user: string
   kindleEmail: string
   password?: string // 留空表示沿用已存密码
+  autoDeliveryEnabled?: boolean
+  autoDeliveryChannel?: AutoDeliveryChannel
 }
 
 export interface DeliveryConfigPublic {
@@ -29,6 +31,15 @@ export interface DeliveryConfigPublic {
   user: string
   kindleEmail: string
   hasPassword: boolean
+  autoDeliveryEnabled: boolean
+  autoDeliveryChannel: AutoDeliveryChannel
+}
+
+export type AutoDeliveryChannel = 'smtp' | 'webpush'
+
+export interface AutoDeliveryResult extends DeliveryResult {
+  attempted: boolean
+  channel?: AutoDeliveryChannel
 }
 
 interface StoredDelivery {
@@ -38,6 +49,8 @@ interface StoredDelivery {
   kindleEmail?: string
   passEncrypted?: string // base64(safeStorage.encryptString) 或明文回退
   passPlain?: string // safeStorage 不可用时的明文回退
+  autoDeliveryEnabled?: boolean
+  autoDeliveryChannel?: AutoDeliveryChannel
 }
 
 const settingsFile = (): string => join(app.getPath('userData'), 'settings.json')
@@ -146,8 +159,91 @@ function makeTransport(cfg: {
   })
 }
 
+const deliveryInFlight = new Map<string, Promise<DeliveryResult>>()
+let webPushAutoHandler: (
+  artifactId: string,
+  locale: 'zh' | 'en'
+) => Promise<DeliveryResult> = async () => ({ success: false, code: 'webpush-not-ready' })
+
+export function registerWebPushAutoHandler(handler: typeof webPushAutoHandler): void {
+  webPushAutoHandler = handler
+}
+
+async function sendArtifact(artifactId: string): Promise<DeliveryResult> {
+  const existing = deliveryInFlight.get(artifactId)
+  if (existing) return existing
+
+  const operation = (async (): Promise<DeliveryResult> => {
+    const artifact = await getArtifactById(artifactId)
+    if (!artifact) return { success: false, code: 'not-found' }
+
+    const stored = await readDelivery()
+    const pass = decryptPassword(stored)
+    if (!stored.host || !stored.user || !pass || !stored.kindleEmail) {
+      return { success: false, code: 'not-configured' }
+    }
+
+    const transporter = makeTransport({
+      host: stored.host,
+      port: stored.port ?? 465,
+      user: stored.user,
+      pass
+    })
+
+    try {
+      for (const out of artifact.outputs) {
+        await fs.access(out.path)
+        const fileName = basename(out.path)
+        await transporter.sendMail({
+          from: stored.user,
+          to: stored.kindleEmail,
+          subject: `Kindle Manga: ${out.volTitle}`,
+          text: `Converted manga volume: ${fileName}. Sent by ComicToKindle.`,
+          attachments: [{ filename: fileName, path: out.path }]
+        })
+      }
+      await setArtifactStatus(artifactId, 'delivered')
+      return { success: true }
+    } catch (err) {
+      await setArtifactStatus(artifactId, 'failed')
+      const result = classifyError(err)
+      if ((err as NodeJS.ErrnoException)?.code === 'ENOENT') {
+        return { success: false, code: 'missing-output', detail: result.detail }
+      }
+      return { success: false, ...result }
+    }
+  })().finally(() => deliveryInFlight.delete(artifactId))
+
+  deliveryInFlight.set(artifactId, operation)
+  return operation
+}
+
+/**
+ * 转换完成后的可选自动投递入口。SMTP 会直接发送；网页通道只自动打开并填入文件，
+ * 最后的 Send 仍由用户确认。失败只更新产物状态，不回滚已经成功的转换，归档页可手动重试。
+ */
+export async function autoDeliverArtifact(
+  artifactId: string,
+  locale: 'zh' | 'en' = 'zh'
+): Promise<AutoDeliveryResult> {
+  const stored = await readDelivery()
+  if (!stored.autoDeliveryEnabled) return { attempted: false, success: true }
+
+  const channel = stored.autoDeliveryChannel ?? 'smtp'
+  if (channel === 'webpush') {
+    const result = await webPushAutoHandler(artifactId, locale)
+    if (!result.success) await setArtifactStatus(artifactId, 'failed')
+    return { attempted: true, channel, ...result }
+  }
+
+  const result = await sendArtifact(artifactId)
+  return { attempted: true, channel, ...result }
+}
+
 // ---------- IPC ----------
 export function setupDelivery(): void {
+  registerAutoDeliveryHandler(autoDeliverArtifact)
+
   ipcMain.handle('deliver:getConfig', async (): Promise<DeliveryConfigPublic> => {
     const d = await readDelivery()
     return {
@@ -155,7 +251,9 @@ export function setupDelivery(): void {
       port: d.port ?? 465,
       user: d.user ?? '',
       kindleEmail: d.kindleEmail ?? '',
-      hasPassword: hasPassword(d)
+      hasPassword: hasPassword(d),
+      autoDeliveryEnabled: d.autoDeliveryEnabled ?? false,
+      autoDeliveryChannel: d.autoDeliveryChannel ?? 'smtp'
     }
   })
 
@@ -167,7 +265,9 @@ export function setupDelivery(): void {
       user: cfg.user,
       kindleEmail: cfg.kindleEmail,
       passEncrypted: prev.passEncrypted,
-      passPlain: prev.passPlain
+      passPlain: prev.passPlain,
+      autoDeliveryEnabled: cfg.autoDeliveryEnabled ?? prev.autoDeliveryEnabled ?? false,
+      autoDeliveryChannel: cfg.autoDeliveryChannel ?? prev.autoDeliveryChannel ?? 'smtp'
     }
     // 仅当填写了新密码时才更新
     if (cfg.password) {
@@ -198,38 +298,6 @@ export function setupDelivery(): void {
   )
 
   ipcMain.handle('deliver:send', async (_event, artifactId: string): Promise<DeliveryResult> => {
-    const artifact = await getArtifactById(artifactId)
-    if (!artifact) return { success: false, code: 'not-found' }
-
-    const stored = await readDelivery()
-    const pass = decryptPassword(stored)
-    if (!stored.host || !stored.user || !pass || !stored.kindleEmail) {
-      return { success: false, code: 'not-configured' }
-    }
-
-    const transporter = makeTransport({
-      host: stored.host,
-      port: stored.port ?? 465,
-      user: stored.user,
-      pass
-    })
-
-    try {
-      for (const out of artifact.outputs) {
-        const fileName = basename(out.path)
-        await transporter.sendMail({
-          from: stored.user,
-          to: stored.kindleEmail,
-          subject: `Kindle Manga: ${out.volTitle}`,
-          text: `Converted manga volume: ${fileName}. Sent by ComicToKindle.`,
-          attachments: [{ filename: fileName, path: out.path }]
-        })
-      }
-      await setArtifactStatus(artifactId, 'delivered')
-      return { success: true }
-    } catch (err) {
-      await setArtifactStatus(artifactId, 'failed')
-      return { success: false, ...classifyError(err) }
-    }
+    return sendArtifact(artifactId)
   })
 }

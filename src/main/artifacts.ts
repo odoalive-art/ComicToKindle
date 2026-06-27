@@ -93,6 +93,22 @@ export interface ConvertRequest {
   options?: ConvertOptions
 }
 
+interface AutoDeliveryAttempt {
+  attempted: boolean
+  success: boolean
+  channel?: 'smtp' | 'webpush'
+  code?: string
+}
+
+let autoDeliveryHandler: (
+  artifactId: string,
+  locale: 'zh' | 'en'
+) => Promise<AutoDeliveryAttempt> = async () => ({ attempted: false, success: true })
+
+export function registerAutoDeliveryHandler(handler: typeof autoDeliveryHandler): void {
+  autoDeliveryHandler = handler
+}
+
 // 供投递层（deliver.ts）读取产物与更新投递状态
 export async function getArtifactById(id: string): Promise<Artifact | undefined> {
   return (await readManifest()).artifacts.find((a) => a.id === id)
@@ -132,8 +148,18 @@ export function setupArtifacts(): void {
       }
     }
 
+    if (!req.title?.trim()) {
+      throw new Error(
+        'MISSING_TITLE: 书名不能为空，请填写书名后重试。 / Book title is required. Enter a title and retry.'
+      )
+    }
+
     const imagePaths = await collectVolumeImagePaths(req.sourceVolumePath)
-    if (imagePaths.length === 0) throw new Error('这一卷里没有可转换的图片。')
+    if (imagePaths.length === 0) {
+      throw new Error(
+        'EMPTY_VOLUME: 这一卷没有可转换的图片，请检查卷册内容后重试。 / No convertible images were found. Check the volume and retry.'
+      )
+    }
 
     const outputDir = join(convertedRoot(), sanitize(req.seriesName))
     await fs.mkdir(outputDir, { recursive: true })
@@ -171,7 +197,38 @@ export function setupArtifacts(): void {
       status: 'ready'
     }
     await upsertArtifact(artifact)
-    emitProgress(100, '完成')
+    emitProgress(99, '转换完成，正在检查自动投递… / Conversion complete; checking auto delivery…')
+    try {
+      let locale: 'zh' | 'en' = 'zh'
+      if (!sender.isDestroyed()) {
+        const storedLocale = await sender
+          .executeJavaScript("window.localStorage.getItem('comic-to-kindle-language')")
+          .catch(() => null)
+        if (storedLocale === 'en') locale = 'en'
+      }
+      const delivery = await autoDeliveryHandler(artifact.id, locale)
+      if (delivery.attempted) {
+        if (delivery.success && delivery.channel === 'smtp') artifact.status = 'delivered'
+        else if (!delivery.success) artifact.status = 'failed'
+        emitProgress(
+          100,
+          delivery.success
+            ? delivery.channel === 'webpush'
+              ? '已打开网页推送，请确认后点 Send。 / Web delivery is ready; review and click Send.'
+              : '转换并自动投递完成。 / Conversion and automatic delivery completed.'
+            : `转换完成，但自动投递失败（${delivery.code ?? 'unknown'}）；可在归档中重试。 / Conversion completed, but automatic delivery failed; retry from Archive.`
+        )
+      } else {
+        emitProgress(100, '完成 / Done')
+      }
+    } catch (err) {
+      artifact.status = 'failed'
+      await setArtifactStatus(artifact.id, 'failed')
+      emitProgress(
+        100,
+        `转换完成，但自动投递失败；可在归档中重试。 / Conversion completed, but automatic delivery failed; retry from Archive. (${(err as Error).message})`
+      )
+    }
     return artifact
   })
 
@@ -183,7 +240,11 @@ export function setupArtifacts(): void {
       req: { sourceVolumePath: string; pageIndex: number; options?: ConvertOptions }
     ): Promise<PreviewPageResult & { pageIndex: number; pageCount: number }> => {
       const imagePaths = await collectVolumeImagePaths(req.sourceVolumePath)
-      if (imagePaths.length === 0) throw new Error('这一卷里没有可转换的图片。')
+      if (imagePaths.length === 0) {
+        throw new Error(
+          'EMPTY_VOLUME: 这一卷没有可预览的图片，请检查卷册内容后重试。 / No previewable images were found. Check the volume and retry.'
+        )
+      }
       const idx = Math.max(0, Math.min(req.pageIndex, imagePaths.length - 1))
       const result = await runPreview(imagePaths[idx], idx, req.options)
       return { ...result, pageIndex: idx, pageCount: imagePaths.length }
@@ -215,7 +276,7 @@ export function setupArtifacts(): void {
 
     const destDir = filePaths[0]
     for (const out of artifact.outputs) {
-      await fs.copyFile(out.path, join(destDir, out.fileName)).catch(() => {})
+      await fs.copyFile(out.path, join(destDir, out.fileName))
     }
     return true
   })

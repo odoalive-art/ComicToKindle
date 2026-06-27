@@ -2,6 +2,8 @@ import { app, ipcMain, shell, dialog, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { promises as fs } from 'fs'
 import { getArtifactById } from './artifacts'
+import { registerWebPushAutoHandler } from './deliver'
+import { laneBConvertText } from '../renderer/src/i18n'
 
 /**
  * Send to Kindle 网页推送层：在应用内打开 Amazon「Send to Kindle」网页通道，
@@ -57,6 +59,27 @@ export interface WebPushResult {
   detail?: string
   /** 自动填充成功的文件名，便于 renderer 给出明确反馈 */
   injected?: string[]
+}
+
+type WebPushLocale = keyof typeof laneBConvertText
+
+let activeLocale: WebPushLocale = app.getLocale().toLowerCase().startsWith('zh') ? 'zh' : 'en'
+
+function webPushCopy(): (typeof laneBConvertText)[WebPushLocale]['webPushInjected'] {
+  return laneBConvertText[activeLocale].webPushInjected
+}
+
+function joinedNames(names: Array<string | undefined>): string {
+  return names
+    .filter((name): name is string => Boolean(name))
+    .join(activeLocale === 'zh' ? '、' : ', ')
+}
+
+async function syncLocaleFromSender(sender: Electron.WebContents): Promise<void> {
+  const locale = await sender
+    .executeJavaScript("window.localStorage.getItem('comic-to-kindle-language')")
+    .catch(() => null)
+  if (locale === 'zh' || locale === 'en') activeLocale = locale
 }
 
 // 复用单一推送窗口
@@ -152,6 +175,7 @@ function showBanner(
   desc: string,
   tone: 'info' | 'success'
 ): void {
+  const dismiss = webPushCopy().dismiss
   const js = `(() => {
     const render = () => {
       if (!document.body) { return setTimeout(render, 200); }
@@ -174,13 +198,14 @@ function showBanner(
       if (!b) {
         b = document.createElement('div');
         b.id = 'c2k-banner';
-        b.innerHTML = '<span class="c2k-dot"></span><span class="c2k-body"><span class="c2k-lead"></span> <span class="c2k-desc"></span></span><button class="c2k-close">知道了</button>';
+        b.innerHTML = '<span class="c2k-dot"></span><span class="c2k-body"><span class="c2k-lead"></span> <span class="c2k-desc"></span></span><button class="c2k-close"></button>';
         b.querySelector('.c2k-close').onclick = () => b.remove();
         document.body.appendChild(b);
       }
       b.setAttribute('data-tone', ${JSON.stringify(tone)});
       b.querySelector('.c2k-lead').textContent = ${JSON.stringify(lead)};
       b.querySelector('.c2k-desc').textContent = ${JSON.stringify(desc)};
+      b.querySelector('.c2k-close').textContent = ${JSON.stringify(dismiss)};
     };
     render();
   })()`
@@ -245,13 +270,11 @@ function hideOverlay(win: BrowserWindow): void {
     .catch(() => {})
 }
 
-const CLOSE_CONFIRM_TITLE = '关闭 Send to Kindle 窗口？'
-const CLOSE_CONFIRM_DESC = '尚未点 Send 的文件不会发送。'
-
 // 注入式确认框：与横幅/蒙层同款 design token（border/foreground/muted-foreground/primary、radius 8px），
 // 无 emoji。返回一个 Promise，按钮点击/Esc/点背景把选择（true=关闭 / false=取消）resolve 回主进程，
 // 不需要 IPC（executeJavaScript 会等待页面里的 Promise 落定）。
 function closeConfirmScript(): string {
+  const copy = webPushCopy()
   return `(() => new Promise((resolve) => {
     if (!document.body) { throw new Error('no body'); }
     const ID = 'c2k-confirm';
@@ -275,11 +298,11 @@ function closeConfirmScript(): string {
     const wrap = document.createElement('div'); wrap.id = ID;
     const card = document.createElement('div'); card.className = 'c2k-cf-card';
     card.setAttribute('role', 'alertdialog'); card.setAttribute('aria-modal', 'true');
-    const t = document.createElement('div'); t.className = 'c2k-cf-title'; t.textContent = ${JSON.stringify(CLOSE_CONFIRM_TITLE)};
-    const d = document.createElement('div'); d.className = 'c2k-cf-desc'; d.textContent = ${JSON.stringify(CLOSE_CONFIRM_DESC)};
+    const t = document.createElement('div'); t.className = 'c2k-cf-title'; t.textContent = ${JSON.stringify(copy.closeTitle)};
+    const d = document.createElement('div'); d.className = 'c2k-cf-desc'; d.textContent = ${JSON.stringify(copy.closeDesc)};
     const acts = document.createElement('div'); acts.className = 'c2k-cf-actions';
-    const cancel = document.createElement('button'); cancel.className = 'c2k-cf-btn c2k-cf-cancel'; cancel.textContent = '取消';
-    const ok = document.createElement('button'); ok.className = 'c2k-cf-btn c2k-cf-ok'; ok.textContent = '关闭';
+    const cancel = document.createElement('button'); cancel.className = 'c2k-cf-btn c2k-cf-cancel'; cancel.textContent = ${JSON.stringify(copy.cancel)};
+    const ok = document.createElement('button'); ok.className = 'c2k-cf-btn c2k-cf-ok'; ok.textContent = ${JSON.stringify(copy.close)};
     acts.appendChild(cancel); acts.appendChild(ok);
     card.appendChild(t); card.appendChild(d); card.appendChild(acts);
     wrap.appendChild(card); document.body.appendChild(wrap);
@@ -297,14 +320,15 @@ async function confirmClose(win: BrowserWindow): Promise<boolean> {
   try {
     return Boolean(await win.webContents.executeJavaScript(closeConfirmScript(), true))
   } catch {
+    const copy = webPushCopy()
     // 注入失败（页面正在导航、无 body 等）→ 回退原生系统弹窗，保证关窗始终可确认
     const { response } = await dialog.showMessageBox(win, {
       type: 'question',
-      buttons: ['取消', '关闭'],
+      buttons: [copy.cancel, copy.close],
       defaultId: 1,
       cancelId: 0,
-      message: CLOSE_CONFIRM_TITLE,
-      detail: CLOSE_CONFIRM_DESC
+      message: copy.closeTitle,
+      detail: copy.closeDesc
     })
     return response === 1
   }
@@ -410,7 +434,7 @@ async function ensureUploaderReady(win: BrowserWindow, allowReload: boolean): Pr
       const reloadUrl = win.webContents.getURL() || DEFAULT_STK_URL
       await loadStkAndWait(win, reloadUrl)
       await new Promise((r) => setTimeout(r, 600))
-      showOverlay(win, '正在准备上传…')
+      showOverlay(win, webPushCopy().preparing)
       continue
     }
     await new Promise((r) => setTimeout(r, 400))
@@ -445,10 +469,6 @@ async function clickUploadUntilChooser(win: BrowserWindow): Promise<boolean> {
  *
  * 拦截器在窗口生命周期内常驻、只装一次；每次推送只更新待注入的文件 pendingFiles。
  */
-const ARM_BANNER_LEAD = '自动填入已就绪'
-const ARM_BANNER_DESC =
-  '点页面中的「Add a file」按钮，已转换的文件会自动填入（不会弹出系统选择框），随后点 Send 发送到 Kindle。'
-
 async function armFileChooser(win: BrowserWindow, filePaths: string[]): Promise<ArmStatus> {
   if (looksLikeSignIn(win.webContents.getURL())) return 'not-signed-in'
 
@@ -457,7 +477,7 @@ async function armFileChooser(win: BrowserWindow, filePaths: string[]): Promise<
   const names = filePaths.map((f) => f.split(/[\\/]/).pop() ?? f)
   const wc = win.webContents
 
-  showOverlay(win, `正在上传 ${names.join('、')}…`)
+  showOverlay(win, webPushCopy().uploading(joinedNames(names)))
 
   // 装拦截器之前先确保上传控件就绪（必要时 reload 一次解决登录态水合滞后）。
   // 仅首次武装允许 reload——此后拦截器已装，reload 会把它清掉。
@@ -492,13 +512,10 @@ async function armFileChooser(win: BrowserWindow, filePaths: string[]): Promise<
           .then(() => {
             console.log('[webpush] 已注入文件:', injectedNames)
             hasStagedFiles = true
-            finishOverlay(win, '已填入，点 Send 发送到 Kindle')
-            showBanner(
-              win,
-              '已自动填入',
-              `${injectedNames.join('、')}，确认后点 Amazon 的 Send 发送到 Kindle。`,
-              'success'
-            )
+            const copy = webPushCopy()
+            const displayNames = joinedNames(injectedNames)
+            finishOverlay(win, copy.filled)
+            showBanner(win, copy.filledLead, copy.filledDesc(displayNames), 'success')
           })
           .catch((err) => {
             hideOverlay(win)
@@ -513,12 +530,13 @@ async function armFileChooser(win: BrowserWindow, filePaths: string[]): Promise<
     }
 
     // 全自动：蒙层挡住人为操作 + 程序点击上传按钮，触发文件框后由上面的 handler 喂入。
-    showOverlay(win, `正在上传 ${names.join('、')}…`)
+    showOverlay(win, webPushCopy().uploading(joinedNames(names)))
     const clicked = await clickUploadUntilChooser(win)
     if (!clicked) {
       // 没找到/点不动上传按钮（Amazon 改版等）——撤蒙层，退回半自动：引导用户自己点。
       hideOverlay(win)
-      showBanner(win, ARM_BANNER_LEAD, ARM_BANNER_DESC, 'info')
+      const copy = webPushCopy()
+      showBanner(win, copy.armedLead, copy.armedDesc, 'info')
     }
     return 'armed'
   } catch (err) {
@@ -595,8 +613,59 @@ async function showStkWindow(): Promise<BrowserWindow> {
   return win
 }
 
+/**
+ * 打开某产物的网页推送流程。可由手动 IPC 或转换完成后的自动投递调用；这里只自动填入文件，
+ * Amazon 的最终 Send 始终保留给用户确认。
+ */
+export async function openArtifactForWebPush(
+  artifactId: string,
+  locale: WebPushLocale = activeLocale
+): Promise<WebPushResult> {
+  activeLocale = locale
+  const artifact = await getArtifactById(artifactId)
+  if (!artifact) return { success: false, code: 'not-found' }
+  if (artifact.outputs.length === 0) return { success: false, code: 'no-outputs' }
+
+  // 校验文件存在 + 体积上限
+  const filePaths: string[] = []
+  const oversized: string[] = []
+  for (const out of artifact.outputs) {
+    try {
+      const stat = await fs.stat(out.path)
+      if (stat.size > MAX_WEB_PUSH_BYTES) oversized.push(out.fileName)
+      else filePaths.push(out.path)
+    } catch {
+      /* 文件丢失，交给 no-outputs 错误码和归档重试路径 */
+    }
+  }
+
+  if (filePaths.length === 0) {
+    return {
+      success: false,
+      code: oversized.length > 0 ? 'too-large' : 'no-outputs',
+      detail: oversized.join(', ')
+    }
+  }
+
+  const win = await showStkWindow()
+  const status = await armFileChooser(win, filePaths)
+  const codeByStatus: Record<ArmStatus, string | undefined> = {
+    armed: undefined,
+    'not-signed-in': 'not-signed-in',
+    failed: 'inject-failed'
+  }
+  return {
+    success: status === 'armed',
+    code: codeByStatus[status],
+    detail: oversized.length > 0 ? `oversized: ${oversized.join(', ')}` : undefined,
+    injected: status === 'armed' ? filePaths.map((p) => p.split(/[\\/]/).pop() ?? p) : undefined
+  }
+}
+
 // ---------- IPC ----------
 export function setupWebPush(): void {
+  registerWebPushAutoHandler(openArtifactForWebPush)
+
   ipcMain.handle('webpush:getUrl', async (): Promise<string> => getStkUrl())
 
   ipcMain.handle('webpush:setUrl', async (_e, url: string): Promise<void> => {
@@ -605,49 +674,14 @@ export function setupWebPush(): void {
   })
 
   // 不带文件打开网页（首次登录 / 管理已发送内容）
-  ipcMain.handle('webpush:openBlank', async (): Promise<void> => {
+  ipcMain.handle('webpush:openBlank', async (event): Promise<void> => {
+    await syncLocaleFromSender(event.sender)
     await showStkWindow()
   })
 
-  ipcMain.handle('webpush:open', async (_e, artifactId: string): Promise<WebPushResult> => {
-    const artifact = await getArtifactById(artifactId)
-    if (!artifact) return { success: false, code: 'not-found' }
-    if (artifact.outputs.length === 0) return { success: false, code: 'no-outputs' }
-
-    // 校验文件存在 + 体积上限
-    const filePaths: string[] = []
-    const oversized: string[] = []
-    for (const out of artifact.outputs) {
-      try {
-        const stat = await fs.stat(out.path)
-        if (stat.size > MAX_WEB_PUSH_BYTES) oversized.push(out.fileName)
-        else filePaths.push(out.path)
-      } catch {
-        /* 文件丢失，跳过 */
-      }
-    }
-
-    if (filePaths.length === 0) {
-      return {
-        success: false,
-        code: oversized.length > 0 ? 'too-large' : 'no-outputs',
-        detail: oversized.join(', ')
-      }
-    }
-
-    const win = await showStkWindow()
-    const status = await armFileChooser(win, filePaths)
-    const codeByStatus: Record<ArmStatus, string | undefined> = {
-      armed: undefined,
-      'not-signed-in': 'not-signed-in',
-      failed: 'inject-failed'
-    }
-    return {
-      success: status === 'armed',
-      code: codeByStatus[status],
-      detail: oversized.length > 0 ? `oversized: ${oversized.join(', ')}` : undefined,
-      injected: status === 'armed' ? filePaths.map((p) => p.split(/[\\/]/).pop() ?? p) : undefined
-    }
+  ipcMain.handle('webpush:open', async (event, artifactId: string): Promise<WebPushResult> => {
+    await syncLocaleFromSender(event.sender)
+    return openArtifactForWebPush(artifactId, activeLocale)
   })
 
   // 自动填充失败时的兜底：在 Finder 里定位文件，方便用户手动拖入网页
