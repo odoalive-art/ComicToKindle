@@ -133,6 +133,8 @@ import { ButtonGroup } from '@/components/ui/button-group'
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { cn } from '@/lib/utils'
 import { uiText, type LanguageMode } from './i18n'
+import OnboardingView from './onboarding'
+import DeliveryWizardView from './delivery-wizard'
 
 // 开发期组件/规范演示页：仅 dev 构建载入，生产包里整段不存在（含 recharts 等重依赖）
 const DevShowcase = import.meta.env.DEV ? React.lazy(() => import('./dev/Showcase')) : null
@@ -211,6 +213,9 @@ function App(): React.JSX.Element {
   const [activeView, setActiveView] = useState<ViewId>('library')
   const [themeMode, setThemeMode] = useState<ThemeMode>(getInitialThemeMode)
   const [languageMode, setLanguageMode] = useState<LanguageMode>(getInitialLanguageMode)
+  const [showOnboarding, setShowOnboarding] = useState<boolean>(() => {
+    return window.localStorage.getItem('comic-to-kindle-onboarded') !== 'true'
+  })
   // 转换活动队列上提到 App 层，切换视图时不中断
   const convertActivity = useConvertActivity(languageMode)
 
@@ -235,6 +240,26 @@ function App(): React.JSX.Element {
     document.documentElement.lang = languageMode === 'zh' ? 'zh-CN' : 'en'
     window.localStorage.setItem('comic-to-kindle-language', languageMode)
   }, [languageMode])
+
+  if (showOnboarding) {
+    return (
+      <OnboardingView
+        locale={languageMode}
+        setLocale={setLanguageMode}
+        themeMode={themeMode}
+        setThemeMode={setThemeMode}
+        onComplete={() => {
+          window.localStorage.setItem('comic-to-kindle-onboarded', 'true')
+          setShowOnboarding(false)
+          window.api?.library?.getSaved().then((saved) => {
+            if (saved) {
+              setLibRoot(saved)
+            }
+          })
+        }}
+      />
+    )
+  }
 
   return (
     <SidebarProvider>
@@ -4620,10 +4645,24 @@ function DeliverySettingsView({ locale }: { locale: LanguageMode }): React.JSX.E
     }
   }
 
+  const [showWizard, setShowWizard] = useState(false)
+
   return (
-    <ScrollArea className="min-h-0 flex-1">
+    <>
+      <ScrollArea className="min-h-0 flex-1">
       <div className="mx-auto w-full max-w-xl p-4 lg:p-6">
-        <p className="mb-5 text-sm text-muted-foreground">{t.description}</p>
+        <div className="mb-5 flex items-start justify-between gap-4">
+          <p className="text-sm text-muted-foreground min-w-0 flex-1">{t.description}</p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="shrink-0"
+            onClick={() => setShowWizard(true)}
+          >
+            <Settings className="size-4 mr-1.5" />
+            {locale === 'zh' ? '使用向导配置' : 'Use Setup Wizard'}
+          </Button>
+        </div>
         <div className="space-y-4">
           <div className="grid grid-cols-3 gap-3">
             <div className="col-span-2 space-y-1.5">
@@ -4688,6 +4727,26 @@ function DeliverySettingsView({ locale }: { locale: LanguageMode }): React.JSX.E
         </div>
       </div>
     </ScrollArea>
+    <Dialog open={showWizard} onOpenChange={setShowWizard}>
+      <DialogContent className="max-w-2xl h-[560px] p-0 overflow-hidden flex flex-col">
+        <DeliveryWizardView
+          locale={locale}
+          isEmbedInOnboarding={false}
+          onCancel={() => setShowWizard(false)}
+          onSaveSuccess={() => {
+            setShowWizard(false)
+            window.api.deliver.getConfig().then((cfg) => {
+              setHost(cfg.host || '')
+              setPort(String(cfg.port || '465'))
+              setUser(cfg.user || '')
+              setKindleEmail(cfg.kindleEmail || '')
+              setHasPassword(cfg.hasPassword || false)
+            })
+          }}
+        />
+      </DialogContent>
+    </Dialog>
+    </>
   )
 }
 

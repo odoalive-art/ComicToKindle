@@ -879,3 +879,122 @@ export const uiText = {
     }
   }
 } as const
+
+// === lane-C onboarding ===
+export const onboardingText = {
+  zh: {
+    welcome: {
+      title: '欢迎使用 ComicToKindle',
+      subtitle: '轻松将您的漫画转换并投递至 Kindle，打造极致的墨水屏漫画阅读体验。',
+      startBtn: '开始设置',
+      languageSelect: '界面语言',
+      themeSelect: '界面主题'
+    },
+    library: {
+      title: '创建或打开漫画库',
+      desc: 'ComicToKindle 会将您的漫画以专属库包的形式保存，确保阅读进度与转换队列稳定。',
+      createBtn: '新建漫画库',
+      openBtn: '打开已有库',
+      selectedPath: '当前库路径',
+      nextBtn: '下一步',
+      errorNoPath: '请先新建或打开一个漫画库'
+    },
+    import: {
+      title: '导入您的第一本漫画',
+      desc: '支持导入 ZIP、CBZ、PDF、EPUB 格式的漫画文件或文件夹。我们会为您自动扫描并导入。',
+      dragHint: '将漫画文件拖拽到此处，或点击下方按钮选择文件',
+      selectBtn: '选择漫画文件',
+      importing: '正在导入...',
+      success: (count: number) => `导入成功！已导入 ${count} 卷漫画。`,
+      noFileSelected: '请先拖入或选择漫画文件',
+      skipBtn: '跳过导入',
+      nextBtn: '下一步'
+    },
+    delivery: {
+      title: '配置 Kindle 投递',
+      desc: '配置发件邮箱和 Kindle 邮箱，体验一键无线投递漫画。',
+      smtpTitle: '第一步：配置发件邮箱 (SMTP)',
+      smtpDesc: 'ComicToKindle 会使用您填写的邮箱服务将漫画作为附件发出。',
+      emailProvider: '选择邮箱服务商',
+      customProvider: '自定义',
+      host: 'SMTP 主机',
+      port: '端口',
+      user: '发件人邮箱',
+      pass: '授权码 / 应用专用密码',
+      passPlaceholder: '请输入应用专用密码或授权码',
+      passNote: '提示：由于安全性限制，QQ、163、Gmail 等邮箱不能直接使用邮箱登录密码，必须使用生成的「授权码」或「应用专用密码」。',
+      amazonTitle: '第二步：添加已认可发送人与 Kindle 邮箱',
+      amazonStep1: '1. 登录亚马逊官网的「管理您的内容和设备」首选项页面。',
+      amazonStep2: '2. 找到「个人文档设置」，将上述【发件人邮箱】添加至「已认可发件人电子邮箱列表」。',
+      amazonStep3: '3. 复制亚马逊页面上您设备的【Kindle 电子邮箱】填入下方。',
+      kindleEmail: 'Kindle 电子邮箱',
+      kindlePlaceholder: '例如 xxx@kindle.com',
+      testBtn: '测试 SMTP 连接',
+      testing: '测试中...',
+      testSuccess: 'SMTP 连接测试成功！',
+      testFailed: 'SMTP 连接失败，请检查配置。',
+      saveBtn: '保存设置',
+      finishBtn: '完成引导',
+      prevBtn: '上一步',
+      nextBtn: '下一步'
+    }
+  },
+  en: {
+    welcome: {
+      title: 'Welcome to ComicToKindle',
+      subtitle: 'Convert and deliver your comics to Kindle easily for the ultimate E-ink reading experience.',
+      startBtn: 'Get Started',
+      languageSelect: 'Language',
+      themeSelect: 'Theme'
+    },
+    library: {
+      title: 'Create or Open Library',
+      desc: 'ComicToKindle stores your comics in a dedicated library bundle to ensure stable reading progress and conversion queues.',
+      createBtn: 'Create New Library',
+      openBtn: 'Open Existing Library',
+      selectedPath: 'Library Path',
+      nextBtn: 'Next Step',
+      errorNoPath: 'Please create or open a library first'
+    },
+    import: {
+      title: 'Import Your First Comic',
+      desc: 'Supports importing comics in ZIP, CBZ, PDF, and EPUB formats. We will scan and import them automatically.',
+      dragHint: 'Drag and drop comic files here, or click the button below to select files',
+      selectBtn: 'Select Comic File',
+      importing: 'Importing...',
+      success: (count: number) => `Import successful! Imported ${count} volumes.`,
+      noFileSelected: 'Please drag in or select a comic file first',
+      skipBtn: 'Skip Import',
+      nextBtn: 'Next Step'
+    },
+    delivery: {
+      title: 'Configure Kindle Delivery',
+      desc: 'Set up your sender email and Kindle email to enjoy one-click wireless comic delivery.',
+      smtpTitle: 'Step 1: Configure Sender Email (SMTP)',
+      smtpDesc: 'ComicToKindle uses your email service to send comics as attachments.',
+      emailProvider: 'Email Provider',
+      customProvider: 'Custom',
+      host: 'SMTP Host',
+      port: 'Port',
+      user: 'Sender Email',
+      pass: 'App Password / Auth Token',
+      passPlaceholder: 'Enter app-specific password or token',
+      passNote: 'Note: For security reasons, providers like QQ, 163, and Gmail require an "App Password" or "Auth Token" instead of your login password.',
+      amazonTitle: 'Step 2: Approve Sender & Set Kindle Email',
+      amazonStep1: '1. Log in to Amazon\'s "Manage Your Content and Devices" preferences page.',
+      amazonStep2: '2. Find "Personal Document Settings" and add your [Sender Email] to the "Approved Personal Document E-mail List".',
+      amazonStep3: '3. Copy your device\'s [Kindle E-mail] from that page and paste it below.',
+      kindleEmail: 'Kindle E-mail',
+      kindlePlaceholder: 'e.g. xxx@kindle.com',
+      testBtn: 'Test SMTP Connection',
+      testing: 'Testing...',
+      testSuccess: 'SMTP connection test succeeded!',
+      testFailed: 'SMTP connection failed. Please check your configuration.',
+      saveBtn: 'Save Settings',
+      finishBtn: 'Complete Setup',
+      prevBtn: 'Back',
+      nextBtn: 'Next Step'
+    }
+  }
+} as const
+
