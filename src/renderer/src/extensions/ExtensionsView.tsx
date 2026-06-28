@@ -4,7 +4,6 @@ import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Sparkles, Cpu, Trash2, RefreshCw, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react'
 import { toast } from 'sonner'
@@ -104,13 +103,6 @@ export function ExtensionsView({ locale }: ExtensionsViewProps): React.JSX.Eleme
   return (
     <ScrollArea className="flex-1 bg-background">
       <div className="mx-auto max-w-4xl p-6 space-y-6">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-bold tracking-tight truncate">{t.title}</h1>
-          <p className="text-sm text-muted-foreground break-words">{t.subtitle}</p>
-        </div>
-
-        <Separator />
-
         <Card className="border-border/60 shadow-sm overflow-hidden">
           <CardHeader className="pb-4">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between min-w-0">

@@ -400,12 +400,12 @@ function CoverImage({
       decoding="async"
       draggable={false} // 否则原生图片拖拽会劫持卡片的 HTML5 拖拽手势（目录网格拖动移动）
       onError={() => setFailed(true)}
-      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+      className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105"
     />
   )
 }
 
-/** 文件夹卡的可点击视觉（错位书摞 + 册数角标 + 文件夹名），下钻容器复用。纯收纳，无作者。 */
+/** 文件夹卡的可点击视觉（封面 + 册数角标 + 文件夹名），下钻容器复用。纯收纳，无作者。 */
 function FolderStackCard({
   item,
   picked,
@@ -430,20 +430,15 @@ function FolderStackCard({
       }}
       className="group flex cursor-default flex-col gap-2 text-left outline-none"
     >
-      <div className="group relative">
-        {/* 背后两层错位卡片，暗示「文件夹里有多卷」 */}
-        <div className="pointer-events-none absolute inset-0 translate-x-1.5 translate-y-1.5 rounded-lg bg-muted-foreground/20" />
-        <div className="pointer-events-none absolute inset-0 translate-x-[3px] translate-y-[3px] rounded-lg bg-muted-foreground/30" />
-        <AspectRatio
-          ratio={3 / 4}
-          className={`relative overflow-hidden rounded-lg bg-muted transition-all ${
-            picked ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''
-          }`}
-        >
-          <CoverImage src={item.coverUrl} alt={item.title} />
-          <div className="pointer-events-none absolute inset-0 rounded-lg border border-foreground/10" />
-        </AspectRatio>
-      </div>
+      <AspectRatio
+        ratio={5 / 7}
+        className={`relative overflow-hidden rounded-lg bg-muted transition-all ${
+          picked ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''
+        }`}
+      >
+        <CoverImage src={item.coverUrl} alt={item.title} />
+        <div className="pointer-events-none absolute inset-0 rounded-lg border border-foreground/10" />
+      </AspectRatio>
       <div
         className={`min-w-0 rounded-md px-1.5 py-0.5 ${
           picked ? 'bg-accent text-accent-foreground' : ''
@@ -3653,7 +3648,7 @@ function LibraryView({
               <div className={LIBRARY_GRID}>
                 {Array.from({ length: 12 }).map((_, i) => (
                   <div key={i} className="flex flex-col gap-2">
-                    <Skeleton className="aspect-[3/4] w-full rounded-lg" />
+                    <Skeleton className="aspect-[5/7] w-full rounded-lg" />
                     <Skeleton className="h-4 w-4/5" />
                     <Skeleton className="h-3 w-2/5" />
                   </div>
@@ -3667,7 +3662,7 @@ function LibraryView({
               ) : (
                 <div className={LIBRARY_GRID}>
                   {volumes.map((vol) => {
-                    // 子部：渲染为可继续下钻的「书摞」卡（双击进入更深一层）
+                    // 子部：渲染为可继续下钻的文件夹卡（双击进入更深一层）
                     if (vol.type === 'folder') {
                       return (
                         <ContextMenu key={vol.id}>
@@ -3721,7 +3716,7 @@ function LibraryView({
                             <div className="relative">
                               <div className="block w-full text-left">
                                 <AspectRatio
-                                  ratio={3 / 4}
+                                  ratio={5 / 7}
                                   className={`overflow-hidden rounded-lg bg-muted transition-shadow ${
                                     picked
                                       ? 'ring-2 ring-primary ring-offset-2 ring-offset-background'
@@ -3938,7 +3933,7 @@ function LibraryView({
                           >
                             <div className="relative">
                               <AspectRatio
-                                ratio={3 / 4}
+                                ratio={5 / 7}
                                 className={`overflow-hidden rounded-lg bg-muted transition-shadow ${
                                   bookPicked
                                     ? 'ring-2 ring-primary ring-offset-2 ring-offset-background'
@@ -4104,7 +4099,7 @@ function LibraryView({
                       </ContextMenu>
                     )
                   }
-                  // ② 部文件夹：错位「书摞」+ 卷数角标，双击进入看卷册
+                  // ② 部文件夹：封面 + 卷数角标，双击进入看卷册
                   return (
                     <ContextMenu key={item.id}>
                       <ContextMenuTrigger asChild>
@@ -4118,22 +4113,17 @@ function LibraryView({
                           }}
                           className="group flex cursor-default flex-col gap-2 text-left outline-none"
                         >
-                          <div className="group relative">
-                            {/* 背后两层错位卡片，暗示「文件夹里有多卷」 */}
-                            <div className="pointer-events-none absolute inset-0 translate-x-1.5 translate-y-1.5 rounded-lg bg-muted-foreground/20" />
-                            <div className="pointer-events-none absolute inset-0 translate-x-[3px] translate-y-[3px] rounded-lg bg-muted-foreground/30" />
-                            <AspectRatio
-                              ratio={3 / 4}
-                              className={`relative overflow-hidden rounded-lg bg-muted transition-all ${
-                                picked
-                                  ? 'ring-2 ring-primary ring-offset-2 ring-offset-background'
-                                  : ''
-                              }`}
-                            >
-                              <CoverImage src={item.coverUrl} alt={item.title} />
-                              <div className="pointer-events-none absolute inset-0 rounded-lg border border-foreground/10" />
-                            </AspectRatio>
-                          </div>
+                          <AspectRatio
+                            ratio={5 / 7}
+                            className={`relative overflow-hidden rounded-lg bg-muted transition-all ${
+                              picked
+                                ? 'ring-2 ring-primary ring-offset-2 ring-offset-background'
+                                : ''
+                            }`}
+                          >
+                            <CoverImage src={item.coverUrl} alt={item.title} />
+                            <div className="pointer-events-none absolute inset-0 rounded-lg border border-foreground/10" />
+                          </AspectRatio>
                           <div
                             className={`min-w-0 rounded-md px-1.5 py-0.5 ${
                               picked ? 'bg-accent text-accent-foreground' : ''
@@ -4570,9 +4560,22 @@ function ConvertWorkbench({
     >
       <DialogContent
         showCloseButton
+        // 打开时 Radix 会自动聚焦容器内首个可聚焦元素 = 分隔条（role=separator tabIndex=0），
+        // 触发 focus-visible 高亮环，看着像「被选中」。阻止默认自动聚焦即可（焦点陷阱/Esc 不受影响）。
+        onOpenAutoFocus={(e) => e.preventDefault()}
         // 正在编辑单元格时按 Esc 只取消编辑，不关整个弹窗
         onEscapeKeyDown={(e) => {
           if (editing) e.preventDefault()
+        }}
+        // 中间分隔条拖动时 react-resizable-panels 会 setPointerCapture，
+        // 被 Radix 误判为「点击弹窗外」而关闭——来源是分隔条则不关。
+        onPointerDownOutside={(e) => {
+          const target = e.detail.originalEvent.target as HTMLElement | null
+          if (target?.closest('[data-slot="resizable-handle"],[data-separator]')) e.preventDefault()
+        }}
+        onInteractOutside={(e) => {
+          const target = e.detail.originalEvent.target as HTMLElement | null
+          if (target?.closest('[data-slot="resizable-handle"],[data-separator]')) e.preventDefault()
         }}
         className="flex h-[85vh] w-[92vw] max-w-5xl flex-col gap-0 overflow-hidden p-0 sm:max-w-5xl"
       >
@@ -4654,7 +4657,7 @@ function ConvertWorkbench({
                     <button
                       type="button"
                       onClick={() => onPreview(active.vol)}
-                      className="group relative aspect-[3/4] w-44 overflow-hidden rounded-lg border bg-muted shadow-sm"
+                      className="group relative aspect-[5/7] w-44 overflow-hidden rounded-lg border bg-muted shadow-sm"
                       title={text.convertPreview.open}
                     >
                       {active.vol.coverUrl ? (
