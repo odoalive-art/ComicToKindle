@@ -26,6 +26,11 @@ export interface UpscaleStatus {
   model: string
 }
 
+export interface UpscalePeekResult {
+  status: '1' | '0' | 'failed'
+  error?: string
+}
+
 type EngineGpu = UpscaleStatus['gpu']
 
 interface EngineResources {
@@ -527,6 +532,27 @@ export async function enhance(sourcePath: string): Promise<string> {
   return promise
 }
 
+/**
+ * 确认一张阅读页的增强状态。enhance() 命中缓存时只做轻量读取，未命中时与
+ * comic:// 图片请求共享 inFlight 任务，避免状态确认重复运行引擎。
+ */
+async function peekUpscale(sourcePath: unknown): Promise<UpscalePeekResult> {
+  if (typeof sourcePath !== 'string' || !sourcePath) {
+    return { status: 'failed', error: 'INVALID_UPSCALE_SOURCE' }
+  }
+  const config = await getUpscaleConfig()
+  if (!config.enabled) return { status: '0' }
+  try {
+    const outputPath = await enhance(sourcePath)
+    if (outputPath === sourcePath) {
+      return { status: 'failed', error: 'enhance() 返回原图路径' }
+    }
+    return { status: '1' }
+  } catch (error) {
+    return { status: 'failed', error: error instanceof Error ? error.message : String(error) }
+  }
+}
+
 function disposeWorker(): void {
   if (worker) worker.kill()
   worker = null
@@ -545,5 +571,8 @@ export function setupUpscale(): void {
   ipcMain.handle('upscale:status', async (): Promise<UpscaleStatus> => getUpscaleStatus())
   ipcMain.handle('upscale:clearCache', async (): Promise<number> => clearUpscaleCache())
   ipcMain.handle('upscale:cacheSize', async (): Promise<number> => upscaleCacheSize())
+  ipcMain.handle('upscale:peek', async (_event, sourcePath: unknown): Promise<UpscalePeekResult> =>
+    peekUpscale(sourcePath)
+  )
   app.once('before-quit', disposeWorker)
 }

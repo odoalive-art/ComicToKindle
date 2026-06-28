@@ -827,9 +827,36 @@ function PdfReader({
   )
 }
 
+type EnhanceStatus = 'idle' | 'enhancing' | 'enhanced' | 'failed' | 'original'
+
+/** 增强状态角标文案/样式（状态显形）：让用户随时知道当前页是不是真增强了 */
+function enhanceBadge(
+  status: EnhanceStatus | 'compare',
+  locale: LanguageMode
+): { label: string; dot: string } | null {
+  const zh = locale === 'zh'
+  switch (status) {
+    case 'enhancing':
+      return { label: zh ? '增强中…' : 'Enhancing…', dot: 'bg-amber-400 animate-pulse' }
+    case 'enhanced':
+      return { label: zh ? '已增强' : 'Enhanced', dot: 'bg-emerald-400' }
+    case 'failed':
+      return { label: zh ? '增强失败 · 原图' : 'Failed · original', dot: 'bg-red-400' }
+    case 'original':
+      return { label: zh ? '未增强 · 原图' : 'Off · original', dot: 'bg-zinc-400' }
+    case 'compare':
+      return { label: zh ? '原图（对比）' : 'Original (compare)', dot: 'bg-white' }
+    default:
+      return null
+  }
+}
+
 interface EnhancedImageProps {
   src: string
   enhance: boolean
+  locale: LanguageMode
+  /** 「按住对比原图」按下时为 true：强制显示原图并标注对比态 */
+  forceOriginal?: boolean
   alt?: string
   className?: string
   style?: React.CSSProperties
@@ -840,6 +867,8 @@ interface EnhancedImageProps {
 function EnhancedImage({
   src,
   enhance,
+  locale,
+  forceOriginal,
   alt,
   className,
   style,
@@ -847,59 +876,91 @@ function EnhancedImage({
   containerClassName
 }: EnhancedImageProps): React.JSX.Element {
   const [displaySrc, setDisplaySrc] = useState(src)
-  const [isEnhancing, setIsEnhancing] = useState(false)
+  const [status, setStatus] = useState<EnhanceStatus>('idle')
 
   useEffect(() => {
     if (!enhance) {
       setDisplaySrc(src)
-      setIsEnhancing(false)
+      setStatus('idle')
       return
     }
 
-    // 先以原图秒显
+    // 先以原图秒显，再后台取增强图
     setDisplaySrc(src)
-    setIsEnhancing(true)
+    setStatus('enhancing')
 
     const enhancedUrl = `${src}${src.includes('?') ? '&' : '?'}enhance=1`
-    const img = new Image()
-    img.src = enhancedUrl
-
     let active = true
-    img.onload = () => {
-      if (active) {
-        setDisplaySrc(enhancedUrl)
-        setIsEnhancing(false)
+    const image = new Image()
+    const imageReady = new Promise<void>((resolve, reject) => {
+      image.onload = () => resolve()
+      image.onerror = () => reject(new Error('增强图加载失败'))
+    })
+
+    let sourcePath: string | null = null
+    try {
+      const url = new URL(src)
+      if (url.protocol === 'comic:') sourcePath = url.searchParams.get('p')
+    } catch {
+      // 非法 URL 交给下面的统一失败态处理。
+    }
+
+    if (!sourcePath) {
+      console.warn('[upscale] 本页增强失败: 无法从 comic:// URL 取得源图片路径')
+      setStatus('failed')
+      return () => {
+        active = false
       }
     }
-    img.onerror = () => {
-      if (active) {
-        setDisplaySrc(src)
-        setIsEnhancing(false)
-      }
-    }
+
+    // 图片仍走已验证稳定的 <img src="comic://...&enhance=1">；IPC 只确认状态，
+    // 避开 Chromium 对 http(s) renderer → 自定义协议 fetch 的 CORS 限制。
+    image.src = enhancedUrl
+    Promise.all([imageReady, window.api.upscale.peek(sourcePath)])
+      .then(([, result]) => {
+        if (!active) return
+        if (result.status === '1') {
+          setDisplaySrc(enhancedUrl)
+          setStatus('enhanced')
+        } else if (result.status === '0') {
+          setDisplaySrc(src)
+          setStatus('original')
+        } else {
+          console.warn('[upscale] 本页增强失败:', result.error ?? '(无失败原因)')
+          setDisplaySrc(src)
+          setStatus('failed')
+        }
+      })
+      .catch((error) => {
+        if (active) {
+          console.warn(
+            '[upscale] 本页增强失败:',
+            error instanceof Error ? error.message : String(error)
+          )
+          setDisplaySrc(src)
+          setStatus('failed')
+        }
+      })
 
     return () => {
       active = false
-      img.onload = null
-      img.onerror = null
+      image.onload = null
+      image.onerror = null
     }
   }, [src, enhance])
 
+  const shown = forceOriginal ? src : displaySrc
+  const badge = enhance ? enhanceBadge(forceOriginal ? 'compare' : status, locale) : null
+
   return (
-    <div className={cn("relative flex items-center justify-center overflow-hidden", containerClassName)}>
-      <img
-        src={displaySrc}
-        alt={alt}
-        draggable={draggable}
-        style={style}
-        className={className}
-      />
-      {isEnhancing && (
+    <div className={cn('relative flex items-center justify-center overflow-hidden', containerClassName)}>
+      <img src={shown} alt={alt} draggable={draggable} style={style} className={className} />
+      {badge ? (
         <div className="absolute bottom-2 right-2 z-10 flex items-center gap-1.5 rounded bg-black/60 px-2 py-0.5 text-[10px] text-white backdrop-blur-sm select-none pointer-events-none">
-          <span className="size-1.5 animate-pulse rounded-full bg-amber-400" />
-          <span>增强中...</span>
+          <span className={cn('size-1.5 rounded-full', badge.dot)} />
+          <span>{badge.label}</span>
         </div>
-      )}
+      ) : null}
     </div>
   )
 }
@@ -920,6 +981,8 @@ function VolumeReader({
   const [direction, setDirection] = useState<ReadingDirection>(getInitialDirection)
   const [mode, setMode] = useState<ReadingMode>(getInitialMode)
   const [enhance, setEnhance] = useState(false)
+  // 「按住对比原图」：按下时强制显示原图，用来直接肉眼验证增强是否生效
+  const [compareOriginal, setCompareOriginal] = useState(false)
 
   // 读取 upscale 默认配置
   useEffect(() => {
@@ -936,6 +999,7 @@ function VolumeReader({
   const toggleEnhance = async () => {
     const next = !enhance
     setEnhance(next)
+    setCompareOriginal(false)
     try {
       await window.electron.ipcRenderer.invoke('upscale:setConfig', { enabled: next })
     } catch (err) {
@@ -1079,6 +1143,20 @@ function VolumeReader({
             >
               <Sparkles className="size-4" strokeWidth={1.75} />
             </Button>
+            {enhance ? (
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="text-muted-foreground"
+                title={locale === 'zh' ? '按住对比原图' : 'Hold to compare original'}
+                onPointerDown={() => setCompareOriginal(true)}
+                onPointerUp={() => setCompareOriginal(false)}
+                onPointerLeave={() => setCompareOriginal(false)}
+                onPointerCancel={() => setCompareOriginal(false)}
+              >
+                <Eye className="size-4" strokeWidth={1.75} />
+              </Button>
+            ) : null}
             <span className="ml-1 text-sm tabular-nums text-muted-foreground">{counter}</span>
           </div>
         ) : null}
@@ -1100,6 +1178,8 @@ function VolumeReader({
                 key={pages[index]}
                 src={pages[index]}
                 enhance={enhance}
+                locale={locale}
+                forceOriginal={compareOriginal}
                 alt={`${index + 1}`}
                 draggable={false}
                 style={{ objectPosition: rtl ? 'left' : 'right' }}
@@ -1111,6 +1191,8 @@ function VolumeReader({
                   key={pages[index + 1]}
                   src={pages[index + 1]}
                   enhance={enhance}
+                  locale={locale}
+                  forceOriginal={compareOriginal}
                   alt={`${index + 2}`}
                   draggable={false}
                   style={{ objectPosition: rtl ? 'right' : 'left' }}
@@ -1124,6 +1206,8 @@ function VolumeReader({
               key={pages[index]}
               src={pages[index]}
               enhance={enhance}
+              locale={locale}
+              forceOriginal={compareOriginal}
               alt={`${index + 1}`}
               draggable={false}
               className="max-h-full max-w-full object-contain select-none"

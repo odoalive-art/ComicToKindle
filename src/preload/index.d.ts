@@ -320,12 +320,18 @@ export interface UpscaleStatus {
   model: string
 }
 
+export interface UpscalePeekResult {
+  status: '1' | '0' | 'failed'
+  error?: string
+}
+
 export interface UpscaleAPI {
   getConfig: () => Promise<UpscaleConfig>
   setConfig: (patch: Partial<UpscaleConfig>) => Promise<UpscaleConfig>
   status: () => Promise<UpscaleStatus>
   clearCache: () => Promise<number>
   cacheSize: () => Promise<number>
+  peek: (sourcePath: string) => Promise<UpscalePeekResult>
 }
 
 export interface CustomAPI {
