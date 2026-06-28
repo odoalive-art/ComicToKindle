@@ -1,6 +1,6 @@
 # 工单：扩展功能 · AI 放大 / 高清化（阅读时增强）
 
-> 状态：**已拍板，待实现**。体例同 `docs/plan-import-enhancements.md` / `plan-eagle-library.md`。
+> 状态：**已实现并合入 `main`（`cbfd680` + 状态反馈修复 `3c5ca44`），已推送**。剩压缩包/PDF/EPUB 三来源增强与打包 dmg 引擎签名的真机补验。体例同 `docs/plan-import-enhancements.md` / `plan-eagle-library.md`。
 > 分支：三条线各自从**同一冻结 base（`main`）**切独立分支，base 在本期冻结：
 >   - A `feat/upscale-packaging`（Claude） · B `feat/upscale-engine`（Codex） · C `feat/upscale-ui`（Gemini）
 >   - 合并归 Claude，顺序 A→B→C，每步 `npm run build` 绿了再下一步。
