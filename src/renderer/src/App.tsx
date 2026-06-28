@@ -38,9 +38,12 @@ import {
   FileArchive,
   Eye,
   EyeOff,
+  Blend,
   Pencil,
   FolderInput,
+  Fullscreen,
   Puzzle,
+  Shrink,
   Sparkles,
   MoreHorizontal
 } from 'lucide-react'
@@ -616,8 +619,7 @@ function useConvertActivity(locale: LanguageMode): ConvertActivity {
       .then(async () => {
         await refreshArtifacts()
         setJobs((prev) => prev.filter((j) => j.id !== next.id))
-        if (!cancelledIdsRef.current.delete(next.id))
-          toast.success(text.convert.done(next.title))
+        if (!cancelledIdsRef.current.delete(next.id)) toast.success(text.convert.done(next.title))
       })
       .catch((err) => {
         // 用户取消的任务已从列表移除，静默处理
@@ -803,7 +805,7 @@ function PdfReader({
           onClick={onClose}
           style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
         >
-          <ArrowLeft className="size-4" strokeWidth={1.75} />
+          <ArrowLeft className="size-4 text-muted-foreground" strokeWidth={1.75} />
           {text.reader.back}
         </Button>
         <span
@@ -859,7 +861,7 @@ interface EnhancedImageProps {
   containerClassName?: string
 }
 
-function EnhancedImage({
+const EnhancedImage = React.memo(function EnhancedImage({
   src,
   enhance,
   locale,
@@ -870,27 +872,16 @@ function EnhancedImage({
   draggable,
   containerClassName
 }: EnhancedImageProps): React.JSX.Element {
-  const [displaySrc, setDisplaySrc] = useState(src)
-  const [status, setStatus] = useState<EnhanceStatus>('idle')
+  const enhancedUrl = `${src}${src.includes('?') ? '&' : '?'}enhance=1`
+  const [loadedUrl, setLoadedUrl] = useState<string | null>(null)
+  const [peekResult, setPeekResult] = useState<{
+    url: string
+    status: 'enhanced' | 'original' | 'failed'
+  } | null>(null)
 
   useEffect(() => {
-    if (!enhance) {
-      setDisplaySrc(src)
-      setStatus('idle')
-      return
-    }
-
-    // 先以原图秒显，再后台取增强图
-    setDisplaySrc(src)
-    setStatus('enhancing')
-
-    const enhancedUrl = `${src}${src.includes('?') ? '&' : '?'}enhance=1`
+    if (!enhance) return
     let active = true
-    const image = new Image()
-    const imageReady = new Promise<void>((resolve, reject) => {
-      image.onload = () => resolve()
-      image.onerror = () => reject(new Error('增强图加载失败'))
-    })
 
     let sourcePath: string | null = null
     try {
@@ -902,28 +893,27 @@ function EnhancedImage({
 
     if (!sourcePath) {
       console.warn('[upscale] 本页增强失败: 无法从 comic:// URL 取得源图片路径')
-      setStatus('failed')
+      queueMicrotask(() => {
+        if (active) setPeekResult({ url: enhancedUrl, status: 'failed' })
+      })
       return () => {
         active = false
       }
     }
 
-    // 图片仍走已验证稳定的 <img src="comic://...&enhance=1">；IPC 只确认状态，
-    // 避开 Chromium 对 http(s) renderer → 自定义协议 fetch 的 CORS 限制。
-    image.src = enhancedUrl
-    Promise.all([imageReady, window.api.upscale.peek(sourcePath)])
-      .then(([, result]) => {
+    // 增强图以独立叠层加载；IPC 只确认协议响应是否来自增强缓存。
+    // 原图节点始终保留在下层，避免同一个 <img> 换 src 时出现黑帧。
+    window.api.upscale
+      .peek(sourcePath)
+      .then((result) => {
         if (!active) return
         if (result.status === '1') {
-          setDisplaySrc(enhancedUrl)
-          setStatus('enhanced')
+          setPeekResult({ url: enhancedUrl, status: 'enhanced' })
         } else if (result.status === '0') {
-          setDisplaySrc(src)
-          setStatus('original')
+          setPeekResult({ url: enhancedUrl, status: 'original' })
         } else {
           console.warn('[upscale] 本页增强失败:', result.error ?? '(无失败原因)')
-          setDisplaySrc(src)
-          setStatus('failed')
+          setPeekResult({ url: enhancedUrl, status: 'failed' })
         }
       })
       .catch((error) => {
@@ -932,33 +922,67 @@ function EnhancedImage({
             '[upscale] 本页增强失败:',
             error instanceof Error ? error.message : String(error)
           )
-          setDisplaySrc(src)
-          setStatus('failed')
+          setPeekResult({ url: enhancedUrl, status: 'failed' })
         }
       })
 
     return () => {
       active = false
-      image.onload = null
-      image.onerror = null
     }
-  }, [src, enhance])
+  }, [enhance, enhancedUrl, src])
 
-  const shown = forceOriginal ? src : displaySrc
+  const currentPeekStatus = peekResult?.url === enhancedUrl ? peekResult.status : 'pending'
+  const ready = enhance && loadedUrl === enhancedUrl && currentPeekStatus === 'enhanced'
+  const status: EnhanceStatus = !enhance
+    ? 'idle'
+    : currentPeekStatus === 'failed'
+      ? 'failed'
+      : currentPeekStatus === 'original'
+        ? 'original'
+        : ready
+          ? 'enhanced'
+          : 'enhancing'
+
   const badge = enhance ? enhanceBadge(forceOriginal ? 'compare' : status, locale) : null
 
   return (
-    <div className={cn('relative flex items-center justify-center overflow-hidden', containerClassName)}>
-      <img src={shown} alt={alt} draggable={draggable} style={style} className={className} />
+    <div
+      className={cn(
+        'relative flex items-center justify-center overflow-hidden',
+        containerClassName
+      )}
+    >
+      <img src={src} alt={alt} draggable={draggable} style={style} className={className} />
+      {enhance ? (
+        <img
+          src={enhancedUrl}
+          alt=""
+          aria-hidden
+          draggable={false}
+          style={style}
+          onLoad={() => setLoadedUrl(enhancedUrl)}
+          onError={() => setPeekResult({ url: enhancedUrl, status: 'failed' })}
+          className={cn(
+            className,
+            'pointer-events-none absolute inset-0 m-auto transition-opacity duration-200 ease-out motion-reduce:transition-none',
+            ready && !forceOriginal ? 'opacity-100' : 'opacity-0'
+          )}
+        />
+      ) : null}
       {badge ? (
-        <div className="absolute bottom-2 right-2 z-10 flex items-center gap-1.5 rounded bg-black/60 px-2 py-0.5 text-[10px] text-white backdrop-blur-sm select-none pointer-events-none">
+        <div
+          className={cn(
+            'absolute bottom-2 right-2 z-10 flex items-center gap-1.5 rounded bg-black/60 px-2 py-0.5 text-[10px] text-white backdrop-blur-sm select-none pointer-events-none transition-transform duration-200 motion-reduce:transition-none',
+            ready ? 'animate-in fade-in zoom-in-95 duration-200' : ''
+          )}
+        >
           <span className={cn('size-1.5 rounded-full', badge.dot)} />
           <span>{badge.label}</span>
         </div>
       ) : null}
     </div>
   )
-}
+})
 
 function VolumeReader({
   volume,
@@ -976,6 +1000,13 @@ function VolumeReader({
   const [direction, setDirection] = useState<ReadingDirection>(getInitialDirection)
   const [mode, setMode] = useState<ReadingMode>(getInitialMode)
   const [enhance, setEnhance] = useState(false)
+  const [scrubIndex, setScrubIndex] = useState(0)
+  const [isScrubbing, setIsScrubbing] = useState(false)
+  const [pageJumpOpen, setPageJumpOpen] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const [controlsVisible, setControlsVisible] = useState(true)
+  const readerRef = useRef<HTMLDivElement>(null)
+  const controlsTimerRef = useRef<number | null>(null)
   // 「按住对比原图」：按下时强制显示原图，用来直接肉眼验证增强是否生效
   const [compareOriginal, setCompareOriginal] = useState(false)
 
@@ -991,7 +1022,7 @@ function VolumeReader({
       .catch((err) => console.error('Failed to get upscale config:', err))
   }, [])
 
-  const toggleEnhance = async () => {
+  const toggleEnhance = async (): Promise<void> => {
     const next = !enhance
     setEnhance(next)
     setCompareOriginal(false)
@@ -1030,6 +1061,123 @@ function VolumeReader({
     [total, step]
   )
 
+  const showControls = React.useCallback((): void => {
+    setControlsVisible(true)
+    if (controlsTimerRef.current !== null) window.clearTimeout(controlsTimerRef.current)
+    if (
+      document.fullscreenElement === readerRef.current &&
+      !isScrubbing &&
+      !compareOriginal &&
+      !pageJumpOpen
+    ) {
+      controlsTimerRef.current = window.setTimeout(() => setControlsVisible(false), 1600)
+    }
+  }, [compareOriginal, isScrubbing, pageJumpOpen])
+
+  useEffect(() => {
+    if (document.fullscreenElement === readerRef.current) showControls()
+  }, [pageJumpOpen, showControls])
+
+  useEffect(() => {
+    const onFullscreenChange = (): void => {
+      const next = document.fullscreenElement === readerRef.current
+      setIsFullscreen(next)
+      setControlsVisible(true)
+      if (controlsTimerRef.current !== null) window.clearTimeout(controlsTimerRef.current)
+      controlsTimerRef.current = next
+        ? window.setTimeout(() => setControlsVisible(false), 1600)
+        : null
+    }
+    document.addEventListener('fullscreenchange', onFullscreenChange)
+    return () => {
+      document.removeEventListener('fullscreenchange', onFullscreenChange)
+      if (controlsTimerRef.current !== null) window.clearTimeout(controlsTimerRef.current)
+    }
+  }, [])
+
+  const toggleFullscreen = React.useCallback(async (): Promise<void> => {
+    try {
+      if (document.fullscreenElement === readerRef.current) await document.exitFullscreen()
+      else await readerRef.current?.requestFullscreen()
+    } catch {
+      toast.error(text.reader.fullscreenFailed)
+    }
+  }, [text.reader.fullscreenFailed])
+
+  const alignPageIndex = React.useCallback(
+    (value: number): number => {
+      const clamped = Math.max(0, Math.min(total - 1, Math.round(value)))
+      return mode === 'double' ? Math.floor(clamped / 2) * 2 : clamped
+    },
+    [mode, total]
+  )
+
+  const commitScrub = React.useCallback(
+    (value: number): void => {
+      const next = alignPageIndex(value)
+      setScrubIndex(next)
+      setIndex(next)
+      setIsScrubbing(false)
+      showControls()
+    },
+    [alignPageIndex, showControls]
+  )
+
+  // 原图始终并行预热，AI 增强则按「后两跨页 → 前一跨页」串行排队。
+  // 快速拖动进度条时暂停 AI 预热，松手后从新位置重新排队，避免放大已跳过页面。
+  useEffect(() => {
+    if (loading || total === 0) return
+    let active = true
+    const pendingImages = new Set<HTMLImageElement>()
+    const starts = [index + step, index + step * 2, index - step]
+    const priorityIndices: number[] = []
+    const seen = new Set<number>()
+    for (const start of starts) {
+      const count = mode === 'double' ? 2 : 1
+      for (let offset = 0; offset < count; offset += 1) {
+        const pageIndex = start + offset
+        if (pageIndex < 0 || pageIndex >= total || seen.has(pageIndex)) continue
+        seen.add(pageIndex)
+        priorityIndices.push(pageIndex)
+      }
+    }
+
+    for (const pageIndex of priorityIndices) {
+      const image = new Image()
+      pendingImages.add(image)
+      image.onload = image.onerror = () => pendingImages.delete(image)
+      image.src = pages[pageIndex]
+    }
+
+    if (enhance && !isScrubbing) {
+      void (async () => {
+        for (const pageIndex of priorityIndices) {
+          if (!active) break
+          await new Promise<void>((resolve) => {
+            const image = new Image()
+            pendingImages.add(image)
+            image.onload = image.onerror = () => {
+              pendingImages.delete(image)
+              resolve()
+            }
+            const url = pages[pageIndex]
+            image.src = `${url}${url.includes('?') ? '&' : '?'}enhance=1`
+          })
+        }
+      })()
+    }
+
+    return () => {
+      active = false
+      for (const image of pendingImages) {
+        image.onload = null
+        image.onerror = null
+        image.src = ''
+      }
+      pendingImages.clear()
+    }
+  }, [enhance, index, isScrubbing, loading, mode, pages, step, total])
+
   // 持久化进度
   useEffect(() => {
     if (!loading && total > 0) saveProgress(volume.path, index)
@@ -1056,7 +1204,24 @@ function VolumeReader({
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') {
+        if (pageJumpOpen) {
+          e.preventDefault()
+          setPageJumpOpen(false)
+          setIsScrubbing(false)
+          setScrubIndex(index)
+          return
+        }
+        if (document.fullscreenElement === readerRef.current) {
+          e.preventDefault()
+          void document.exitFullscreen()
+          return
+        }
         onClose()
+        return
+      }
+      if (e.key.toLowerCase() === 'f' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault()
+        void toggleFullscreen()
         return
       }
       const rtl = direction === 'rtl'
@@ -1076,7 +1241,7 @@ function VolumeReader({
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [direction, goNext, goPrev, onClose])
+  }, [direction, goNext, goPrev, index, onClose, pageJumpOpen, toggleFullscreen])
 
   const rtl = direction === 'rtl'
   const isDouble = mode === 'double'
@@ -1086,11 +1251,28 @@ function VolumeReader({
   const counter = hasSecond
     ? `${index + 1}–${index + 2} / ${total}`
     : text.reader.pageOf(index + 1, total)
+  const sliderIndex = isScrubbing ? scrubIndex : index
+  const directionLabel = `${text.reader.toggleDirection}: ${rtl ? text.reader.directionRtl : text.reader.directionLtr}`
+  const modeLabel = `${text.reader.toggleMode}: ${isDouble ? text.reader.modeDouble : text.reader.modeSingle}`
+  const enhanceLabel =
+    locale === 'zh'
+      ? `AI 画面增强: ${enhance ? '已开启' : '已关闭'}`
+      : `AI Image Enhancement: ${enhance ? 'ON' : 'OFF'}`
+  const compareLabel = locale === 'zh' ? '按住对比原图' : 'Hold to compare original'
+  const fullscreenLabel = isFullscreen ? text.reader.exitFullscreen : text.reader.fullscreen
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-background">
+    <div
+      ref={readerRef}
+      onPointerMove={showControls}
+      className="relative flex min-h-0 flex-1 flex-col bg-background"
+    >
       <header
-        className="flex h-12 shrink-0 items-center gap-2 border-b bg-background px-4"
+        className={cn(
+          'flex h-12 shrink-0 items-center gap-2 border-b bg-background px-4 transition-[opacity,transform] duration-200 motion-reduce:transition-none',
+          isFullscreen && 'absolute inset-x-0 top-0 z-20 bg-background/85 backdrop-blur-md',
+          isFullscreen && !controlsVisible && 'pointer-events-none -translate-y-full opacity-0'
+        )}
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
       >
         <Button
@@ -1099,7 +1281,7 @@ function VolumeReader({
           onClick={onClose}
           style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
         >
-          <ArrowLeft className="size-4" strokeWidth={1.75} />
+          <ArrowLeft className="size-4 text-muted-foreground" strokeWidth={1.75} />
           {text.reader.back}
         </Button>
         <span
@@ -1113,46 +1295,140 @@ function VolumeReader({
             className="ml-auto flex shrink-0 items-center gap-1"
             style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
           >
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={toggleDirection}
-              title={`${text.reader.toggleDirection}: ${rtl ? text.reader.directionRtl : text.reader.directionLtr}`}
-            >
-              <ArrowLeftRight className="size-4" strokeWidth={1.75} />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={toggleMode}
-              title={`${text.reader.toggleMode}: ${isDouble ? text.reader.modeDouble : text.reader.modeSingle}`}
-            >
-              {isDouble ? <BookOpen className="size-4" strokeWidth={1.75} /> : <BookText className="size-4" strokeWidth={1.75} />}
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={toggleEnhance}
-              className={enhance ? 'text-amber-500 hover:text-amber-600' : 'text-muted-foreground'}
-              title={locale === 'zh' ? `AI 画面增强: ${enhance ? '已开启' : '已关闭'}` : `AI Image Enhancement: ${enhance ? 'ON' : 'OFF'}`}
-            >
-              <Sparkles className="size-4" strokeWidth={1.75} />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" onClick={toggleDirection}>
+                  <ArrowLeftRight
+                    className="size-4 text-muted-foreground"
+                    strokeWidth={1.75}
+                  />
+                  <span className="sr-only">{directionLabel}</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{directionLabel}</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" onClick={toggleMode}>
+                  {isDouble ? (
+                    <BookOpen className="size-4 text-muted-foreground" strokeWidth={1.75} />
+                  ) : (
+                    <BookText className="size-4 text-muted-foreground" strokeWidth={1.75} />
+                  )}
+                  <span className="sr-only">{modeLabel}</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{modeLabel}</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleEnhance}
+                  aria-pressed={enhance}
+                  className={enhance ? 'bg-accent' : undefined}
+                >
+                  <Sparkles className="size-4 text-muted-foreground" strokeWidth={1.75} />
+                  <span className="sr-only">{enhanceLabel}</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{enhanceLabel}</TooltipContent>
+            </Tooltip>
             {enhance ? (
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className="text-muted-foreground"
-                title={locale === 'zh' ? '按住对比原图' : 'Hold to compare original'}
-                onPointerDown={() => setCompareOriginal(true)}
-                onPointerUp={() => setCompareOriginal(false)}
-                onPointerLeave={() => setCompareOriginal(false)}
-                onPointerCancel={() => setCompareOriginal(false)}
-              >
-                <Eye className="size-4" strokeWidth={1.75} />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onPointerDown={() => setCompareOriginal(true)}
+                    onPointerUp={() => setCompareOriginal(false)}
+                    onPointerLeave={() => setCompareOriginal(false)}
+                    onPointerCancel={() => setCompareOriginal(false)}
+                  >
+                    <Blend className="size-4 text-muted-foreground" strokeWidth={1.75} />
+                    <span className="sr-only">{compareLabel}</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{compareLabel}</TooltipContent>
+              </Tooltip>
             ) : null}
-            <span className="ml-1 text-sm tabular-nums text-muted-foreground">{counter}</span>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" onClick={() => void toggleFullscreen()}>
+                  {isFullscreen ? (
+                    <Shrink className="size-4 text-muted-foreground" strokeWidth={1.75} />
+                  ) : (
+                    <Fullscreen className="size-4 text-muted-foreground" strokeWidth={1.75} />
+                  )}
+                  <span className="sr-only">{fullscreenLabel}</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{fullscreenLabel}</TooltipContent>
+            </Tooltip>
+            <Popover
+              open={pageJumpOpen}
+              onOpenChange={(open) => {
+                setPageJumpOpen(open)
+                if (!open) {
+                  setIsScrubbing(false)
+                  setScrubIndex(index)
+                }
+              }}
+            >
+              <PopoverTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="ml-1 text-sm tabular-nums text-muted-foreground"
+                  aria-label={text.reader.quickJump}
+                >
+                  {counter}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent
+                align="end"
+                sideOffset={8}
+                className="w-80 p-4"
+                style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+                onEscapeKeyDown={(event) => {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  setPageJumpOpen(false)
+                  setIsScrubbing(false)
+                  setScrubIndex(index)
+                }}
+              >
+                <div className="flex min-w-0 items-center justify-between gap-3">
+                  <span className="truncate text-sm font-medium">{text.reader.quickJump}</span>
+                  <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
+                    {sliderIndex + 1} / {total}
+                  </span>
+                </div>
+                <Slider
+                  aria-label={text.reader.quickJump}
+                  min={0}
+                  max={Math.max(0, total - 1)}
+                  step={1}
+                  value={[sliderIndex]}
+                  onValueChange={([value]) => {
+                    setIsScrubbing(true)
+                    setScrubIndex(alignPageIndex(value))
+                    showControls()
+                  }}
+                  onValueCommit={([value]) => commitScrub(value)}
+                  onPointerCancel={() => {
+                    setIsScrubbing(false)
+                    setScrubIndex(index)
+                  }}
+                  className="mt-4"
+                />
+                <div className="mt-2 flex items-center justify-between text-xs tabular-nums text-muted-foreground">
+                  <span>1</span>
+                  <span>{total}</span>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
         ) : null}
       </header>
@@ -1210,17 +1486,6 @@ function VolumeReader({
             />
           )}
 
-          {/* 预加载相邻页 */}
-          {Array.from({ length: 6 }, (_, k) => index - 2 + k)
-            .filter((i) => i >= 0 && i < total && i !== index && !(isDouble && i === index + 1))
-            .map((i) => {
-              const url = pages[i]
-              const srcWithEnhance = enhance ? `${url}${url.includes('?') ? '&' : '?'}enhance=1` : url
-              return (
-                <img key={`pre-${i}`} src={srcWithEnhance} alt="" aria-hidden className="hidden" />
-              )
-            })}
-
           {/* 左半区 */}
           <button
             type="button"
@@ -1229,7 +1494,14 @@ function VolumeReader({
             disabled={rtl ? atLast : atFirst}
             className="group absolute inset-y-0 left-0 flex w-1/2 items-center justify-start pl-3 disabled:pointer-events-none"
           >
-            <span className="flex size-9 items-center justify-center rounded-full bg-black/40 text-white opacity-0 transition-opacity group-hover:opacity-100">
+            <span
+              className={cn(
+                'flex size-9 items-center justify-center rounded-full bg-black/40 text-white opacity-0 transition-opacity',
+                isFullscreen && !controlsVisible
+                  ? 'group-hover:opacity-0'
+                  : 'group-hover:opacity-100'
+              )}
+            >
               <ChevronLeft className="size-5" strokeWidth={1.75} />
             </span>
           </button>
@@ -1241,10 +1513,18 @@ function VolumeReader({
             disabled={rtl ? atFirst : atLast}
             className="group absolute inset-y-0 right-0 flex w-1/2 items-center justify-end pr-3 disabled:pointer-events-none"
           >
-            <span className="flex size-9 items-center justify-center rounded-full bg-black/40 text-white opacity-0 transition-opacity group-hover:opacity-100">
+            <span
+              className={cn(
+                'flex size-9 items-center justify-center rounded-full bg-black/40 text-white opacity-0 transition-opacity',
+                isFullscreen && !controlsVisible
+                  ? 'group-hover:opacity-0'
+                  : 'group-hover:opacity-100'
+              )}
+            >
               <ChevronRight className="size-5" strokeWidth={1.75} />
             </span>
           </button>
+
         </div>
       )}
     </div>
@@ -1273,12 +1553,9 @@ function ConvertActivityPopover({
       const res = await window.api.deliver.send(a.id)
       if (res.success) toast.success(ta.delivered(a.title), { id: toastId })
       else
-        toast.error(
-          `${ta.deliverFailed(a.title)} — ${deliveryErrorMsg(text.delivery, res)}`,
-          {
-            id: toastId
-          }
-        )
+        toast.error(`${ta.deliverFailed(a.title)} — ${deliveryErrorMsg(text.delivery, res)}`, {
+          id: toastId
+        })
       await activity.refreshArtifacts()
     } catch (err) {
       toast.error(`${ta.deliverFailed(a.title)} — ${err}`, { id: toastId })
@@ -2755,7 +3032,11 @@ function LibraryView({
                 onClick={() => setUnlockReq((s) => (s ? { ...s, show: !s.show } : s))}
                 className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground"
               >
-                {unlockReq?.show ? <EyeOff className="size-4" strokeWidth={1.75} /> : <Eye className="size-4" strokeWidth={1.75} />}
+                {unlockReq?.show ? (
+                  <EyeOff className="size-4" strokeWidth={1.75} />
+                ) : (
+                  <Eye className="size-4" strokeWidth={1.75} />
+                )}
               </button>
             </div>
             {unlockReq?.error ? (
@@ -2827,10 +3108,14 @@ function LibraryView({
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>
-              {seriesMetaReq?.kind === 'book' ? text.seriesMeta.bookEdit : text.seriesMeta.folderEdit}
+              {seriesMetaReq?.kind === 'book'
+                ? text.seriesMeta.bookEdit
+                : text.seriesMeta.folderEdit}
             </DialogTitle>
             <DialogDescription>
-              {seriesMetaReq?.kind === 'book' ? text.seriesMeta.bookDesc : text.seriesMeta.folderDesc}
+              {seriesMetaReq?.kind === 'book'
+                ? text.seriesMeta.bookDesc
+                : text.seriesMeta.folderDesc}
             </DialogDescription>
           </DialogHeader>
           {seriesMetaReq ? (
@@ -3087,7 +3372,10 @@ function LibraryView({
                       onClick={() => void submitMove(t.path)}
                       className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-accent disabled:opacity-50"
                     >
-                      <FolderInput className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />
+                      <FolderInput
+                        className="size-4 shrink-0 text-muted-foreground"
+                        strokeWidth={1.75}
+                      />
                       <span className="min-w-0 flex-1 truncate">{t.title}</span>
                     </button>
                   ))}
@@ -3570,10 +3858,7 @@ function LibraryView({
                         </>
                       ) : null}
                       <DropdownMenuItem onClick={rescan} disabled={loading}>
-                        <RefreshCw
-                          className={loading ? 'animate-spin' : ''}
-                          strokeWidth={1.75}
-                        />
+                        <RefreshCw className={loading ? 'animate-spin' : ''} strokeWidth={1.75} />
                         {text.library.rescan}
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
@@ -3773,7 +4058,10 @@ function LibraryView({
                                       variant="secondary"
                                       className="absolute top-1.5 left-1.5 size-6 justify-center rounded-full bg-background/85 p-0 backdrop-blur"
                                     >
-                                      <CheckCircle2 className="size-3.5 text-emerald-500" strokeWidth={1.75} />
+                                      <CheckCircle2
+                                        className="size-3.5 text-emerald-500"
+                                        strokeWidth={1.75}
+                                      />
                                     </Badge>
                                   </TooltipTrigger>
                                   <TooltipContent>{text.convert.converted}</TooltipContent>
@@ -3788,7 +4076,10 @@ function LibraryView({
                                   >
                                     {job.status === 'converting' ? (
                                       <>
-                                        <Loader2 className="size-3 animate-spin" strokeWidth={1.75} />
+                                        <Loader2
+                                          className="size-3 animate-spin"
+                                          strokeWidth={1.75}
+                                        />
                                         {text.convert.progress(Math.max(0, job.percent))}
                                       </>
                                     ) : job.status === 'queued' ? (
@@ -3981,7 +4272,10 @@ function LibraryView({
                                       variant="secondary"
                                       className="absolute top-1.5 left-1.5 size-6 justify-center rounded-full bg-background/85 p-0 backdrop-blur"
                                     >
-                                      <CheckCircle2 className="size-3.5 text-emerald-500" strokeWidth={1.75} />
+                                      <CheckCircle2
+                                        className="size-3.5 text-emerald-500"
+                                        strokeWidth={1.75}
+                                      />
                                     </Badge>
                                   </TooltipTrigger>
                                   <TooltipContent>{text.convert.converted}</TooltipContent>
@@ -3995,7 +4289,10 @@ function LibraryView({
                                   >
                                     {job.status === 'converting' ? (
                                       <>
-                                        <Loader2 className="size-3 animate-spin" strokeWidth={1.75} />
+                                        <Loader2
+                                          className="size-3 animate-spin"
+                                          strokeWidth={1.75}
+                                        />
                                         {text.convert.progress(Math.max(0, job.percent))}
                                       </>
                                     ) : job.status === 'queued' ? (
@@ -4585,195 +4882,195 @@ function ConvertWorkbench({
 
         {/* 两栏主体：左=待转换表格，右=书籍详情+转换格式，中间可拖分隔 */}
         <ResizablePanelGroup orientation="horizontal" className="min-h-0 flex-1">
-        {/* 左：待转换表格（书名/卷数/作者，双击行内编辑） */}
-        <ResizablePanel defaultSize={56} minSize={32}>
-          <div className="flex h-full min-h-0 flex-col">
-            <div className="flex items-baseline justify-between px-4 py-3">
-              <h3 className="text-sm font-semibold">{t.queue}</h3>
-              <span className="text-xs text-muted-foreground">
-                {t.editHint} · {t.queueCount(items.length)}
-              </span>
-            </div>
-            <ScrollArea className="min-h-0 flex-1">
-              <Table>
-                <TableHeader className="sticky top-0 z-10 bg-card">
-                  <TableRow>
-                    <TableHead className="w-8 text-center">#</TableHead>
-                    <TableHead>{t.colTitle}</TableHead>
-                    <TableHead className="w-44">{t.colAuthor}</TableHead>
-                    <TableHead className="w-8" />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {items.map((it, i) => (
-                    <TableRow
-                      key={it.vol.path}
-                      data-state={i === activeIdx ? 'selected' : undefined}
-                      onClick={() => setActiveIdx(i)}
-                      className="group cursor-default"
-                    >
-                      <TableCell className="text-center text-xs tabular-nums text-muted-foreground">
-                        {i + 1}
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {editCell(i, 'title', it.title, t.colTitle)}
-                      </TableCell>
-                      <TableCell>
-                        {editCell(i, 'author', it.author, tm.authorPlaceholder)}
-                      </TableCell>
-                      <TableCell className="p-0 pr-2">
-                        {items.length > 1 ? (
-                          <button
-                            type="button"
-                            aria-label={t.remove}
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              removeAt(i)
-                            }}
-                            className="rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
-                          >
-                            <X className="size-4" strokeWidth={1.75} />
-                          </button>
-                        ) : null}
-                      </TableCell>
+          {/* 左：待转换表格（书名/卷数/作者，双击行内编辑） */}
+          <ResizablePanel defaultSize={56} minSize={32}>
+            <div className="flex h-full min-h-0 flex-col">
+              <div className="flex items-baseline justify-between px-4 py-3">
+                <h3 className="text-sm font-semibold">{t.queue}</h3>
+                <span className="text-xs text-muted-foreground">
+                  {t.editHint} · {t.queueCount(items.length)}
+                </span>
+              </div>
+              <ScrollArea className="min-h-0 flex-1">
+                <Table>
+                  <TableHeader className="sticky top-0 z-10 bg-card">
+                    <TableRow>
+                      <TableHead className="w-8 text-center">#</TableHead>
+                      <TableHead>{t.colTitle}</TableHead>
+                      <TableHead className="w-44">{t.colAuthor}</TableHead>
+                      <TableHead className="w-8" />
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </ScrollArea>
-          </div>
-        </ResizablePanel>
+                  </TableHeader>
+                  <TableBody>
+                    {items.map((it, i) => (
+                      <TableRow
+                        key={it.vol.path}
+                        data-state={i === activeIdx ? 'selected' : undefined}
+                        onClick={() => setActiveIdx(i)}
+                        className="group cursor-default"
+                      >
+                        <TableCell className="text-center text-xs tabular-nums text-muted-foreground">
+                          {i + 1}
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {editCell(i, 'title', it.title, t.colTitle)}
+                        </TableCell>
+                        <TableCell>
+                          {editCell(i, 'author', it.author, tm.authorPlaceholder)}
+                        </TableCell>
+                        <TableCell className="p-0 pr-2">
+                          {items.length > 1 ? (
+                            <button
+                              type="button"
+                              aria-label={t.remove}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                removeAt(i)
+                              }}
+                              className="rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
+                            >
+                              <X className="size-4" strokeWidth={1.75} />
+                            </button>
+                          ) : null}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            </div>
+          </ResizablePanel>
 
-        <ResizableHandle withHandle />
+          <ResizableHandle withHandle />
 
-        {/* 右：书籍详情（只读封面）+ 转换格式 + 开始转换 */}
-        <ResizablePanel defaultSize={44} minSize={28}>
-          <div className="flex h-full min-h-0 flex-col">
-            <ScrollArea className="min-h-0 flex-1">
-              <div className="space-y-5 p-4">
-                {/* 书籍信息：只读封面 + 书名/作者，点封面进模拟 Kindle 预览 */}
-                {active ? (
-                  <div className="flex flex-col items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => onPreview(active.vol)}
-                      className="group relative aspect-[5/7] w-44 overflow-hidden rounded-lg border bg-muted shadow-sm"
-                      title={text.convertPreview.open}
-                    >
-                      {active.vol.coverUrl ? (
-                        <CoverImage src={active.vol.coverUrl} alt="" quiet />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center text-muted-foreground">
-                          <BookText className="size-10" strokeWidth={1.25} />
+          {/* 右：书籍详情（只读封面）+ 转换格式 + 开始转换 */}
+          <ResizablePanel defaultSize={44} minSize={28}>
+            <div className="flex h-full min-h-0 flex-col">
+              <ScrollArea className="min-h-0 flex-1">
+                <div className="space-y-5 p-4">
+                  {/* 书籍信息：只读封面 + 书名/作者，点封面进模拟 Kindle 预览 */}
+                  {active ? (
+                    <div className="flex flex-col items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => onPreview(active.vol)}
+                        className="group relative aspect-[5/7] w-44 overflow-hidden rounded-lg border bg-muted shadow-sm"
+                        title={text.convertPreview.open}
+                      >
+                        {active.vol.coverUrl ? (
+                          <CoverImage src={active.vol.coverUrl} alt="" quiet />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                            <BookText className="size-10" strokeWidth={1.25} />
+                          </div>
+                        )}
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition group-hover:bg-black/40 group-hover:opacity-100">
+                          <span className="flex items-center gap-1.5 rounded-md bg-background/90 px-2.5 py-1.5 text-xs font-medium shadow">
+                            <Eye className="size-4" strokeWidth={1.75} />
+                            {text.convertPreview.open}
+                          </span>
                         </div>
-                      )}
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition group-hover:bg-black/40 group-hover:opacity-100">
-                        <span className="flex items-center gap-1.5 rounded-md bg-background/90 px-2.5 py-1.5 text-xs font-medium shadow">
-                          <Eye className="size-4" strokeWidth={1.75} />
-                          {text.convertPreview.open}
+                      </button>
+                      <div className="w-full space-y-0.5 text-center">
+                        <div className="text-sm font-medium" title={active.title}>
+                          {active.title}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {active.author.trim() || tm.authorPlaceholder}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="py-8 text-center text-sm text-muted-foreground">{t.empty}</div>
+                  )}
+
+                  <Separator />
+
+                  {/* 转换格式（全局参数） */}
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-semibold">{t.format}</h3>
+                    {/* 设备档位 */}
+                    <div className="space-y-1.5">
+                      <Label>{ts.deviceProfile}</Label>
+                      <Select
+                        value={opts.deviceProfile}
+                        onValueChange={(v) => setOpt('deviceProfile', v as DeviceProfileOpt)}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PROFILE_ORDER.map((p) => (
+                            <SelectItem key={p} value={p}>
+                              {ts.profiles[p]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <SwitchRow
+                      label={ts.mangaMode}
+                      note={ts.mangaModeNote}
+                      checked={opts.mangaMode}
+                      onChange={(v) => setOpt('mangaMode', v)}
+                    />
+                    <SwitchRow
+                      label={ts.grayscale}
+                      note={ts.grayscaleNote}
+                      checked={opts.grayscale}
+                      onChange={(v) => setOpt('grayscale', v)}
+                    />
+                    <SwitchRow
+                      label={ts.splitDoublePages}
+                      note={ts.splitDoublePagesNote}
+                      checked={opts.splitDoublePages}
+                      onChange={(v) => setOpt('splitDoublePages', v)}
+                    />
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label>{ts.imageQuality}</Label>
+                        <span className="text-sm tabular-nums text-muted-foreground">
+                          {opts.imageQuality}
                         </span>
                       </div>
-                    </button>
-                    <div className="w-full space-y-0.5 text-center">
-                      <div className="text-sm font-medium" title={active.title}>
-                        {active.title}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {active.author.trim() || tm.authorPlaceholder}
-                      </div>
+                      <Slider
+                        min={45}
+                        max={100}
+                        step={1}
+                        value={[opts.imageQuality]}
+                        onValueChange={([v]) => setOpt('imageQuality', v)}
+                      />
                     </div>
-                  </div>
-                ) : (
-                  <div className="py-8 text-center text-sm text-muted-foreground">{t.empty}</div>
-                )}
 
-                <Separator />
-
-                {/* 转换格式（全局参数） */}
-                <div className="space-y-4">
-                  <h3 className="text-sm font-semibold">{t.format}</h3>
-                  {/* 设备档位 */}
-                  <div className="space-y-1.5">
-                    <Label>{ts.deviceProfile}</Label>
-                    <Select
-                      value={opts.deviceProfile}
-                      onValueChange={(v) => setOpt('deviceProfile', v as DeviceProfileOpt)}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {PROFILE_ORDER.map((p) => (
-                          <SelectItem key={p} value={p}>
-                            {ts.profiles[p]}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <SwitchRow
-                    label={ts.mangaMode}
-                    note={ts.mangaModeNote}
-                    checked={opts.mangaMode}
-                    onChange={(v) => setOpt('mangaMode', v)}
-                  />
-                  <SwitchRow
-                    label={ts.grayscale}
-                    note={ts.grayscaleNote}
-                    checked={opts.grayscale}
-                    onChange={(v) => setOpt('grayscale', v)}
-                  />
-                  <SwitchRow
-                    label={ts.splitDoublePages}
-                    note={ts.splitDoublePagesNote}
-                    checked={opts.splitDoublePages}
-                    onChange={(v) => setOpt('splitDoublePages', v)}
-                  />
-
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label>{ts.imageQuality}</Label>
-                      <span className="text-sm tabular-nums text-muted-foreground">
-                        {opts.imageQuality}
-                      </span>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="max-vol">{ts.maxVolumeSize}</Label>
+                      <Input
+                        id="max-vol"
+                        inputMode="numeric"
+                        value={String(opts.maxVolumeSize)}
+                        onChange={(e) => {
+                          const n = Number(e.target.value.replace(/[^0-9]/g, ''))
+                          setOpt('maxVolumeSize', n > 0 ? n : 1)
+                        }}
+                        className="w-32"
+                      />
                     </div>
-                    <Slider
-                      min={45}
-                      max={100}
-                      step={1}
-                      value={[opts.imageQuality]}
-                      onValueChange={([v]) => setOpt('imageQuality', v)}
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label htmlFor="max-vol">{ts.maxVolumeSize}</Label>
-                    <Input
-                      id="max-vol"
-                      inputMode="numeric"
-                      value={String(opts.maxVolumeSize)}
-                      onChange={(e) => {
-                        const n = Number(e.target.value.replace(/[^0-9]/g, ''))
-                        setOpt('maxVolumeSize', n > 0 ? n : 1)
-                      }}
-                      className="w-32"
-                    />
                   </div>
                 </div>
+              </ScrollArea>
+              <div className="shrink-0 border-t p-4">
+                <Button
+                  className="w-full"
+                  disabled={items.length === 0}
+                  onClick={() => onStart(items)}
+                >
+                  {t.startCount(items.length)}
+                </Button>
               </div>
-            </ScrollArea>
-            <div className="shrink-0 border-t p-4">
-              <Button
-                className="w-full"
-                disabled={items.length === 0}
-                onClick={() => onStart(items)}
-              >
-                {t.startCount(items.length)}
-              </Button>
             </div>
-          </div>
-        </ResizablePanel>
+          </ResizablePanel>
         </ResizablePanelGroup>
       </DialogContent>
     </Dialog>
@@ -4868,102 +5165,106 @@ function DeliverySettingsView({ locale }: { locale: LanguageMode }): React.JSX.E
   return (
     <>
       <ScrollArea className="min-h-0 flex-1">
-      <div className="mx-auto w-full max-w-xl p-4 lg:p-6">
-        <div className="mb-5 flex items-start justify-between gap-4">
-          <p className="text-sm text-muted-foreground min-w-0 flex-1">{t.description}</p>
-          <Button
-            variant="outline"
-            size="sm"
-            className="shrink-0"
-            onClick={() => setShowWizard(true)}
-          >
-            <Settings className="size-4 mr-1.5" strokeWidth={1.75} />
-            {locale === 'zh' ? '使用向导配置' : 'Use Setup Wizard'}
-          </Button>
-        </div>
-        <div className="space-y-4">
-          <div className="grid grid-cols-3 gap-3">
-            <div className="col-span-2 space-y-1.5">
-              <Label htmlFor="smtp-host">{t.smtpHost}</Label>
+        <div className="mx-auto w-full max-w-xl p-4 lg:p-6">
+          <div className="mb-5 flex items-start justify-between gap-4">
+            <p className="text-sm text-muted-foreground min-w-0 flex-1">{t.description}</p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="shrink-0"
+              onClick={() => setShowWizard(true)}
+            >
+              <Settings className="size-4 mr-1.5" strokeWidth={1.75} />
+              {locale === 'zh' ? '使用向导配置' : 'Use Setup Wizard'}
+            </Button>
+          </div>
+          <div className="space-y-4">
+            <div className="grid grid-cols-3 gap-3">
+              <div className="col-span-2 space-y-1.5">
+                <Label htmlFor="smtp-host">{t.smtpHost}</Label>
+                <Input
+                  id="smtp-host"
+                  value={host}
+                  placeholder={t.smtpHostPlaceholder}
+                  onChange={(e) => setHost(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="smtp-port">{t.smtpPort}</Label>
+                <Input
+                  id="smtp-port"
+                  value={port}
+                  inputMode="numeric"
+                  onChange={(e) => setPort(e.target.value.replace(/[^0-9]/g, ''))}
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="smtp-user">{t.smtpUser}</Label>
               <Input
-                id="smtp-host"
-                value={host}
-                placeholder={t.smtpHostPlaceholder}
-                onChange={(e) => setHost(e.target.value)}
+                id="smtp-user"
+                value={user}
+                autoComplete="off"
+                onChange={(e) => setUser(e.target.value)}
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="smtp-port">{t.smtpPort}</Label>
+              <Label htmlFor="smtp-pass">{t.smtpPass}</Label>
               <Input
-                id="smtp-port"
-                value={port}
-                inputMode="numeric"
-                onChange={(e) => setPort(e.target.value.replace(/[^0-9]/g, ''))}
+                id="smtp-pass"
+                type="password"
+                value={password}
+                autoComplete="new-password"
+                placeholder={hasPassword ? t.smtpPassSaved : t.smtpPassPlaceholder}
+                onChange={(e) => setPassword(e.target.value)}
               />
             </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="kindle-email">{t.kindleEmail}</Label>
+              <Input
+                id="kindle-email"
+                value={kindleEmail}
+                placeholder={t.kindleEmailPlaceholder}
+                onChange={(e) => setKindleEmail(e.target.value)}
+              />
+            </div>
+            <div className="flex items-center gap-2 pt-1">
+              <Button onClick={save} disabled={saving}>
+                {saving ? <Loader2 className="size-4 animate-spin" strokeWidth={1.75} /> : null}
+                {t.save}
+              </Button>
+              <Button variant="outline" onClick={test} disabled={testing}>
+                {testing ? (
+                  <Loader2 className="size-4 animate-spin" strokeWidth={1.75} />
+                ) : (
+                  <Mail className="size-4" strokeWidth={1.75} />
+                )}
+                {testing ? t.testing : t.test}
+              </Button>
+            </div>
+            <p className="pt-2 text-xs leading-relaxed text-muted-foreground">{t.note}</p>
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="smtp-user">{t.smtpUser}</Label>
-            <Input
-              id="smtp-user"
-              value={user}
-              autoComplete="off"
-              onChange={(e) => setUser(e.target.value)}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="smtp-pass">{t.smtpPass}</Label>
-            <Input
-              id="smtp-pass"
-              type="password"
-              value={password}
-              autoComplete="new-password"
-              placeholder={hasPassword ? t.smtpPassSaved : t.smtpPassPlaceholder}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="kindle-email">{t.kindleEmail}</Label>
-            <Input
-              id="kindle-email"
-              value={kindleEmail}
-              placeholder={t.kindleEmailPlaceholder}
-              onChange={(e) => setKindleEmail(e.target.value)}
-            />
-          </div>
-          <div className="flex items-center gap-2 pt-1">
-            <Button onClick={save} disabled={saving}>
-              {saving ? <Loader2 className="size-4 animate-spin" strokeWidth={1.75} /> : null}
-              {t.save}
-            </Button>
-            <Button variant="outline" onClick={test} disabled={testing}>
-              {testing ? <Loader2 className="size-4 animate-spin" strokeWidth={1.75} /> : <Mail className="size-4" strokeWidth={1.75} />}
-              {testing ? t.testing : t.test}
-            </Button>
-          </div>
-          <p className="pt-2 text-xs leading-relaxed text-muted-foreground">{t.note}</p>
         </div>
-      </div>
-    </ScrollArea>
-    <Dialog open={showWizard} onOpenChange={setShowWizard}>
-      <DialogContent className="max-w-2xl h-[560px] p-0 overflow-hidden flex flex-col">
-        <DeliveryWizardView
-          locale={locale}
-          isEmbedInOnboarding={false}
-          onCancel={() => setShowWizard(false)}
-          onSaveSuccess={() => {
-            setShowWizard(false)
-            window.api.deliver.getConfig().then((cfg) => {
-              setHost(cfg.host || '')
-              setPort(String(cfg.port || '465'))
-              setUser(cfg.user || '')
-              setKindleEmail(cfg.kindleEmail || '')
-              setHasPassword(cfg.hasPassword || false)
-            })
-          }}
-        />
-      </DialogContent>
-    </Dialog>
+      </ScrollArea>
+      <Dialog open={showWizard} onOpenChange={setShowWizard}>
+        <DialogContent className="max-w-2xl h-[560px] p-0 overflow-hidden flex flex-col">
+          <DeliveryWizardView
+            locale={locale}
+            isEmbedInOnboarding={false}
+            onCancel={() => setShowWizard(false)}
+            onSaveSuccess={() => {
+              setShowWizard(false)
+              window.api.deliver.getConfig().then((cfg) => {
+                setHost(cfg.host || '')
+                setPort(String(cfg.port || '465'))
+                setUser(cfg.user || '')
+                setKindleEmail(cfg.kindleEmail || '')
+                setHasPassword(cfg.hasPassword || false)
+              })
+            }}
+          />
+        </DialogContent>
+      </Dialog>
     </>
   )
 }
@@ -4984,7 +5285,9 @@ function PageEmpty({
 }): React.JSX.Element {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
-      {Icon ? <Icon className="size-10 text-muted-foreground opacity-30" strokeWidth={1.75} /> : null}
+      {Icon ? (
+        <Icon className="size-10 text-muted-foreground opacity-30" strokeWidth={1.75} />
+      ) : null}
       {title || label ? (
         <div className="flex flex-col gap-1">
           {title ? <p className="text-sm font-medium text-foreground">{title}</p> : null}
@@ -5104,101 +5407,103 @@ function ArchiveView({ locale }: { locale: LanguageMode }): React.JSX.Element {
     <TooltipProvider delayDuration={300}>
       <ScrollArea className="min-h-0 flex-1">
         <div className="mx-auto w-full max-w-4xl p-4 lg:p-6">
-        <div className="space-y-3">
-          {artifacts.map((a) => {
-            const totalBytes = a.outputs.reduce((sum, o) => sum + o.sizeBytes, 0)
-            return (
-              <div
-                key={a.id}
-                className="flex items-center gap-4 rounded-lg border bg-card p-4 text-card-foreground"
-              >
-                <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-muted">
-                  <FileText className="size-5 text-muted-foreground" strokeWidth={1.75} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="truncate text-sm font-medium" title={artifactLabel(a)}>
-                      {artifactLabel(a)}
-                    </span>
-                    <Badge variant="secondary" className="shrink-0 gap-1">
-                      {statusIcon(a.status)}
-                      {statusLabel(a.status)}
-                    </Badge>
+          <div className="space-y-3">
+            {artifacts.map((a) => {
+              const totalBytes = a.outputs.reduce((sum, o) => sum + o.sizeBytes, 0)
+              return (
+                <div
+                  key={a.id}
+                  className="flex items-center gap-4 rounded-lg border bg-card p-4 text-card-foreground"
+                >
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-muted">
+                    <FileText className="size-5 text-muted-foreground" strokeWidth={1.75} />
                   </div>
-                  {a.author ? (
-                    <div className="mt-0.5 truncate text-xs text-muted-foreground">{a.author}</div>
-                  ) : null}
-                  <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
-                    <span>{t.volumeFiles(a.outputs.length)}</span>
-                    <span>{t.pages(a.pageCount)}</span>
-                    <span>{formatBytes(totalBytes)}</span>
-                    <span>{new Date(a.createdAt).toLocaleString()}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="truncate text-sm font-medium" title={artifactLabel(a)}>
+                        {artifactLabel(a)}
+                      </span>
+                      <Badge variant="secondary" className="shrink-0 gap-1">
+                        {statusIcon(a.status)}
+                        {statusLabel(a.status)}
+                      </Badge>
+                    </div>
+                    {a.author ? (
+                      <div className="mt-0.5 truncate text-xs text-muted-foreground">
+                        {a.author}
+                      </div>
+                    ) : null}
+                    <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                      <span>{t.volumeFiles(a.outputs.length)}</span>
+                      <span>{t.pages(a.pageCount)}</span>
+                      <span>{formatBytes(totalBytes)}</span>
+                      <span>{new Date(a.createdAt).toLocaleString()}</span>
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => deliver(a)}
+                          disabled={delivering.has(a.id)}
+                        >
+                          {delivering.has(a.id) ? (
+                            <Loader2 className="size-4 animate-spin" strokeWidth={1.75} />
+                          ) : (
+                            <Send className="size-4" strokeWidth={1.75} />
+                          )}
+                          <span className="hidden lg:inline">
+                            {delivering.has(a.id) ? t.delivering : t.deliver}
+                          </span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>{t.deliver}</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => webPush(a)}
+                          disabled={pushing.has(a.id)}
+                        >
+                          {pushing.has(a.id) ? (
+                            <Loader2 className="size-4 animate-spin" strokeWidth={1.75} />
+                          ) : (
+                            <Globe className="size-4" strokeWidth={1.75} />
+                          )}
+                          <span className="hidden lg:inline">{t.webPush}</span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>{t.webPush}</TooltipContent>
+                    </Tooltip>
+                    {/* 低频的「在 Finder 中显示 / 删除」收进溢出菜单，给行内动作减负 */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreHorizontal className="size-4" strokeWidth={1.75} />
+                          <span className="sr-only">{text.library.moreActions}</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => reveal(a.id)}>
+                          <FolderOpen strokeWidth={1.75} />
+                          {t.reveal}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem variant="destructive" onClick={() => remove(a.id)}>
+                          <Trash2 strokeWidth={1.75} />
+                          {t.remove}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
-                <div className="flex shrink-0 items-center gap-1">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={() => deliver(a)}
-                        disabled={delivering.has(a.id)}
-                      >
-                        {delivering.has(a.id) ? (
-                          <Loader2 className="size-4 animate-spin" strokeWidth={1.75} />
-                        ) : (
-                          <Send className="size-4" strokeWidth={1.75} />
-                        )}
-                        <span className="hidden lg:inline">
-                          {delivering.has(a.id) ? t.delivering : t.deliver}
-                        </span>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>{t.deliver}</TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => webPush(a)}
-                        disabled={pushing.has(a.id)}
-                      >
-                        {pushing.has(a.id) ? (
-                          <Loader2 className="size-4 animate-spin" strokeWidth={1.75} />
-                        ) : (
-                          <Globe className="size-4" strokeWidth={1.75} />
-                        )}
-                        <span className="hidden lg:inline">{t.webPush}</span>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>{t.webPush}</TooltipContent>
-                  </Tooltip>
-                  {/* 低频的「在 Finder 中显示 / 删除」收进溢出菜单，给行内动作减负 */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreHorizontal className="size-4" strokeWidth={1.75} />
-                        <span className="sr-only">{text.library.moreActions}</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => reveal(a.id)}>
-                        <FolderOpen strokeWidth={1.75} />
-                        {t.reveal}
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem variant="destructive" onClick={() => remove(a.id)}>
-                        <Trash2 strokeWidth={1.75} />
-                        {t.remove}
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </div>
-            )
-          })}
-        </div>
+              )
+            })}
+          </div>
         </div>
       </ScrollArea>
     </TooltipProvider>

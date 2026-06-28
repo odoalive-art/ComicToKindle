@@ -1,6 +1,6 @@
 # 工单：扩展功能 · AI 放大 / 高清化（阅读时增强）
 
-> 状态：**已实现并合入 `main`（`cbfd680` + 状态反馈修复 `3c5ca44`），已推送**。剩压缩包/PDF/EPUB 三来源增强与打包 dmg 引擎签名的真机补验。体例同 `docs/plan-import-enhancements.md` / `plan-eagle-library.md`。
+> 状态：**已实现、合入 `main` 并完成验收**（`cbfd680` + 状态反馈修复 `3c5ca44`）。真实 ZIP、图片型 EPUB 与自签安装包已验证；PDF 阅读仍走 Chromium 内置查看器，不在本工单增强覆盖内。体例同 `docs/plan-import-enhancements.md` / `plan-eagle-library.md`。
 > 分支：三条线各自从**同一冻结 base（`main`）**切独立分支，base 在本期冻结：
 >   - A `feat/upscale-packaging`（Claude） · B `feat/upscale-engine`（Codex） · C `feat/upscale-ui`（Gemini）
 >   - 合并归 Claude，顺序 A→B→C，每步 `npm run build` 绿了再下一步。
@@ -17,7 +17,7 @@
 
 ## 背景与关键接入点
 
-阅读器只通过一个自定义协议 `comic://?p=<绝对路径>` 加载页面（`src/main/library.ts` 的 `protocol.handle('comic')`，约 1317 行）。**所有源格式**（图片目录 / CBZ·ZIP·CBR·RAR·7z / PDF / 图片型 EPUB）在阅读时都已被规整成磁盘上的图片文件再经此协议读出。
+统一图片阅读器只通过一个自定义协议 `comic://?p=<绝对路径>` 加载页面（`src/main/library.ts` 的 `protocol.handle('comic')`）。图片目录 / CBZ·ZIP·CBR·RAR·7z / 图片型 EPUB 在阅读时会规整成磁盘图片再经此协议读出；PDF 例外，直接嵌入 Chromium PDF 查看器。
 
 → 因此放大**只需挂在 `comic://` 这一个咽喉点**：对所有格式天然生效，阅读器渲染逻辑几乎不动。
 
@@ -122,7 +122,7 @@
 **质检关（全过才合）**：
 
 - `npm run typecheck` / `npm run build` / `npm run pack:doctor`
-- 真机 `npm run dev`：四种源格式（图片目录 / 压缩包 / PDF / 图片型 EPUB）各开增强读一遍——确认对所有格式生效。
+- 真机 `npm run dev`：图片目录 / 压缩包 / 图片型 EPUB 各开增强读一遍；PDF 只确认内置查看器边界，不把它误报为已增强。
 - 准实时体感：顺序翻页基本无感（原图秒显 + 增强 swap + 预取）；重读/回看命中缓存即时。
 - 降级：无 GPU 机器（或禁用 GPU）增强不卡死、有提示、可关。
 - 关闭增强后行为与现状完全一致（URL 不带 `enhance`，零回归）。
@@ -134,8 +134,8 @@
 
 ## 回头质检清单（计划作者复查用）
 
-- [ ] A/B/C 各自任务卡功能点全实现。
-- [ ] 上面「质检关」全过。
-- [ ] 文档同步：`docs/roadmap.md`（「图像增强」从探索中→正在打磨/已上线对应项）、`docs/release-notes.md`、`docs/handoff.md`、`AGENTS.md`、`operator-runbook.md`（体积/许可证/缓存路径）。
-- [ ] 本工单标记「已实现，待真机质检」→ 通过后标完成。
-- [ ] 记忆同步（项目状态 backlog 勾销「waifu2x 待接入扩展页」）。
+- [x] A/B/C 各自任务卡功能点全实现。
+- [x] 统一图片阅读器的真实 ZIP / 图片型 EPUB 增强、状态角标和原图对比通过；PDF 边界已确认。
+- [x] 自签包内引擎可执行、模型可读，应用 `codesign --verify --deep --strict` 通过。
+- [x] 文档同步：`docs/roadmap.md`、`docs/release-notes.md`、`docs/handoff.md`、`AGENTS.md`、`operator-runbook.md`。
+- [x] 本工单标记完成。

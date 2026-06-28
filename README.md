@@ -2,7 +2,7 @@
 
 ComicToKindle 是一个 Electron 桌面应用，用于本地漫画库管理、面向 Kindle 的转换流程和投递工具。
 
-当前已实现完整闭环：可运行的应用壳、Eagle 式 `.ctklib` 托管漫画库（导入即复制成桶，书架由 `library.json` manifest 投影为文件夹 + 单册书网格，支持多级分组下钻、文件夹重命名、每本书书名+作者编辑（含多选批量设作者）、归属与排序管理、库内回收站；模型为「书（单册，自带书名+作者）+ 文件夹（纯收纳，无作者，作者跟书走）」）、卷册阅读器（单页/双页、左右阅读方向、记住续读进度）、书（图片目录 + CBZ/ZIP/CBR/RAR/7z 压缩包，PDF 单文件、图片型 EPUB）转 Kindle 固定版式 EPUB（sharp + archiver，书名为单一字段 + 作者元数据、转换工作台为独立模态弹窗）、转换队列持久化（含重启后中断恢复）、产物归档、以及投递到 Kindle（SMTP 邮件 nodemailer + safeStorage 加密凭据 / Send to Kindle 网页通道 ≤200MB 二选一）。库视图采用桌面书架式交互（双击进入、单击选中、整卡框选多选、右键整理），所有整理只写托管库 manifest 或移动库内桶，不改用户原始文件。另含开发期用于搭建界面的设计辅助工作区。尚未实现：漫画元数据库/索引、图像 AI 放大、转换后自动投递。
+当前已实现完整闭环：可运行的应用壳、Eagle 式 `.ctklib` 托管漫画库（导入即复制成桶，书架由 `library.json` manifest 投影为文件夹 + 单册书网格，支持多级分组下钻、文件夹重命名、每本书书名+作者编辑（含多选批量设作者）、归属与排序管理、库内回收站；模型为「书（单册，自带书名+作者）+ 文件夹（纯收纳，无作者，作者跟书走）」）、卷册阅读器（单页/双页、左右阅读方向、记住续读进度；图片目录/压缩包/图片型 EPUB 支持本地 waifu2x 阅读增强）、书（图片目录 + CBZ/ZIP/CBR/RAR/7z 压缩包，PDF 单文件、图片型 EPUB）转 Kindle 固定版式 EPUB（sharp + archiver，书名为单一字段 + 作者元数据、转换工作台为独立模态弹窗）、转换队列持久化（含重启后中断恢复）、产物归档、以及投递到 Kindle（SMTP 邮件 nodemailer + safeStorage 加密凭据 / Send to Kindle 网页通道 ≤200MB 二选一）。库视图采用桌面书架式交互（双击进入、单击选中、整卡框选多选、右键整理），所有整理只写托管库 manifest 或移动库内桶，不改用户原始文件。当前投递重心是 Send to Kindle 网页通道；转换后自动投递暂缓，不作为近期目标。
 
 ## 技术栈
 
@@ -107,14 +107,14 @@ src/renderer/src/components/ui/
 
 ## 当前状态
 
-截至 2026-06-25：
+截至 2026-06-28：
 
 - Electron + Vite + React + TypeScript 应用可以成功构建。
 - Tailwind CSS 和 shadcn/ui 已配置。
 - Eagle 式 `.ctklib` 托管漫画库：通过 main 进程创建/打开库包，导入时把图片目录或单文件卷册复制为 `books/<bookId>/` 桶，`library.json` 与 `book.json` 记录分组、书名、作者、排序和来源 hints；`library:scan/listVolumes` 返回 manifest 投影的部/散卷书架；`comic://` 协议加载封面（封面走 480px webp 缩略图缓存）；库包路径持久化。
-- 卷册阅读器：单页/双页、左右阅读方向、记住每卷续读进度。
+- 卷册阅读器：单页/双页、左右阅读方向、记住每卷续读进度；点击顶栏页码展开临时 Slider，拖动快速翻页（松手跳转），默认不遮挡漫画；支持 `F`/按钮沉浸全屏与控件自动隐藏。图片目录、压缩包和图片型 EPUB 可一键开启 waifu2x 阅读增强，原图始终先就绪、增强图叠层淡入，邻页按优先级预取并支持按住对比原图；PDF 阅读仍使用 Chromium 内置查看器，暂不进入这些统一阅读器能力。
 - 压缩包来源：CBZ/ZIP/CBR/RAR/7z 卷册（含加密 zip 与多卷分卷）经内置 7-Zip（`src/main/archive.ts`，7zip-bin）解出图片到 `userData/extracted/`，阅读/转换共用，解压有进度反馈；加密包用 safeStorage 加密的共享密码池，缺密码时弹框补录。
-- 文档来源：PDF 单文件卷册经 PDF.js + `@napi-rs/canvas` 渲染成页面 PNG 缓存；图片型 EPUB 经 7-Zip 解包后按 OPF spine/XHTML 图片引用抽取页面。两者都复用阅读器与 Kindle 转换流水线；纯文本/重排 EPUB 暂不支持。
+- 文档来源：PDF 单文件阅读走 Chromium 内置查看器，转换时经 PDF.js + `@napi-rs/canvas` 渲染成页面 PNG 缓存；图片型 EPUB 经 7-Zip 解包后按 OPF spine/XHTML 图片引用抽取页面并复用统一图片阅读器与 Kindle 转换流水线；纯文本/重排 EPUB 暂不支持。
 - 转换闭环：书 → Kindle 固定版式 EPUB（`src/main/convert.ts`，sharp + archiver），书名为单一字段 + 作者元数据，转换工作台为独立模态弹窗（逐本预填书名/作者可改）；产物由应用托管落在 `userData/converted/`，「归档」视图管理；库卡片显示「已转换」角标。
 - 库视图交互＝桌面书架式（对标 Eagle），内容区统一使用网格交互：`所有漫画` 显示 manifest 投影的文件夹与单册书，双击文件夹逐级下钻，面包屑返回上级；卡片按下即选中，单个选中仅高亮，选中 2 个及以上进入多选模式。
 - 应用内整理：右键**编辑书籍信息(书名+作者) / 批量设置作者(多选) / 重命名文件夹 / 移入或新建文件夹 / 解散文件夹 / 删除到库内回收站 / 上移下移排序**；整理通过 `library:setBookMeta/setBooksAuthor/renameSeries/deleteSeries/assignBooks/reorderSeries/reorderBooks/trashBooks` 等托管库 IPC 写 manifest 或移动库内桶，用户导入源保持原样。
@@ -123,6 +123,6 @@ src/renderer/src/components/ui/
 - Send to Kindle 网页推送：应用内嵌 Amazon 网页通道（`src/main/webpush.ts`，≤200MB 单文件，适合 SMTP 发不动的大卷），CDP 拦截文件框自动填入产物、半自动发送；归档/转换活动浮窗均有「网页推送」入口。
 - 顶栏提供应用级深浅模式切换和中英切换，切换会影响整个 renderer。
 - 开发期工作区包含 shadcn 组件选型页和基础规范页；基础规范页读取 `src/renderer/src/data/design-tokens.ts`。
-- 尚未实现：漫画元数据存储/索引、图像 AI 放大、转换后自动投递；批量重命名。
+- 尚未实现：漫画元数据存储/索引、纯文本/重排 EPUB、PDF 阅读增强、转换时图像增强；批量重命名。转换后自动投递暂缓，当前优先维护 ≤200MB 的 Send to Kindle 网页推送路径。
 
 详细架构（漫画库数据层、IPC、数据模型、存储键）见 `docs/architecture.md`。

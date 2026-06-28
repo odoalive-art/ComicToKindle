@@ -43,8 +43,13 @@ npm run dev
 - 顶栏中英切换按钮可以切换应用壳、开发期页面和 shadcn 镜像文档阅读语言。
 - `所有漫画` 视图首次进入显示空状态，可「新建库」或「打开库」选择 `.ctklib` 托管库包；打开后显示 manifest 投影的部/散卷书架。**双击**某部逐级下钻、**双击**卷册进入阅读器（单页/双页、左右方向、续读）；单击为选中（桌面书架式交互）。库包路径会被记住。
 - 压缩包卷册（CBZ/ZIP/CBR/RAR/7z，含分卷 `name.7z.001` 等——只显示入口卷）显示压缩包/锁占位图标；点开阅读或转换时先解压到缓存并显示进度条/进度 toast；加密包弹密码框（可输中文，勾「记住」加入共享密码池，后续同密码包自动解）。
-- PDF 单文件书：无封面时封面位用文件图标占位；首次打开或转换时会渲染为页面缓存并显示“准备页面/处理中”进度，之后复用缓存。
+- PDF 单文件书：无封面时封面位用文件图标占位；阅读直接使用 Chromium 内置查看器，转换/预览时才渲染为页面缓存并复用。PDF 当前不支持阅读增强。
 - 图片型 EPUB：首次准备时会按 OPF spine / XHTML 图片引用抽取页面。纯文本/重排 EPUB 没有本地图片页时，应提示没有可用页面图片。
+- 阅读增强冒烟：在图片目录、压缩包或图片型 EPUB 的统一阅读器中开启 Sparkles 开关，确认当前页先显示原图和「增强中」，随后切换到「已增强」；按住眼睛按钮显示「原图（对比）」，松开恢复。PDF 不应显示这些控件。
+- 快速翻页冒烟：默认漫画画面不应出现底部进度条；点击顶栏页码后出现快速翻页 Popover。拖动 Slider 时漫画正文和顶栏计数保持不变，面板目标页码随拖动更新；松手后才跳到目标页，双页模式应落在跨页起点。按 `Esc` 应只关闭面板并保留阅读器。
+- 顶栏一致性：书架与阅读器纯图标按钮都应为 36×36 的 ghost icon Button，图标使用同一 muted 色与 1.75 线宽；阅读器悬停应出现 Tooltip，AI 开启态只显示轻微 accent 背景，不出现独立橙色。
+- AI 翻页防闪回归：清空增强缓存后打开中段页面，确认目标原图先完整显示、增强层透明加载；增强完成后淡入。顺序翻到下一页时不应露出黑底。
+- 全屏冒烟：按钮或 `F` 进入全屏，静置约 1.6 秒后顶栏、进度条和翻页箭头隐藏；移动鼠标后恢复；`Esc` 只退出全屏、不退出阅读器。
 - 书卡统一显示「书名 + 作者」，页数在封面右下角标（文件夹卡显示名字 + 册数，无作者）。
 - 转换走「格式转换」独立模态弹窗（逐本预填书名/作者可改）；产物书名 = 该书的书名（单一字段）、作者写入元数据。库内右键单本「编辑信息」(书名+作者) / 多选「批量设置作者」/ 文件夹「重命名」；书名、作者、归属和排序写入 `.ctklib` manifest，不改用户导入源。
 - `设计组件` 中的示例复制按钮仍复制英文示例名，例如 `button-with-icon`。
@@ -219,6 +224,16 @@ npm run build:linux   # AppImage / deb / snap
 - **签名**：引擎在 `resources/**` → `app.asar.unpacked`，由 `scripts/sign-mac.cjs` 的 `codesign --deep` 一并自签，自动更新签名身份链不受影响。
 - 升级版本：改 `scripts/fetch-upscale-bin.mjs` 的 `VERSION` 与 `SHA256` 常量后 `npm run fetch:upscale -- --force`。
 
+安装包验收可在 zip 解包后运行：
+
+```bash
+codesign --verify --deep --strict --verbose=2 ComicToKindle.app
+file ComicToKindle.app/Contents/Resources/app.asar.unpacked/resources/waifu2x-ncnn-vulkan/waifu2x-ncnn-vulkan
+ComicToKindle.app/Contents/Resources/app.asar.unpacked/resources/waifu2x-ncnn-vulkan/waifu2x-ncnn-vulkan -h
+```
+
+2026-06-28 本地验收：真实 ZIP 182 页、图片型 EPUB 165 页的首屏增强与原图对比通过；自签 zip 解包后的应用通过 `codesign --verify --deep --strict`，arm64 引擎与 cunet 模型可用。PDF 179 页确认仍走内置查看器，不属于当前增强覆盖。
+
 #### 排查：「增强似乎只对部分漫画生效」
 
 现象：开启增强后，A 漫画肉眼明显变锐，B 漫画看不出变化（但两者右下角都显示「已增强」）。
@@ -255,9 +270,11 @@ git status --short
 - `CTK_FORCE_UPDATE_CHECK=1`：开发调试时强制走更新检查，需同时提供 `dev-app-update.yml`。
 - `CTK_WAIFU2X_BIN` / `CTK_WAIFU2X_MODELS`：开发联调时覆盖 waifu2x 引擎二进制 / 模型目录位置（不设则用 `resources/waifu2x-ncnn-vulkan/`）。
 
-如果后续新增转换器路径、Kindle 邮箱设置、转换后自动投递开关或模型位置，需要同步更新本文和 `AGENTS.md`。
+如果后续新增转换器路径、Kindle 邮箱设置或模型位置，需要同步更新本文和 `AGENTS.md`。转换后自动投递当前已暂缓；若重新启动，需先复核约 50MB SMTP 体积与画质取舍，再更新路线图和设置页契约。
 
 Send to Kindle 网页通道有一项可配置项：STK 站点 URL，存 `userData/settings.json` 的 `webpush.url`（默认 amazon.com 美区），可在 `网页推送` 页修改。
+
+当前投递重心是 Send to Kindle 网页通道（≤200MB）；SMTP 手动投递作为小体积产物补充。不要把 main 层已有但无 UI 的自动触发能力写成已发布功能。
 
 ## 本地状态与重置
 

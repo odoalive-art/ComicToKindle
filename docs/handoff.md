@@ -4,12 +4,16 @@
 
 日期：2026-06-28
 
-**AI 放大 / 高清化（阅读时增强）已完成，合入 `main` 并推送远端**（A 依赖打包 + B main 引擎 + C 阅读器/扩展页三线集成）。
+**AI 放大 / 高清化（阅读时增强）已完成，合入 `main` 并推送远端**（A 依赖打包 + B main 引擎 + C 阅读器/扩展页三线集成）。2026-06-28 已补做真实来源与安装包验收。
 
-- 阅读器一键开增强，挂在统一取图协议 `comic://` 上，对所有来源格式生效；按需放大 + 内容寻址磁盘缓存 + 邻页预取 + 「原图秒显 → 增强替换」准实时；角标显示「已增强 / 增强中 / 失败」，支持「按住对比原图」。
+- 统一图片阅读器可一键开增强，挂在取图协议 `comic://` 上，覆盖图片目录、压缩包和图片型 EPUB；按需放大 + 内容寻址磁盘缓存 + 邻页预取 + 「原图秒显 → 增强替换」准实时；角标显示「已增强 / 增强中 / 失败」，支持「按住对比原图」。PDF 仍走 Chromium 内置查看器，不进入增强链路。
 - 引擎 waifu2x-ncnn-vulkan（cunet）按需经 `npm run fetch:upscale` 拉到 `resources/`（不进 git，~34MB），随 `asarUnpack: resources/**` 进包。
 - **状态反馈最终用 `upscale:peek` IPC 确认**（非 fetch 读响应头）。根因：Chromium 禁止 dev 源（`localhost:5173`）跨源 `fetch(comic://…)`，请求在拿到 Response 前即被 CORS 拒绝、响应头读不到；图片仍走已验证稳定的 `<img comic://…&enhance=1>`，IPC 只确认状态。
-- 提交：`cbfd680`（特性集成）+ `3c5ca44`（状态反馈修复）；真机验证通过（两页「已增强」、按住对比 1700×2400↔850×1200、Console 无 CSP/CORS 告警）。**仍待补验**：压缩包/PDF/EPUB 三种来源各开增强读一遍、打包后 dmg 内引擎可执行 + `--deep` 签名。
+- 提交：`cbfd680`（特性集成）+ `3c5ca44`（状态反馈修复）。真实 ZIP（182 页）首屏约 8 秒从 850px→1700px，图片型 EPUB（165 页）约 4 秒从 1072px→2144px；两者均验证「增强中 → 已增强 → 原图对比」。PDF（179 页）确认走内置查看器，当前不支持阅读增强。
+- 本地 `0.1.0-beta.4` 自签包已重建：`pack:doctor`、`npm run build`、`codesign --verify --deep --strict` 通过；zip 内 arm64 waifu2x 可执行、cunet 模型和帮助输出均正常。产物仅用于本地验收，未发布新版本。
+- **产品决策**：转换后自动投递暂缓。SMTP 为保证成功率需把产物控制在约 50MB，画质压缩代价过高；投递重心保持 ≤200MB 的 Send to Kindle 网页通道。main 层既有自动触发代码保留，但不接设置页 UI。
+- **阅读体验第一期已完成（未提交）**：顶栏页码点击展开快速翻页 Popover（默认不遮挡漫画；拖动预览、松手跳转、双页对齐）、`F`/按钮沉浸全屏、控件静置隐藏；`Esc` 先关翻页面板再退出全屏/阅读器。AI 预热改为原图并行 + 后两跨页/前一跨页增强串行，拖动时暂停。增强图使用独立叠层 200ms 淡入，修复 AI 开启时换页黑闪；AI 原图对比与全屏按钮改用 Lucide `Blend`、`Fullscreen`/`Shrink`。阅读器顶栏已与书架统一为 `Tooltip + ghost size="icon" + text-muted-foreground + strokeWidth 1.75`，AI 开启态仅用 `bg-accent` 表示。
+- 真机隔离库验证：拖动时正文保持第 165 页而进度显示第 83 页，松手后才跳转；清空缓存后目标原图首帧 `complete=true`，下一页在 16ms 采样点原图/增强图均已就绪；全屏隐藏与鼠标唤回通过。Kindle 预览重做仍留第二期。
 
 产品主闭环为：托管漫画库浏览 → 阅读器（可叠加阅读时 AI 放大）→ 卷册转 Kindle 固定版式 EPUB → 「已转换」产物管理 → 投递到 Kindle（SMTP / Send to Kindle 网页通道）。详细历史见下方各线交接与「已完成」。
 
@@ -25,8 +29,8 @@
 - 完成 `upscale:getConfig/setConfig/status/clearCache/cacheSize` IPC 与 `window.api.upscale` 类型契约；默认配置为 `cunet / 2x / denoise 1 / 2048 MB / disabled`。
 - 未修改 `i18n.ts`：引擎层只返回稳定错误码并写 main 日志，没有新增面向用户的错误串，因而无需向 `// === lane-B convert ===` 区块追加词条。
 
-未完成：
-- 四类来源（图片目录 / 压缩包 / PDF / 图片型 EPUB）的真实阅读增强回归、打包后 dmg 资源执行仍待合并阶段完成。
+当时未完成（现已由本页顶部 2026-06-28 验收补齐）：
+- 原计划的四类来源回归已校正为统一图片阅读器范围；ZIP、图片型 EPUB 与打包资源已通过，PDF 直开内置查看器的边界已确认。
 
 重要文件：
 - B 线本轮：`src/main/upscale.ts`、`src/main/library.ts`、`src/preload/index.ts`、`src/preload/index.d.ts`、`docs/handoff.md`。
@@ -65,7 +69,7 @@
 - 签名：嵌套二进制由既有 `scripts/sign-mac.cjs` 的 `codesign --deep` 一并自签，无需单独处理（自动更新同一签名身份链不破）。
 - `docs/operator-runbook.md`：记体积增量与许可证。
 
-**待合并阶段验证**：打包后 dmg 内 `app.asar.unpacked/resources/waifu2x-ncnn-vulkan/` 二进制可执行、被 `--deep` 正确签名、B 引擎 `engineReady=true`。
+**已完成验证**：打包后 zip 内 `app.asar.unpacked/resources/waifu2x-ncnn-vulkan/` 二进制可执行、模型可读；应用 `--deep --strict` 签名验证通过，开发态真实引擎 `engineReady=true`。
 
 ## 已完成
 
@@ -93,8 +97,8 @@
   - 实现了 `EnhancedImage` 辅助组件，作为阅读器单双页图片的渲染核心。
   - 开启增强时，`EnhancedImage` 优先显示原图 URL（`comic://?p=...`）以保证翻页秒显。另在后台创建 `Image` 对象加载对应的 `&enhance=1` 高清地址，并在 `onload` 事件成功后将图片 `src` swap 切换到高清版。
   - swap 期间在图片右下角贴片显示微弱的「增强中...」动态指示角标。
-- **预加载携带参数暖缓存**（`src/renderer/src/App.tsx`）：
-  - 当阅读时开启增强，相邻 6 页的预加载隐藏 `<img>` 标签直接携带 `&enhance=1` 进行后台请求，预先暖好主进程的放大缓存，实现用户翻页时能秒显高清或完成近无感的原图到高清的 swap 体验。
+- **预加载携带参数暖缓存**（历史实现，已由 2026-06-28 阅读体验第一期替换）：
+  - 原实现同时挂载相邻 6 页隐藏 `<img>`；现改为原图始终并行预热、AI 按后两跨页再前一跨页串行预取，避免无效任务和 AI 开启时的原图黑闪。
 - **扩展页面配置**（`src/renderer/src/extensions/ExtensionsView.tsx`）：
   - 新建了配置页面，支持中英文双语切换，复用现有的 shadcn 组件（Switch, Select, Button, Badge 等）并遵守左右布局防溢出和长文字截断截流规范。
   - 支持调用 `upscale:status` 上报引擎的就绪状态以及 GPU 能力级别（`available` | `cpu-only` | `none`），在仅 CPU 模式下显示显眼的警告提示，以规避可能带来的翻页性能卡顿。
@@ -174,7 +178,7 @@ Phase 1（A 发布管线 + B 转换稳定性 + C 引导向导）已全部合入 
 
 未完成：
 
-- **设置页 UI 接线因 B 线硬边界未做**：需跨界修改 `src/renderer/src/App.tsx` 的 `DeliverySettingsView`，增加自动投递开关与 `SMTP / Send to Kindle` 通道选择，并在保存时传 `autoDeliveryEnabled` / `autoDeliveryChannel`；同时需更新 `src/preload/index.d.ts` 的 `DeliveryConfigInput/Public` 类型。现有 preload `saveConfig` 运行时会透传对象，因此无需改 `src/preload/index.ts`。请由 Claude 协调归属后补齐。
+- **设置页 UI 接线因 B 线硬边界未做**（历史记录，2026-06-28 已作废）：原计划需修改 `DeliverySettingsView` 与 preload 类型；现产品已暂缓自动投递，不再按此项补 UI。
 - 超大页的自适应渲染回退位于 main（B 线不能修改 `src/main/pdf-render.ts` / `convert-ipc.ts`）；如果后续允许跨界，可把自适应参数下沉 utility process，进一步减少 main 的单页 CPU 峰值。
 
 重要文件：
@@ -434,20 +438,19 @@ Phase 1（A 发布管线 + B 转换稳定性 + C 引导向导）已全部合入 
 
 `设计组件` 和 `基础规范` 都是开发期提效页面，不是终端用户产品功能。
 
-浏览/阅读/转换（图片目录 + CBZ/ZIP/CBR/RAR/7z 压缩包含分卷 + PDF + 图片型 EPUB → Kindle 固定版式 EPUB，书名+作者元数据）/队列持久化（含中断恢复）/`.ctklib` 托管库包（导入复制成桶、manifest 分组/改名/排序、库内回收站）/归档/投递（SMTP + Send to Kindle 网页通道）/扩展功能入口壳闭环已实现；仍未实现：元数据存储/索引、纯文本/重排 EPUB、图像放大（waifu2x，待接入扩展功能页）、转换后自动投递、批量重命名。
+浏览/阅读/转换（图片目录 + CBZ/ZIP/CBR/RAR/7z 压缩包含分卷 + PDF + 图片型 EPUB → Kindle 固定版式 EPUB，书名+作者元数据）/队列持久化（含中断恢复）/`.ctklib` 托管库包（导入复制成桶、manifest 分组/改名/排序、库内回收站）/归档/投递（SMTP + Send to Kindle 网页通道）/阅读时 AI 放大闭环已实现；仍未实现：元数据存储/索引、纯文本/重排 EPUB、PDF 阅读增强、转换时图像增强、批量重命名。转换后自动投递已暂缓。
 
 Codex、Claude Code、Antigravity 接力开发前应先读 `docs/agent-collaboration.md`。
 
 ## 下一步建议
 
-1. **托管库整理体验**：继续打磨批量重命名、导入时选择目标部/新建部、外部拖拽导入等 manifest 级能力；不要恢复本地文件夹整理、文件视图树节点右键或拖拽移动用户文件的旧方向。
-2. **扩展功能（extensions）页**：已建入口壳，waifu2x AI 放大待填充。
-3. 转换后自动投递（可选开关）。
-4. PDF/图片型 EPUB 来源打磨：大 PDF 渲染耗时、特殊字体/页面兼容性、EPUB 目录结构兼容性，以及纯文本/重排 EPUB 的明确提示或后续策略。
+1. **托管库整理体验**：继续打磨批量重命名等 manifest 级能力；不要恢复本地文件夹整理、文件视图树节点右键或拖拽移动用户文件的旧方向。
+2. **阅读增强边界**：是否让 PDF 放弃内置查看器、改走页面预渲染以获得统一增强，需要单独拍板启动速度与缓存体积取舍；未拍板前不要擅改。
+3. PDF/图片型 EPUB 来源打磨：大 PDF 转换渲染耗时、特殊字体/页面兼容性、EPUB 目录结构兼容性，以及纯文本/重排 EPUB 的明确提示或后续策略。
 5. 压缩包/文档缓存打磨：解压缓存、文档页面缓存和缩略图缓存的清理/容量上限；设置页管理已记住的密码池；扫描时为非加密包补封面（当前压缩包封面仍在首次打开后才出现）。
 6. 视情况引入漫画元数据库/索引，替代每次实时扫描。
 7. 阅读器增强：双页「封面单独成页」、缩放/适配宽度、沉浸模式、Home/End 跳首末页。
-8. 网页推送小打磨（可选）：蒙层/确认框文案接 i18n（当前 main 进程硬编码中文）；关闭确认改成「仅有已填入未发送文件时才弹」。
+8. 网页推送小打磨（可选）：继续提高 Amazon 页面变更兼容性；自动投递 UI 暂不推进。
 9. 批量转换弹窗已实现（共享漫画名/作者 + 书名预览）；若需**逐卷**书籍信息编辑可再做。
 
 ## 验证命令

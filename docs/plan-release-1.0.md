@@ -3,6 +3,8 @@
 本文是 ComicToKindle 从内测（`0.1.0-beta.2`）走向 **开源社区正式发布（1.0）** 的实施计划与多 agent 任务分派单。供 Claude Code、Codex、Antigravity(Gemini) 接力时按线领取任务。
 
 > 状态：A 线 macOS 自签发布管线已完成，`0.1.0-beta.3 → 0.1.0-beta.4` 真实 electron-updater/Squirrel.Mac 升级已于 2026-06-27 验证通过。
+>
+> 2026-06-28 产品调整：转换后自动投递暂缓，不再是 1.0 当前阻塞项。SMTP 约 50MB 的实用体积目标会迫使大卷漫画严重压缩，投递重心保持 ≤200MB 的 Send to Kindle 网页通道。B 线已完成的 main 层代码保留，但设置页 UI 不接线。
 
 协作总规则见 `docs/agent-collaboration.md`；本文件只补充本轮的「发布策略定案 + 分线任务卡 + 合并质检关」。
 
@@ -26,7 +28,7 @@
 | 线 | 分支 | 负责 agent | **独占文件范围（硬边界）** |
 |---|---|---|---|
 | **A · 发布管线** | `feat/release-pipeline` | Claude | `electron-builder.yml`、`scripts/**`、`.github/**`、`package.json`、`src/main/index.ts`(仅更新检查接线) |
-| **B · 转换稳定性 + 自动投递** | `feat/convert-stability` | Codex | `src/main/{convert,document,archive,artifacts,deliver,queue,webpush}.ts` |
+| **B · 转换稳定性（含自动投递 main 历史实现）** | `feat/convert-stability` | Codex | `src/main/{convert,document,archive,artifacts,deliver,queue,webpush}.ts` |
 | **C · 引导与投递向导** | `feat/onboarding-delivery` | Gemini | 新建 `src/renderer/src/onboarding/**`、`src/renderer/src/delivery-wizard/**`；`App.tsx`(仅挂载点) |
 
 三条分支从**同一个 base commit**（P0.0 落定的 convert-workbench tip + 本计划）切出，base 在 Phase 1 期间**冻结**。
@@ -61,14 +63,14 @@
 
 **需要用户提供**：无（自签免费）。若决定上公证，再要 Apple 账号 + 证书 + 公证密码。
 
-## 任务卡 B · 转换稳定性 + 自动投递（Codex）
+## 任务卡 B · 转换稳定性（Codex；自动投递已暂缓）
 
 **目标**：转换/来源链路在异常输入下不静默失败、有明确提示与恢复路径。
 
 1. **大 PDF**：渲染耗时与进度反馈、超大页/特殊字体兼容、失败明确提示。
 2. **异常输入**：损坏图、空卷、加密包失败路径，给可理解报错与恢复路径（不静默吞错）。
 3. **EPUB 边界**：纯文本/重排 EPUB 无可用图片时给明确「不支持」提示，而非空白。
-4. **转换后自动投递**（roadmap 计划项）：设置页加可选开关，转换完成后按设置自动进 SMTP 或网页推送；保留手动确认与失败重试路径。
+4. **转换后自动投递**：main 层已实现，renderer 设置页不接线；按 2026-06-28 产品决策暂缓，不作为本轮发布门槛。
 5. **`webpush.ts` 去硬编码中文**：当前注入网页的引导/蒙层文案硬编码中文，改为走 i18n 双语（文案条目追加到 `i18n.ts` 对应区块）。
 
 **红线**：只动 `src/main/` 内上述文件 + `i18n.ts` 追加区块；不碰 renderer 组件结构、不碰发布配置。
