@@ -5,7 +5,6 @@ import {
   ArrowDown,
   ArrowUp,
   CheckCircle2,
-  Clock3,
   Component,
   FileText,
   FolderOpen,
@@ -13,11 +12,9 @@ import {
   Loader2,
   Moon,
   BookText,
-  Send,
   Settings,
   Sun,
   SwatchBook,
-  AlertCircle,
   Globe,
   Mail,
   FolderPlus,
@@ -50,7 +47,11 @@ import {
   DialogTitle
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { Progress } from '@/components/ui/progress'
+import { Separator } from '@/components/ui/separator'
+import { toast } from 'sonner'
+import { Toaster } from '@/components/ui/sonner'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Select,
   SelectContent,
@@ -59,13 +60,6 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
-import { Separator } from '@/components/ui/separator'
-import { toast } from 'sonner'
-import { Toaster } from '@/components/ui/sonner'
-import { Spinner } from '@/components/ui/spinner'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Progress } from '@/components/ui/progress'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Sidebar,
   SidebarContent,
@@ -124,10 +118,13 @@ import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { cn } from '@/lib/utils'
 import { uiText, type LanguageMode } from './i18n'
 import OnboardingView from './onboarding'
-import DeliveryWizardView from './delivery-wizard'
 import { ExtensionsView } from './extensions/ExtensionsView'
 import { PdfReader } from '@/features/reader/PdfReader'
 import { VolumeReader } from '@/features/reader/VolumeReader'
+import { PageEmpty } from '@/components/PageEmpty'
+import { DeliverySettingsView } from '@/features/delivery/DeliverySettingsView'
+import { ArchiveView } from '@/features/delivery/ArchiveView'
+import { WebPushView } from '@/features/delivery/WebPushView'
 
 import type {
   ViewId,
@@ -137,16 +134,12 @@ import type {
   LibraryBook,
   LibraryDirEntry,
   LibraryVolume,
-  Artifact,
   ImportScanResult,
   ImportTarget,
   TrashBookView
 } from '@/lib/types'
 import {
-  formatBytes,
-  artifactLabel,
-  volumeFormatLabel,
-  deliveryErrorMsg
+  volumeFormatLabel
 } from '@/lib/format'
 import { getProgress } from '@/lib/reading-storage'
 import { useConvertActivity, type ConvertActivity } from '@/features/convert/useConvertActivity'
@@ -3095,486 +3088,7 @@ function LibraryView({
 
 
 
-function DeliverySettingsView({ locale }: { locale: LanguageMode }): React.JSX.Element {
-  const text = uiText[locale]
-  const t = text.delivery
-  const [host, setHost] = useState('')
-  const [port, setPort] = useState('465')
-  const [user, setUser] = useState('')
-  const [password, setPassword] = useState('')
-  const [kindleEmail, setKindleEmail] = useState('')
-  const [hasPassword, setHasPassword] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [testing, setTesting] = useState(false)
 
-  useEffect(() => {
-    window.api.deliver.getConfig().then((cfg) => {
-      setHost(cfg.host)
-      setPort(String(cfg.port))
-      setUser(cfg.user)
-      setKindleEmail(cfg.kindleEmail)
-      setHasPassword(cfg.hasPassword)
-    })
-  }, [])
-
-  const save = async (): Promise<void> => {
-    setSaving(true)
-    try {
-      await window.api.deliver.saveConfig({
-        host: host.trim(),
-        port: Number(port) || 465,
-        user: user.trim(),
-        kindleEmail: kindleEmail.trim(),
-        password: password || undefined
-      })
-      if (password) setHasPassword(true)
-      setPassword('')
-      toast.success(t.saved)
-    } catch (err) {
-      toast.error(`${err}`)
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const test = async (): Promise<void> => {
-    setTesting(true)
-    try {
-      const res = await window.api.deliver.testSMTP({
-        host: host.trim(),
-        port: Number(port) || 465,
-        user: user.trim(),
-        password: password || undefined
-      })
-      if (res.success) toast.success(t.testSuccess)
-      else toast.error(deliveryErrorMsg(t, res))
-    } catch (err) {
-      toast.error(`${err}`)
-    } finally {
-      setTesting(false)
-    }
-  }
-
-  const [showWizard, setShowWizard] = useState(false)
-
-  return (
-    <>
-      <ScrollArea className="min-h-0 flex-1">
-        <div className="mx-auto w-full max-w-xl p-4 lg:p-6">
-          <div className="mb-5 flex items-start justify-between gap-4">
-            <p className="text-sm text-muted-foreground min-w-0 flex-1">{t.description}</p>
-            <Button
-              variant="outline"
-              size="sm"
-              className="shrink-0"
-              onClick={() => setShowWizard(true)}
-            >
-              <Settings className="size-4 mr-1.5" strokeWidth={1.75} />
-              {locale === 'zh' ? '使用向导配置' : 'Use Setup Wizard'}
-            </Button>
-          </div>
-          <div className="space-y-4">
-            <div className="grid grid-cols-3 gap-3">
-              <div className="col-span-2 space-y-1.5">
-                <Label htmlFor="smtp-host">{t.smtpHost}</Label>
-                <Input
-                  id="smtp-host"
-                  value={host}
-                  placeholder={t.smtpHostPlaceholder}
-                  onChange={(e) => setHost(e.target.value)}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="smtp-port">{t.smtpPort}</Label>
-                <Input
-                  id="smtp-port"
-                  value={port}
-                  inputMode="numeric"
-                  onChange={(e) => setPort(e.target.value.replace(/[^0-9]/g, ''))}
-                />
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="smtp-user">{t.smtpUser}</Label>
-              <Input
-                id="smtp-user"
-                value={user}
-                autoComplete="off"
-                onChange={(e) => setUser(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="smtp-pass">{t.smtpPass}</Label>
-              <Input
-                id="smtp-pass"
-                type="password"
-                value={password}
-                autoComplete="new-password"
-                placeholder={hasPassword ? t.smtpPassSaved : t.smtpPassPlaceholder}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="kindle-email">{t.kindleEmail}</Label>
-              <Input
-                id="kindle-email"
-                value={kindleEmail}
-                placeholder={t.kindleEmailPlaceholder}
-                onChange={(e) => setKindleEmail(e.target.value)}
-              />
-            </div>
-            <div className="flex items-center gap-2 pt-1">
-              <Button onClick={save} disabled={saving}>
-                {saving ? <Loader2 className="size-4 animate-spin" strokeWidth={1.75} /> : null}
-                {t.save}
-              </Button>
-              <Button variant="outline" onClick={test} disabled={testing}>
-                {testing ? (
-                  <Loader2 className="size-4 animate-spin" strokeWidth={1.75} />
-                ) : (
-                  <Mail className="size-4" strokeWidth={1.75} />
-                )}
-                {testing ? t.testing : t.test}
-              </Button>
-            </div>
-            <p className="pt-2 text-xs leading-relaxed text-muted-foreground">{t.note}</p>
-          </div>
-        </div>
-      </ScrollArea>
-      <Dialog open={showWizard} onOpenChange={setShowWizard}>
-        <DialogContent className="max-w-2xl h-[560px] p-0 overflow-hidden flex flex-col">
-          <DeliveryWizardView
-            locale={locale}
-            isEmbedInOnboarding={false}
-            onCancel={() => setShowWizard(false)}
-            onSaveSuccess={() => {
-              setShowWizard(false)
-              window.api.deliver.getConfig().then((cfg) => {
-                setHost(cfg.host || '')
-                setPort(String(cfg.port || '465'))
-                setUser(cfg.user || '')
-                setKindleEmail(cfg.kindleEmail || '')
-                setHasPassword(cfg.hasPassword || false)
-              })
-            }}
-          />
-        </DialogContent>
-      </Dialog>
-    </>
-  )
-}
-
-// 全 app 统一的空状态组件：裸图标风格（淡灰、无底框）。
-// icon / title / label / actions 均可选，按需组合：纯占位页只给 icon+label，
-// 引导页可叠加 title 与 actions（按钮区）。
-function PageEmpty({
-  icon: Icon,
-  title,
-  label,
-  actions
-}: {
-  icon?: React.ElementType
-  title?: string
-  label?: string
-  actions?: React.ReactNode
-}): React.JSX.Element {
-  return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
-      {Icon ? (
-        <Icon className="size-10 text-muted-foreground opacity-30" strokeWidth={1.75} />
-      ) : null}
-      {title || label ? (
-        <div className="flex flex-col gap-1">
-          {title ? <p className="text-sm font-medium text-foreground">{title}</p> : null}
-          {label ? <p className="text-xs text-muted-foreground">{label}</p> : null}
-        </div>
-      ) : null}
-      {actions ? <div className="mt-1 flex flex-wrap justify-center gap-2">{actions}</div> : null}
-    </div>
-  )
-}
-
-function ArchiveView({ locale }: { locale: LanguageMode }): React.JSX.Element {
-  const text = uiText[locale]
-  const t = text.archiveView
-  const [artifacts, setArtifacts] = useState<Artifact[]>([])
-  const [loading, setLoading] = useState(true)
-
-  const load = React.useCallback(async () => {
-    setLoading(true)
-    try {
-      setArtifacts(await window.api.artifacts.list())
-    } catch (err) {
-      toast.error(`${err}`)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    load()
-  }, [load])
-
-  const reveal = async (id: string): Promise<void> => {
-    await window.api.artifacts.reveal(id)
-  }
-  const remove = async (id: string): Promise<void> => {
-    await window.api.artifacts.remove(id)
-    toast.success(t.removed)
-    await load()
-  }
-  const [delivering, setDelivering] = useState<Set<string>>(new Set())
-  const deliver = async (a: Artifact): Promise<void> => {
-    setDelivering((prev) => new Set(prev).add(a.id))
-    const toastId = toast.loading(`${t.deliver} · ${a.title}`)
-    try {
-      const res = await window.api.deliver.send(a.id)
-      if (res.success) {
-        toast.success(t.delivered(a.title), { id: toastId })
-      } else {
-        toast.error(`${t.deliverFailed(a.title)} — ${deliveryErrorMsg(text.delivery, res)}`, {
-          id: toastId
-        })
-      }
-      await load()
-    } catch (err) {
-      toast.error(`${t.deliverFailed(a.title)} — ${err}`, { id: toastId })
-    } finally {
-      setDelivering((prev) => {
-        const next = new Set(prev)
-        next.delete(a.id)
-        return next
-      })
-    }
-  }
-
-  const [pushing, setPushing] = useState<Set<string>>(new Set())
-  const webPush = async (a: Artifact): Promise<void> => {
-    setPushing((prev) => new Set(prev).add(a.id))
-    try {
-      const res = await window.api.webpush.open(a.id)
-      if (res.success) {
-        toast.success(t.webPushOpened(a.title))
-      } else {
-        const msg = t.webPushErrors[res.code ?? 'unknown'] ?? t.webPushErrors.unknown
-        toast.error(`${a.title} — ${msg}`)
-        // 自动填充失败时在 Finder 中定位文件，方便手动拖入
-        if (res.code === 'inject-failed') await window.api.webpush.reveal(a.id)
-      }
-    } catch (err) {
-      toast.error(`${a.title} — ${err}`)
-    } finally {
-      setPushing((prev) => {
-        const next = new Set(prev)
-        next.delete(a.id)
-        return next
-      })
-    }
-  }
-
-  const statusLabel = (status: Artifact['status']): string =>
-    status === 'delivered'
-      ? t.statusDelivered
-      : status === 'failed'
-        ? t.statusFailed
-        : t.statusReady
-  const statusIcon = (status: Artifact['status']): React.JSX.Element =>
-    status === 'delivered' ? (
-      <CheckCircle2 className="size-3 text-emerald-500" strokeWidth={1.75} />
-    ) : status === 'failed' ? (
-      <AlertCircle className="size-3 text-destructive" strokeWidth={1.75} />
-    ) : (
-      <Clock3 className="size-3 text-muted-foreground" strokeWidth={1.75} />
-    )
-
-  if (loading)
-    return (
-      <div className="flex flex-1 items-center justify-center">
-        <Spinner className="text-muted-foreground" />
-      </div>
-    )
-
-  if (artifacts.length === 0) {
-    return <PageEmpty icon={Archive} label={t.empty} />
-  }
-
-  return (
-    <TooltipProvider delayDuration={300}>
-      <ScrollArea className="min-h-0 flex-1">
-        <div className="mx-auto w-full max-w-4xl p-4 lg:p-6">
-          <div className="space-y-3">
-            {artifacts.map((a) => {
-              const totalBytes = a.outputs.reduce((sum, o) => sum + o.sizeBytes, 0)
-              return (
-                <div
-                  key={a.id}
-                  className="flex items-center gap-4 rounded-lg border bg-card p-4 text-card-foreground"
-                >
-                  <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-muted">
-                    <FileText className="size-5 text-muted-foreground" strokeWidth={1.75} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="truncate text-sm font-medium" title={artifactLabel(a)}>
-                        {artifactLabel(a)}
-                      </span>
-                      <Badge variant="secondary" className="shrink-0 gap-1">
-                        {statusIcon(a.status)}
-                        {statusLabel(a.status)}
-                      </Badge>
-                    </div>
-                    {a.author ? (
-                      <div className="mt-0.5 truncate text-xs text-muted-foreground">
-                        {a.author}
-                      </div>
-                    ) : null}
-                    <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
-                      <span>{t.volumeFiles(a.outputs.length)}</span>
-                      <span>{t.pages(a.pageCount)}</span>
-                      <span>{formatBytes(totalBytes)}</span>
-                      <span>{new Date(a.createdAt).toLocaleString()}</span>
-                    </div>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-1">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="default"
-                          size="sm"
-                          onClick={() => deliver(a)}
-                          disabled={delivering.has(a.id)}
-                        >
-                          {delivering.has(a.id) ? (
-                            <Loader2 className="size-4 animate-spin" strokeWidth={1.75} />
-                          ) : (
-                            <Send className="size-4" strokeWidth={1.75} />
-                          )}
-                          <span className="hidden lg:inline">
-                            {delivering.has(a.id) ? t.delivering : t.deliver}
-                          </span>
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>{t.deliver}</TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => webPush(a)}
-                          disabled={pushing.has(a.id)}
-                        >
-                          {pushing.has(a.id) ? (
-                            <Loader2 className="size-4 animate-spin" strokeWidth={1.75} />
-                          ) : (
-                            <Globe className="size-4" strokeWidth={1.75} />
-                          )}
-                          <span className="hidden lg:inline">{t.webPush}</span>
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>{t.webPush}</TooltipContent>
-                    </Tooltip>
-                    {/* 低频的「在 Finder 中显示 / 删除」收进溢出菜单，给行内动作减负 */}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="size-4" strokeWidth={1.75} />
-                          <span className="sr-only">{text.library.moreActions}</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => reveal(a.id)}>
-                          <FolderOpen strokeWidth={1.75} />
-                          {t.reveal}
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem variant="destructive" onClick={() => remove(a.id)}>
-                          <Trash2 strokeWidth={1.75} />
-                          {t.remove}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      </ScrollArea>
-    </TooltipProvider>
-  )
-}
-
-function WebPushView({
-  locale,
-  onGotoArchive
-}: {
-  locale: LanguageMode
-  onGotoArchive: () => void
-}): React.JSX.Element {
-  const t = uiText[locale].webPushView
-  const [url, setUrl] = useState('')
-  const [saving, setSaving] = useState(false)
-
-  useEffect(() => {
-    window.api.webpush.getUrl().then(setUrl)
-  }, [])
-
-  const save = async (): Promise<void> => {
-    setSaving(true)
-    try {
-      await window.api.webpush.setUrl(url.trim())
-      setUrl(await window.api.webpush.getUrl())
-      toast.success(t.saved)
-    } catch (err) {
-      toast.error(`${err}`)
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  return (
-    <ScrollArea className="min-h-0 flex-1">
-      <div className="mx-auto w-full max-w-xl p-4 lg:p-6">
-        <p className="mb-5 text-sm text-muted-foreground">{t.description}</p>
-        <div className="space-y-5">
-          <div className="rounded-lg border bg-card p-4 text-card-foreground">
-            <h3 className="mb-2 text-sm font-medium">{t.howTitle}</h3>
-            <ol className="list-decimal space-y-1.5 pl-5 text-sm text-muted-foreground">
-              <li>{t.step1}</li>
-              <li>{t.step2}</li>
-              <li>{t.step3}</li>
-            </ol>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="stk-url">{t.urlLabel}</Label>
-            <Input
-              id="stk-url"
-              value={url}
-              placeholder="https://www.amazon.com/sendtokindle"
-              onChange={(e) => setUrl(e.target.value)}
-            />
-            <p className="text-xs text-muted-foreground">{t.urlNote}</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 pt-1">
-            <Button onClick={() => window.api.webpush.openBlank()}>
-              <Globe className="size-4" strokeWidth={1.75} />
-              {t.openLogin}
-            </Button>
-            <Button variant="outline" onClick={save} disabled={saving}>
-              {saving ? <Loader2 className="size-4 animate-spin" strokeWidth={1.75} /> : null}
-              {t.save}
-            </Button>
-            <Button variant="ghost" onClick={onGotoArchive}>
-              <Archive className="size-4" strokeWidth={1.75} />
-              {t.gotoArchive}
-            </Button>
-          </div>
-        </div>
-      </div>
-    </ScrollArea>
-  )
-}
 
 function AppSidebar({
   activeView,
