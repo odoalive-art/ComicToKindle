@@ -149,20 +149,47 @@ import OnboardingView from './onboarding'
 import DeliveryWizardView from './delivery-wizard'
 import { ExtensionsView } from './extensions/ExtensionsView'
 
+import type {
+  ViewId,
+  ThemeMode,
+  LibraryEntry,
+  LibrarySeries,
+  LibraryBook,
+  LibraryDirEntry,
+  LibraryVolume,
+  Artifact,
+  ImportScanResult,
+  ImportTarget,
+  TrashBookView
+} from '@/lib/types'
+import {
+  formatBytes,
+  artifactLabel,
+  volumeFormatLabel,
+  deliveryErrorMsg
+} from '@/lib/format'
+import {
+  READING_DIR_KEY,
+  READING_MODE_KEY,
+  ReadingDirection,
+  ReadingMode,
+  getInitialDirection,
+  getInitialMode,
+  getProgress,
+  saveProgress
+} from '@/lib/reading-storage'
+import {
+  CONVERT_OPTIONS_KEY,
+  DeviceProfileOpt,
+  PROFILE_ORDER,
+  ConvertOptionsState,
+  loadConvertOptions
+} from '@/lib/convert-options'
+
 // 开发期组件/规范演示页：仅 dev 构建载入，生产包里整段不存在（含 recharts 等重依赖）
 const DevShowcase = import.meta.env.DEV ? React.lazy(() => import('./dev/Showcase')) : null
 
-type ViewId =
-  | 'library'
-  | 'web-push'
-  | 'devices-emails'
-  | 'extensions'
-  | 'design-components'
-  | 'foundation-standards'
-  | 'app-components'
-  | 'archive'
 
-type ThemeMode = 'light' | 'dark'
 
 type SidebarGroupItem = {
   id: ViewId
@@ -351,31 +378,7 @@ function AppHeader({ languageMode, activeNavItemId }: AppHeaderProps): React.JSX
   )
 }
 
-// 来自 preload 的 window.api.library 返回类型（单一事实来源：src/preload/index.d.ts）
-// 库根顶层项 = 「书(卷册)」或「部文件夹」；书本质上是一卷 LibraryVolume + 作者
-type LibraryEntry = Awaited<ReturnType<Window['api']['library']['scan']>>[number]
-type LibrarySeries = Extract<LibraryEntry, { type: 'folder' }>
-type LibraryBook = Extract<LibraryEntry, { type: 'book' }>
-// 某「部」下钻后列出的条目同样是 LibraryEntry（书/卷 或 可继续下钻的子部）。
-// 「卷(可读单元)」即其中的 book 变体——读图/转换/解锁等只处理它。
-type LibraryDirEntry = Awaited<ReturnType<Window['api']['library']['listVolumes']>>[number]
-type LibraryVolume = Extract<LibraryDirEntry, { type: 'book' }>
 
-/** 封面右下角标显示的来源格式：压缩包/PDF/EPUB 取真实扩展名（CBZ/ZIP/CBR/PDF…），图片目录走 i18n 文案。 */
-function volumeFormatLabel(vol: LibraryVolume, imagesLabel: string): string {
-  if (vol.sourceType === 'folder') return imagesLabel
-  const base = vol.path.split(/[/\\]/).pop() ?? ''
-  const dot = base.lastIndexOf('.')
-  const ext = dot > 0 ? base.slice(dot + 1).toUpperCase() : ''
-  return ext || vol.sourceType.toUpperCase()
-}
-type Artifact = Awaited<ReturnType<Window['api']['artifacts']['list']>>[number]
-type ImportScanResult = Awaited<ReturnType<Window['api']['library']['scanImport']>>
-type ImportTarget =
-  | { kind: 'ungrouped' }
-  | { kind: 'series'; seriesId: string }
-  | { kind: 'new'; title: string }
-type TrashBookView = Awaited<ReturnType<Window['api']['library']['listTrash']>>[number]
 
 function CoverImage({
   src,
@@ -459,43 +462,7 @@ function FolderStackCard({
 const LIBRARY_GRID =
   'grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'
 
-// ---------- 阅读偏好与进度（持久化于 localStorage） ----------
-type ReadingDirection = 'ltr' | 'rtl'
-type ReadingMode = 'single' | 'double'
 
-const READING_DIR_KEY = 'comic-to-kindle-reading-direction'
-const READING_MODE_KEY = 'comic-to-kindle-reading-mode'
-const READING_PROGRESS_KEY = 'comic-to-kindle-reading-progress'
-
-// 转换选项（非敏感，存 localStorage）。字段与 main 的 convert.ts DEFAULTS 保持一致。
-const CONVERT_OPTIONS_KEY = 'comic-to-kindle-convert-options'
-type DeviceProfileOpt = 'pw6' | 'ko3' | 'pw5' | 'pw3' | 'scribe' | 'original'
-const PROFILE_ORDER: DeviceProfileOpt[] = ['pw6', 'ko3', 'pw5', 'pw3', 'scribe', 'original']
-interface ConvertOptionsState {
-  deviceProfile: DeviceProfileOpt
-  mangaMode: boolean
-  grayscale: boolean
-  splitDoublePages: boolean
-  imageQuality: number
-  maxVolumeSize: number
-}
-const DEFAULT_CONVERT_OPTIONS: ConvertOptionsState = {
-  deviceProfile: 'pw6',
-  mangaMode: true,
-  grayscale: true,
-  splitDoublePages: true,
-  imageQuality: 85,
-  maxVolumeSize: 45
-}
-function loadConvertOptions(): ConvertOptionsState {
-  try {
-    const raw = window.localStorage.getItem(CONVERT_OPTIONS_KEY)
-    if (raw) return { ...DEFAULT_CONVERT_OPTIONS, ...JSON.parse(raw) }
-  } catch {
-    /* 解析失败回退默认 */
-  }
-  return { ...DEFAULT_CONVERT_OPTIONS }
-}
 
 // ---------- 转换活动（队列）：上提到 App 层，跨视图保活 ----------
 // 持久化到 userData/queue.json（main 端 queue.ts），重启后恢复；converting 回退为 queued 整卷重跑。
@@ -742,32 +709,7 @@ function useConvertActivity(locale: LanguageMode): ConvertActivity {
   }
 }
 
-function getInitialDirection(): ReadingDirection {
-  return window.localStorage.getItem(READING_DIR_KEY) === 'rtl' ? 'rtl' : 'ltr'
-}
-function getInitialMode(): ReadingMode {
-  return window.localStorage.getItem(READING_MODE_KEY) === 'double' ? 'double' : 'single'
-}
-function readProgressMap(): Record<string, number> {
-  try {
-    return JSON.parse(window.localStorage.getItem(READING_PROGRESS_KEY) || '{}')
-  } catch {
-    return {}
-  }
-}
-function getProgress(volumePath: string): number {
-  const value = readProgressMap()[volumePath]
-  return typeof value === 'number' ? value : 0
-}
-function saveProgress(volumePath: string, index: number): void {
-  const map = readProgressMap()
-  map[volumePath] = index
-  try {
-    window.localStorage.setItem(READING_PROGRESS_KEY, JSON.stringify(map))
-  } catch {
-    /* 忽略写入失败 */
-  }
-}
+
 
 /**
  * PDF 来源阅读器：用 comic:// 把原 PDF 喂给 Chromium 内置查看器（PDFium）直接渲染，
@@ -5077,28 +5019,7 @@ function ConvertWorkbench({
   )
 }
 
-function formatBytes(bytes: number): string {
-  if (bytes <= 0) return '0 B'
-  const units = ['B', 'KB', 'MB', 'GB']
-  const i = Math.min(units.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)))
-  return `${(bytes / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1)} ${units[i]}`
-}
 
-// 产物显示标题：书名（漫画名 + 卷册已合一）。旧产物经 main 读取迁移后也带 title。
-function artifactLabel(a: { title?: string; seriesName?: string }): string {
-  return a.title || a.seriesName || 'Untitled'
-}
-
-// 把 main 返回的投递错误码翻译成当前语言文案；unknown 时附带服务器原始细节
-function deliveryErrorMsg(
-  d: { errors: Record<string, string> },
-  res: { code?: string; detail?: string }
-): string {
-  const errors = d.errors
-  const known = res.code ? errors[res.code] : undefined
-  if (known) return res.code === 'unknown' && res.detail ? `${known}：${res.detail}` : known
-  return res.detail ? `${errors.unknown}：${res.detail}` : errors.unknown
-}
 
 function DeliverySettingsView({ locale }: { locale: LanguageMode }): React.JSX.Element {
   const text = uiText[locale]
